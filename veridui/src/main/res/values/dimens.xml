@@ -1,0 +1,6 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <item name="face_template_width" type="dimen" format="float">0.65</item>
+    <item name="face_template_height" type="dimen" format="float">0.8</item>
+    <dimen name="padding_default">16dp</dimen>
+</resources>
