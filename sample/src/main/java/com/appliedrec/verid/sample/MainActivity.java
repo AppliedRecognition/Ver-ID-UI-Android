@@ -4,6 +4,9 @@ import android.content.Intent;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
 
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.VerID;
@@ -15,10 +18,16 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
 
     private static final int REQUEST_CODE_LIVENESS_DETECTION = 0;
 
+    private Button button;
+    private ProgressBar progressBar;
+    private VerID environment;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        button = findViewById(R.id.button);
+        progressBar = findViewById(R.id.progressBar);
         VerIDFactory verIDFactory = new VerIDFactory(this, this);
         verIDFactory.createVerID();
     }
@@ -33,15 +42,21 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
 
     @Override
     public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
-        LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
-        Intent intent = new Intent(this, VerIDSessionActivity.class);
-        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, sessionSettings);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-        startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
+        environment = verID;
+        button.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
     }
 
     @Override
     public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+        progressBar.setVisibility(View.GONE);
+    }
 
+    public void startLivenessDetectionSession(View v) {
+        LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
+        Intent intent = new Intent(this, VerIDSessionActivity.class);
+        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, sessionSettings);
+        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, environment.getInstanceId());
+        startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
     }
 }
