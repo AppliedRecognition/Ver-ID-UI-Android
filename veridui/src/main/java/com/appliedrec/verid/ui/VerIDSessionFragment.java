@@ -147,6 +147,18 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         delegate = null;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        startCamera();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        releaseCamera();
+    }
+
     //endregion
 
     //region Camera preview listener

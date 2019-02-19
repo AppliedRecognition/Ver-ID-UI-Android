@@ -54,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
 
     public void startLivenessDetectionSession(View v) {
         LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
+        sessionSettings.setNumberOfResultsToCollect(2);
+        sessionSettings.setIncludeFaceTemplatesInResult(true);
+        sessionSettings.setShowResult(true);
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, sessionSettings);
         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, environment.getInstanceId());

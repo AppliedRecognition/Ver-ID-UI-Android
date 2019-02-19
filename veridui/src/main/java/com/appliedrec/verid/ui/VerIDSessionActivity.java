@@ -17,6 +17,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.WindowManager;
 
+import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionServiceFactory;
@@ -29,6 +30,7 @@ import com.appliedrec.verid.core.IImageWriterServiceFactory;
 import com.appliedrec.verid.core.IResultEvaluationService;
 import com.appliedrec.verid.core.IResultEvaluationServiceFactory;
 import com.appliedrec.verid.core.ImageWriterServiceFactory;
+import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.ResultEvaluationServiceFactory;
 import com.appliedrec.verid.core.SessionResult;
 import com.appliedrec.verid.core.SessionSettings;
@@ -41,7 +43,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate {
+public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener {
 
     //region Public constants
     public static final String EXTRA_SETTINGS = "com.appliedrec.verid.ui.EXTRA_SETTINGS";
@@ -108,20 +110,29 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     @Override
     protected void onResume() {
         super.onResume();
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
-            return;
+        if (sessionFragment != null) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestCameraPermission();
+                return;
+            }
+            startSessionTask();
         }
-        sessionFragment.startCamera();
-        startSessionTask();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        executor.shutdownNow();
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        finishCancel();
     }
 
     //endregion
@@ -144,7 +155,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-            sessionFragment.startCamera();
+            if (sessionFragment != null) {
+                sessionFragment.startCamera();
+                startSessionTask();
+            }
         }
     }
 
@@ -168,7 +182,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     private void showResult(SessionResult sessionResult) {
-        executor.shutdownNow();
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
         if (sessionSettings.getShowResult()) {
             Fragment resultFragment = makeResultFragment(sessionResult);
             sessionFragment = null;
@@ -194,7 +211,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     private void finishWithError(Exception error) {
-        executor.shutdownNow();
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
         setResult(RESULT_OK, result);
@@ -202,7 +222,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     private void finishCancel() {
-        executor.shutdownNow();
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
         setResult(RESULT_CANCELED);
         finish();
     }
@@ -349,7 +372,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     //region Result evaluation service factory
 
     protected IResultEvaluationServiceFactory<T> makeResultEvaluationServiceFactory() {
-        return new ResultEvaluationServiceFactory<>(environment);
+        return new ResultEvaluationServiceFactory<>(this, environment);
     }
 
     //endregion
@@ -391,7 +414,32 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     protected Fragment makeResultFragment(SessionResult sessionResult) {
-        return null;
+        int resourceId;
+        if (sessionSettings instanceof AuthenticationSessionSettings) {
+            if (sessionResult.getError() == null) {
+                resourceId = R.string.auth_result;
+            } else {
+                resourceId = R.string.auth_failed;
+            }
+        } else if (sessionSettings instanceof RegistrationSessionSettings) {
+            if (sessionResult.getError() == null) {
+                resourceId = R.string.registration_result;
+            } else {
+                resourceId = R.string.registration_failed;
+            }
+        } else if (sessionResult.getError() == null) {
+            resourceId = R.string.liveness_result;
+        } else {
+            resourceId = R.string.liveness_failure;
+        }
+        if (getSupportActionBar() != null) {
+            if (sessionResult.getError() == null) {
+                getSupportActionBar().setTitle(R.string.success);
+            } else {
+                getSupportActionBar().setTitle(R.string.failed);
+            }
+        }
+        return ResultFragment.newInstance(sessionResult, getString(resourceId));
     }
 
     //endregion
@@ -427,6 +475,15 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     @Override
     public void veridSessionFragmentDidCaptureImage(YuvImage image, int exifOrientation) {
 
+    }
+
+    //endregion
+
+    //region Result fragment listener
+
+    @Override
+    public void onResultFragmentDismissed(ResultFragment resultFragment) {
+        finishWithResult(resultFragment.getSessionResult());
     }
 
     //endregion
