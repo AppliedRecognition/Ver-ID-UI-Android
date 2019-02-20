@@ -36,7 +36,8 @@ public class SettingsActivity extends AppCompatActivity {
             PreferenceHelper preferenceHelper = new PreferenceHelper(getActivity(), getPreferenceScreen().getSharedPreferences());
             yawThresholdPreference.setSummary(Integer.toString(Math.round(preferenceHelper.getYawThreshold())));
             pitchThresholdPreference.setSummary(Integer.toString(Math.round(preferenceHelper.getPitchThreshold())));
-            authThresholdPreference.setSummary(String.format("%.02f", preferenceHelper.getAuthenticationThreshold()));
+            int val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_auth_threshold), 40);
+            authThresholdPreference.setSummary(Integer.toString(val));
         }
 
         @Override
