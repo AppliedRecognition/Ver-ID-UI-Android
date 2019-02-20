@@ -186,7 +186,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             executor.shutdownNow();
             executor = null;
         }
-        if (sessionSettings.getShowResult()) {
+        if (sessionSettings.getShowResult() && !sessionResult.isCanceled()) {
             Fragment resultFragment = makeResultFragment(sessionResult);
             sessionFragment = null;
             getSupportFragmentManager().beginTransaction().replace(R.id.container, resultFragment, FRAGMENT_TAG).commitAllowingStateLoss();
