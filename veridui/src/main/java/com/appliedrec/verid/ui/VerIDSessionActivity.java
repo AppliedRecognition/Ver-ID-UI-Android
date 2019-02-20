@@ -3,6 +3,7 @@ package com.appliedrec.verid.ui;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.YuvImage;
@@ -29,6 +30,7 @@ import com.appliedrec.verid.core.IImageProviderServiceFactory;
 import com.appliedrec.verid.core.IImageWriterServiceFactory;
 import com.appliedrec.verid.core.IResultEvaluationService;
 import com.appliedrec.verid.core.IResultEvaluationServiceFactory;
+import com.appliedrec.verid.core.ImageUtils;
 import com.appliedrec.verid.core.ImageWriterServiceFactory;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.ResultEvaluationServiceFactory;
@@ -393,13 +395,22 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     //region Image provider service
 
+    // TODO: remove this it's for debugging
+    private ImageUtils imageUtils;
+
     @Override
     public VerIDImage dequeueImage() throws Exception {
         if (startTime + sessionSettings.getExpiryTime() < System.currentTimeMillis()) {
             throw new Exception("Session expired");
         }
         if (sessionFragment != null) {
-            return sessionFragment.dequeueImage();
+            VerIDImage image = sessionFragment.dequeueImage();
+            if (imageUtils == null) {
+                imageUtils = new ImageUtils(this);
+            }
+            Bitmap bitmap = imageUtils.grayscaleToBitmap(image.getGrayscaleData(), image.getWidth(), image.getHeight());
+            // You can view the bitmap in the debug tab
+            return image;
         }
         throw new Exception("Image provider is null");
     }
