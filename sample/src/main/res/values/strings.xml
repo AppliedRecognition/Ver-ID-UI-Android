@@ -1,3 +1,91 @@
 <resources>
     <string name="app_name">Ver-ID Sample</string>
+    <string name="show_registration_guide">Show registration guide</string>
+    <string name="show_session_result">Show session result</string>
+    <string name="register_separate_bearings">Register separate bearings</string>
+    <string name="session_timeout_interval">Session timeout interval (seconds)</string>
+    <string name="show_authentication_guide">Show authentication guide</string>
+    <string name="security_level">Security level</string>
+    <string name="use_antispoofing">Use anti-spoofing</string>
+    <string name="authenticate_nonfrontal_bearings">Authenticate non-frontal bearings</string>
+    <string name="Logging">Logging</string>
+    <string name="enable_logging">Enable logging</string>
+    <string name="clear_log">Clear log</string>
+    <string name="export_log">Send log to Ver-ID</string>
+    <string name="reset_registration">Reset registration</string>
+    <string name="settings">Settings</string>
+    <string name="pref_key_show_registration_guide">pref_key_show_registration_guide</string>
+    <string name="pref_key_show_registration_result">pref_key_show_registration_result</string>
+    <string name="pref_key_register_separate_bearings">pref_key_register_separate_bearings</string>
+    <string name="pref_key_security_level">pref_key_security_level</string>
+    <string name="pref_key_show_authentication_guide">pref_key_show_authentication_guide</string>
+    <string name="pref_key_show_authentication_result">pref_key_show_authentication_result</string>
+    <string name="pref_key_use_antispoofing">pref_key_use_antispoofing</string>
+    <string name="pref_key_authenticate_bearings">pref_key_authenticate_bearings</string>
+    <string name="pref_key_enable_logging">pref_key_enable_logging</string>
+    <string name="show_registration_guide_summary">Show a set of instructions before registration</string>
+    <string name="show_session_result_summary">Show a screen with the result at the end of the session</string>
+    <string name="register_separate_bearings_summary">Capture and register faces in different poses for extra security</string>
+    <string name="security_level_summary">Lowering the security level makes it easier for the user to authenticate</string>
+    <string name="show_authentication_guide_summary">Show a set of instructions before authentication</string>
+    <string name="use_antispoofing_summary">Detect and prevent spoofing attempts at authentication</string>
+    <string name="authenticate_nonfrontal_bearings_summary">If off or if separate bearings not registered, only the frontal \"straight\" face bearing is authenticated</string>
+    <string name="enable_logging_summary">Logging may slightly slow down the app but it allows Ver-ID engineers to investigate bugs you may encounter</string>
+    <string name="pref_key_antispoofing_level">pref_key_antispoofing_level</string>
+    <string name="antispoofing_level">Anti-spoofing</string>
+    <string name="unable_to_authenticate_with_settings">You opted for strict liveness detection. This requires face registration in additional poses. You\'ll now be prompted to register more faces.</string>
+    <string name="register_more_faces">Register more faces</string>
+    <string name="verid_failed_to_load">Ver-ID failed to load</string>
+    <string name="the_log_may_be_empty">The log may be empty.</string>
+    <string name="logging_is_disabled">Logging is disabled.</string>
+    <string name="failed_to_send_log">Failed to send log</string>
+    <string name="thank_you_for_sending_us_log_files">Thank you for sending us your log files.</string>
+    <string name="security">Security</string>
+    <string name="pref_key_enable_liveness_detection">pref_key_enable_liveness_detection</string>
+    <string name="enable_liveness_detection">Enable liveness detection</string>
+    <string name="liveness_detection_summary">Liveness detection prevents spoofing the Ver-ID with a picture</string>
+    <string name="pose_count">Liveness detection pose count</string>
+    <string name="pref_key_required_pose_count">pref_key_required_pose_count</string>
+    <string name="face_detection_test">Face detection test</string>
+    <string name="verid_person_sdk">Ver-ID Person SDK</string>
+    <string name="one_registration">1. Registration</string>
+    <string name="two_authentication">2. Authentication</string>
+    <string name="verid_person_sdk_text">This app demonstrates how Ver-ID performs two common user authentication tasks.</string>
+    <string name="one_registration_text">The app collects images of your face and stores them as templates.</string>
+    <string name="two_authentication_text">The app captures images of you and verifies them against the templates collected at registration.</string>
+    <string name="about">About</string>
+    <string name="loading_verid">Loading Ver-ID</string>
+    <string name="registered">Registered</string>
+    <string name="unregister">Unregister</string>
+    <string name="confirm_unregister">Unregister?</string>
+    <string name="failed_to_load_users">Failed to load registered users</string>
+    <string name="unexpected_error">Unexpected error</string>
+    <string name="export_registration">Export registration</string>
+    <string name="scan_to_import">Scan to import</string>
+    <string name="share_registration">Share registration</string>
+    <string name="app_will_generate_code">The app will generate a code. Scan the code with this app on another device to import your registration.</string>
+    <string name="generate_code">Generate code</string>
+    <string name="exporting_registration">Exporting registration</string>
+    <string name="import_more_faces">Import more faces</string>
+    <string name="import_registration_of_person">Import the registered faces of this person?</string>
+    <string name="overwrite_existing_registration">Overwrite existing registration</string>
+    <string name="error">Error</string>
+    <string name="failed_to_import_registration">Failed to import registration</string>
+    <string name="import_registration">Import registration</string>
+    <string name="failed_to_export_registration">Failed to export registration</string>
+    <string name="downloading">Downloading</string>
+    <string name="launch_app_on_another_device_scan_code">Launch this app on another device, share registration and scan the code presented by the other app.</string>
+    <string name="pref_key_yaw_threshold">pref_key_yaw_threshold</string>
+    <string name="yaw_threshold">Yaw threshold</string>
+    <string name="pitch_threshold">Pitch threshold</string>
+    <string name="pref_key_pitch_threshold">pref_key_pitch_threshold</string>
+    <string name="pref_key_auth_threshold">pref_key_auth_threshold</string>
+    <string name="authentication_threshold">Authentication threshold</string>
+    <string-array name="pose_counts">
+        <item>Liveness detection off</item>
+        <item>Require 1 pose</item>
+        <item>Require 2 poses</item>
+        <item>Require 3 poses</item>
+        <item>Require 4 poses</item>
+    </string-array>
 </resources>

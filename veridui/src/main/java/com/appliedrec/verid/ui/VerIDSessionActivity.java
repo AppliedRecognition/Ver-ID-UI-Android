@@ -1,6 +1,7 @@
 package com.appliedrec.verid.ui;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Matrix;
@@ -408,9 +409,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     //region Fragment creation
 
+    @SuppressWarnings("unchecked")
     protected U makeVerIDSessionFragment() {
-        //noinspection unchecked
-        return (U)VerIDSessionFragment.newInstance();
+        if (sessionSettings instanceof RegistrationSessionSettings) {
+            return (U)VerIDRegistrationSessionFragment.newInstance((RegistrationSessionSettings)sessionSettings);
+        } else {
+            return (U) VerIDSessionFragment.newInstance();
+        }
     }
 
     protected Fragment makeResultFragment(SessionResult sessionResult) {

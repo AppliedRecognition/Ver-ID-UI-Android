@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="security_level_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="antispoofing_level_value">
+        <item>NONE</item>
+        <item>REGULAR</item>
+        <item>STRICT</item>
+    </string-array>
+    <string name="antispoofing_level_default_value">REGULAR</string>
+    <string-array name="pose_count_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="security_levels">
+        <item>Lowest</item>
+        <item>Low</item>
+        <item>Normal</item>
+        <item>High</item>
+        <item>Highest</item>
+    </string-array>
+</resources>

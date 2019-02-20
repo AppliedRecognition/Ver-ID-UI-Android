@@ -1,7 +1,9 @@
 package com.appliedrec.verid.ui;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -18,6 +20,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.media.ExifInterface;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -48,6 +51,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     private ICameraPreviewView cameraSurfaceView;
     private TransformableRelativeLayout cameraOverlaysView;
+
+    public TransformableRelativeLayout getViewOverlays() {
+        return viewOverlays;
+    }
+
     private TransformableRelativeLayout viewOverlays;
     private DetectedFaceView detectedFaceView;
     private ThreadPoolExecutor previewProcessingExecutor;
@@ -150,7 +158,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Override
     public void onResume() {
         super.onResume();
-        startCamera();
+        if (getActivity() != null && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            startCamera();
+        }
     }
 
     @Override

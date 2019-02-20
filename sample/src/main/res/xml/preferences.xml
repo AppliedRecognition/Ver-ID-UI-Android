@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/security">
+        <ListPreference
+            android:entries="@array/pose_counts"
+            android:entryValues="@array/pose_count_values"
+            android:key="@string/pref_key_required_pose_count"
+            android:summary="%s\nHigher pose count makes authentication more secure at the expense of usability"
+            android:defaultValue="1"
+            android:title="@string/pose_count" />
+        <com.appliedrec.verid.sample.YawThresholdPreference
+            android:key="@string/pref_key_yaw_threshold"
+            android:title="@string/yaw_threshold" />
+        <com.appliedrec.verid.sample.PitchThresholdPreference
+            android:key="@string/pref_key_pitch_threshold"
+            android:title="@string/pitch_threshold" />
+        <com.appliedrec.verid.sample.AuthenticationThresholdPreference
+            android:key="@string/pref_key_auth_threshold"
+            android:title="@string/authentication_threshold" />
+    </PreferenceCategory>
+</PreferenceScreen>
