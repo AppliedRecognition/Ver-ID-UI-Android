@@ -3,6 +3,7 @@ package com.appliedrec.verid.sample;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.PointF;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -143,6 +144,9 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                         RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
                         settings.setShowResult(true);
                         settings.setNumberOfResultsToCollect(3);
+                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
+                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
                         Intent intent = new Intent(IntroActivity.this, VerIDSessionActivity.class);
                         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
                         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());

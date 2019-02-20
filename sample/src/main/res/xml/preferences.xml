@@ -17,5 +17,11 @@
         <com.appliedrec.verid.sample.AuthenticationThresholdPreference
             android:key="@string/pref_key_auth_threshold"
             android:title="@string/authentication_threshold" />
+        <com.appliedrec.verid.sample.FaceBoundsWidthPreference
+            android:key="@string/pref_key_face_bounds_width"
+            android:title="@string/face_bounds_width" />
+        <com.appliedrec.verid.sample.FaceBoundsHeightPreference
+            android:key="@string/pref_key_face_bounds_height"
+            android:title="@string/face_bounds_height" />
     </PreferenceCategory>
 </PreferenceScreen>

@@ -189,6 +189,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         ((SampleApplication)getApplication()).getVerID().getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
+        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
+        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());
@@ -203,6 +205,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
         settings.setNumberOfResultsToCollect(3);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
+        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());

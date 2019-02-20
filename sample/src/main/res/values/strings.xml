@@ -81,6 +81,10 @@
     <string name="pref_key_pitch_threshold">pref_key_pitch_threshold</string>
     <string name="pref_key_auth_threshold">pref_key_auth_threshold</string>
     <string name="authentication_threshold">Authentication threshold</string>
+    <string name="face_bounds_width">Face bounds width</string>
+    <string name="pref_key_face_bounds_width">pref_key_face_bounds_width</string>
+    <string name="pref_key_face_bounds_height">pref_key_face_bounds_height</string>
+    <string name="face_bounds_height">Face bounds height</string>
     <string-array name="pose_counts">
         <item>Liveness detection off</item>
         <item>Require 1 pose</item>
