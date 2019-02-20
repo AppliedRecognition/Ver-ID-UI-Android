@@ -38,6 +38,7 @@ import com.appliedrec.verid.core.SessionResult;
 import com.appliedrec.verid.core.SessionSettings;
 import com.appliedrec.verid.core.SessionTask;
 import com.appliedrec.verid.core.SessionTaskDelegate;
+import com.appliedrec.verid.core.Size;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDImage;
 
@@ -408,7 +409,9 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             if (imageUtils == null) {
                 imageUtils = new ImageUtils(this);
             }
-            Bitmap bitmap = imageUtils.grayscaleToBitmap(image.getGrayscaleData(), image.getWidth(), image.getHeight());
+            byte[] grayscale = imageUtils.yuvToGrayscale(image.getYuvImage(), image.getExifOrientation());
+            Size imageSize = image.getCorrectedSize();
+            Bitmap bitmap = imageUtils.grayscaleToBitmap(grayscale, imageSize.width, imageSize.height);
             // You can view the bitmap in the debug tab
             return image;
         }
