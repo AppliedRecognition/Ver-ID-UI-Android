@@ -471,6 +471,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void drawCameraOverlay(Bearing bearing, @Nullable String text, boolean isHighlighted, RectF ovalBounds, @Nullable RectF cutoutBounds, @Nullable EulerAngle faceAngle, boolean showArrow, @Nullable EulerAngle offsetAngleFromBearing) {
+        if (getActivity() == null) {
+            return;
+        }
         instructionTextView.setText(text);
         instructionTextView.setTextColor(isHighlighted ? highlightedTextColour : neutralTextColour);
         instructionTextView.setBackgroundColor(isHighlighted ? highlightedColour : neutralColour);
