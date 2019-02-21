@@ -124,10 +124,8 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     protected void onPause() {
         super.onPause();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+        shutDownExecutor();
+        clearCameraOverlays();
     }
 
     @Override
@@ -136,6 +134,19 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     //endregion
+
+    protected void shutDownExecutor() {
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
+    }
+
+    protected void clearCameraOverlays() {
+        if (sessionFragment != null) {
+            sessionFragment.clearCameraOverlay();
+        }
+    }
 
     //region Camera permissions
 
@@ -182,10 +193,8 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     private void showResult(SessionResult sessionResult) {
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+        shutDownExecutor();
+        clearCameraOverlays();
         if (sessionSettings.getShowResult() && !sessionResult.isCanceled()) {
             Fragment resultFragment = makeResultFragment(sessionResult);
             sessionFragment = null;
@@ -195,7 +204,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         }
     }
 
-    private void finishWithResult(SessionResult sessionResult) {
+    protected void finishWithResult(SessionResult sessionResult) {
         if (sessionResult.isCanceled()) {
             finishCancel();
             return;
@@ -210,24 +219,28 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         finish();
     }
 
-    private void finishWithError(Exception error) {
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+    protected void finishWithError(Exception error) {
+        shutDownExecutor();
+        clearCameraOverlays();
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
         setResult(RESULT_OK, result);
         finish();
     }
 
-    private void finishCancel() {
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+    protected void finishCancel() {
+        shutDownExecutor();
+        clearCameraOverlays();
         setResult(RESULT_CANCELED);
         finish();
+    }
+
+    protected T getSessionSettings() {
+        return sessionSettings;
+    }
+
+    protected VerID getEnvironment() {
+        return environment;
     }
 
     //endregion
@@ -313,11 +326,16 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     @Override
-    public void onComplete(SessionTask sessionTask, SessionResult sessionResult) {
-        if (sessionResult.isCanceled()) {
-            return;
-        }
-        showResult(sessionResult);
+    public void onComplete(SessionTask sessionTask, final SessionResult sessionResult) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (sessionResult.isCanceled()) {
+                    return;
+                }
+                showResult(sessionResult);
+            }
+        });
     }
 
     //endregion
@@ -363,7 +381,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         if (dialog == null) {
             return;
         }
-        executor.shutdownNow();
+        shutDownExecutor();
         dialog.show();
     }
 

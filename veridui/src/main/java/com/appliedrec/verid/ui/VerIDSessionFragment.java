@@ -135,6 +135,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             });
         }
         instructionView = viewOverlays.findViewById(R.id.instruction);
+        instructionView.setVisibility(View.GONE);
         instructionTextView = viewOverlays.findViewById(R.id.instruction_textview);
         instructionTextView.setText(R.string.preparing_face_detection);
         setTextViewColour(neutralColour, neutralTextColour);
@@ -492,6 +493,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0-offsetAngleFromBearing.getPitch()) * 2;
         }
         detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+    }
+
+    @Override
+    public void clearCameraOverlay() {
+        instructionView.setVisibility(View.GONE);
+        detectedFaceView.setFaceRect(null, null, neutralColour, backgroundColour, null, null);
     }
 
     private void setTextViewColour(int background, int text) {

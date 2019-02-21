@@ -17,4 +17,5 @@ public interface IVerIDSessionFragment extends IImageProviderService {
     Matrix imageScaleTransformAtImageSize(Size size);
     void didProduceSessionResultFromFaceDetectionResult(SessionResult sessionResult, FaceDetectionResult faceDetectionResult);
     void drawCameraOverlay(Bearing bearing, @Nullable String text, boolean isHighlighted, RectF ovalBounds, @Nullable RectF cutoutBounds, @Nullable EulerAngle faceAngle, boolean showArrow, @Nullable EulerAngle offsetAngleFromBearing);
+    void clearCameraOverlay();
 }

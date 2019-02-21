@@ -70,9 +70,9 @@ DetectedFaceView extends View {
             strokePaint.setShadowLayer(15, 0, 0, Color.argb(0x33, 0, 0, 0));
             path.addOval(faceRect, Path.Direction.CW);
             canvas.drawPath(path, strokePaint);
-        }
-        if (angle != null && distance != null) {
-            drawArrow(canvas, angle, distance);
+            if (angle != null && distance != null) {
+                drawArrow(canvas, angle, distance);
+            }
         }
     }
 
