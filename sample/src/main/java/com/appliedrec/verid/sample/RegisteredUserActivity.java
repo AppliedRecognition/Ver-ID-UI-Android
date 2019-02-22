@@ -6,12 +6,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.UserManager;
 import android.preference.PreferenceManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -27,7 +25,6 @@ import android.widget.ProgressBar;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.IRecognizable;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
@@ -45,11 +42,22 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
     private static final int LOADER_ID_REGISTRATION_IMPORT = 0;
 
     private AlertDialog tempDialog;
+    private VerID verID;
+    private ProfilePhotoHelper profilePhotoHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registered_user);
+        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
+        if (veridInstanceId != -1) {
+            try {
+                verID = VerID.getInstance(veridInstanceId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        profilePhotoHelper = new ProfilePhotoHelper(this);
         loadProfilePicture();
         findViewById(R.id.removeButton).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -88,7 +96,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
             if (result != null) {
                 Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
                 if (imageUris.length > 0) {
-                    ((SampleApplication)getApplication()).setProfilePhotoUri(imageUris[0]);
+                    profilePhotoHelper.setProfilePhotoUri(imageUris[0]);
                 }
             }
             // See documentation at
@@ -141,7 +149,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 AsyncTask.execute(new Runnable() {
                     @Override
                     public void run() {
-                        Uri profilePhotoUri = ((SampleApplication)getApplication()).getProfilePhotoUri();
+                        Uri profilePhotoUri = profilePhotoHelper.getProfilePhotoUri();
                         Bitmap grayscaleBitmap = BitmapFactory.decodeFile(profilePhotoUri.getPath());
                         if (grayscaleBitmap != null) {
                             int size = Math.min(grayscaleBitmap.getWidth(), grayscaleBitmap.getHeight());
@@ -186,14 +194,14 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         PreferenceHelper preferenceHelper = new PreferenceHelper(this, preferences);
         settings.setYawThreshold(preferenceHelper.getYawThreshold());
         settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
-        ((SampleApplication)getApplication()).getVerID().getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
+        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());
+        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
         startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
     }
     //endregion
@@ -210,7 +218,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());
+        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
         startActivityForResult(intent, REGISTRATION_REQUEST_CODE);
     }
 
@@ -225,7 +233,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                             @Override
                             public void run() {
                                 try {
-                                    ((SampleApplication)getApplication()).getVerID().getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
+                                    verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
@@ -281,12 +289,12 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
             public void run() {
                 try {
                     SampleApplication app = (SampleApplication)getApplication();
-                    IRecognizable[] faces = app.getVerID().getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
+                    IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
                     FaceTemplate[] faceTemplates = new FaceTemplate[faces.length];
                     for (int i=0; i<faces.length; i++) {
                         faceTemplates[i] = new FaceTemplate(faces[i].getRecognitionData(), faces[i].getVersion(), VerIDUser.DEFAULT_USER_ID);
                     }
-                    Bitmap profilePicture = BitmapFactory.decodeFile(app.getProfilePhotoUri().getPath());
+                    Bitmap profilePicture = BitmapFactory.decodeFile(profilePhotoHelper.getProfilePhotoUri().getPath());
                     RegistrationData registrationData = new RegistrationData();
                     registrationData.setProfilePicture(profilePicture);
                     registrationData.setFaceTemplates(faceTemplates);
@@ -371,6 +379,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                     public void run() {
                         Intent intent = new Intent(RegisteredUserActivity.this, RegistrationImportActivity.class);
                         intent.putExtras(extras);
+                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                         startActivity(intent);
                     }
                 });

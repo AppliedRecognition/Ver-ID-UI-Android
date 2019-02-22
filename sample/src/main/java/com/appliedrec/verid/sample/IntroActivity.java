@@ -3,7 +3,6 @@ package com.appliedrec.verid.sample;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.PointF;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,8 +23,10 @@ import android.widget.TextView;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.ui.PageViewActivity;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
+import com.appliedrec.verid.ui.VerIDSessionIntent;
 
 public class IntroActivity extends PageViewActivity implements LoaderManager.LoaderCallbacks {
 
@@ -36,11 +37,20 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
     private static final int REQUEST_CODE_IMPORT = 2;
     boolean showRegistration = true;
     private AlertDialog tempDialog;
+    private VerID verID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showRegistration = getIntent().getBooleanExtra(EXTRA_SHOW_REGISTRATION, true);
+        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
+        if (veridInstanceId != -1) {
+            try {
+                verID = VerID.getInstance(veridInstanceId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -93,7 +103,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
             if (result != null && result.getError() == null) {
                 Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
                 if (imageUris.length > 0) {
-                    ((SampleApplication)getApplication()).setProfilePhotoUri(imageUris[0]);
+                    new ProfilePhotoHelper(this).setProfilePhotoUri(imageUris[0]);
                 }
                 Intent intent = new Intent(this, RegisteredUserActivity.class);
                 startActivity(intent);
@@ -106,7 +116,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                 @Override
                 public void run() {
                     try {
-                        final String[] users = ((SampleApplication)getApplication()).getVerID().getUserManagement().getUsers();
+                        final String[] users = verID.getUserManagement().getUsers();
                         if (users.length > 0) {
                             runOnUiThread(new Runnable() {
                                 @Override
@@ -131,9 +141,9 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
             @Override
             public void run() {
                 try {
-                    String[] users = ((SampleApplication)getApplication()).getVerID().getUserManagement().getUsers();
+                    String[] users = verID.getUserManagement().getUsers();
                     if (users.length > 0) {
-                        ((SampleApplication)getApplication()).getVerID().getUserManagement().deleteUsers(users);
+                        verID.getUserManagement().deleteUsers(users);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -147,9 +157,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
-                        Intent intent = new Intent(IntroActivity.this, VerIDSessionActivity.class);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, ((SampleApplication)getApplication()).getVerID().getInstanceId());
+                        Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
                         startActivityForResult(intent, REQUEST_CODE_REGISTER);
                     }
                 });
@@ -251,6 +259,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                     public void run() {
                         Intent intent = new Intent(IntroActivity.this, RegistrationImportActivity.class);
                         intent.putExtras(extras);
+                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                         startActivityForResult(intent, REQUEST_CODE_IMPORT);
                     }
                 });

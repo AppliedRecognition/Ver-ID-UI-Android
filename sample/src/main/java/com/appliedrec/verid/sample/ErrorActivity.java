@@ -21,6 +21,7 @@ public class ErrorActivity extends AppCompatActivity {
     }
 
     public void onReload(View view) {
-        ((SampleApplication)getApplication()).reload();
+        setResult(RESULT_OK);
+        finish();
     }
 }

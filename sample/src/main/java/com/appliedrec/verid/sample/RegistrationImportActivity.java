@@ -13,6 +13,8 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 
 import com.appliedrec.verid.core.FaceTemplate;
+import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
@@ -30,13 +32,22 @@ public class RegistrationImportActivity extends AppCompatActivity {
     public static final String EXTRA_IMAGE_URI = "com.appliedrec.EXTRA_IMAGE_URI";
     public static final String EXTRA_FACE_TEMPLATES_PATH = "com.appliedred.EXTRA_FACE_TEMPLATES_PATH";
 
-    private SampleApplication application;
+    private VerID verID;
+    private ProfilePhotoHelper profilePhotoHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration_import);
-        application = (SampleApplication)getApplication();
+        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
+        if (veridInstanceId != -1) {
+            try {
+                verID = VerID.getInstance(veridInstanceId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        profilePhotoHelper = new ProfilePhotoHelper(this);
         final String faceTemplatesPath;
         if (getIntent() != null) {
             Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
@@ -55,7 +66,7 @@ public class RegistrationImportActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    String[] users = application.getVerID().getUserManagement().getUsers();
+                    String[] users = verID.getUserManagement().getUsers();
                     if (users.length == 0) {
                         runOnUiThread(new Runnable() {
                             @Override
@@ -85,7 +96,7 @@ public class RegistrationImportActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     try {
-                        application.getVerID().getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
+                        verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -123,11 +134,11 @@ public class RegistrationImportActivity extends AppCompatActivity {
                     FaceTemplate[] faceTemplates = new FaceTemplate[templates.size()];
                     templates.toArray(faceTemplates);
 
-                    application.getVerID().getUserManagement().assignFacesToUser(faceTemplates, VerIDUser.DEFAULT_USER_ID);
+                    verID.getUserManagement().assignFacesToUser(faceTemplates, VerIDUser.DEFAULT_USER_ID);
                     faceTemplatesFile.delete();
                     Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
                     if (imageUri != null) {
-                        application.setProfilePhotoUri(imageUri);
+                        profilePhotoHelper.setProfilePhotoUri(imageUri);
                     }
                     runOnUiThread(new Runnable() {
                         @Override
