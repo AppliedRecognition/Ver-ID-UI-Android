@@ -106,6 +106,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                     new ProfilePhotoHelper(this).setProfilePhotoUri(imageUris[0]);
                 }
                 Intent intent = new Intent(this, RegisteredUserActivity.class);
+                intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                 startActivity(intent);
                 finish();
             }
@@ -122,6 +123,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                                 @Override
                                 public void run() {
                                     Intent intent = new Intent(IntroActivity.this, RegisteredUserActivity.class);
+                                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                                     startActivity(intent);
                                     finish();
                                 }

@@ -174,6 +174,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
 
     private void showIntro() {
         Intent intent = new Intent(this, IntroActivity.class);
+        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
         intent.putExtra(IntroActivity.EXTRA_SHOW_REGISTRATION, false);
         startActivity(intent);
     }
@@ -238,6 +239,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                                         @Override
                                         public void run() {
                                             Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
+                                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                                             startActivity(intent);
                                             finish();
                                         }
