@@ -15,7 +15,7 @@ buildscript {
 }
 
 ext {
-    veridcoreversion = "1.0.11"
+    veridcoreversion = "1.0.0-beta.1"
 }
 
 allprojects {
