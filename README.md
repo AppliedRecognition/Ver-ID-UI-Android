@@ -7,7 +7,7 @@
 	
 	~~~groovy
     dependencies {
-	    implementation 'com.appliedrec.verid:ui:1.0.0-beta.2'
+	    implementation 'com.appliedrec.verid:ui:1.0.0-beta.3'
     }
 	~~~
 2. Add RenderScript in your **gradle.build** file:
