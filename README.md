@@ -3,6 +3,15 @@
 # Ver-ID UI for Android
 
 ## Installation
+1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
+    
+    ~~~groovy
+    repositories {
+        maven {
+            url 'https://dev.ver-id.com/artifactory/gradle-release'
+        }
+    }
+    ~~~
 1. Add the following dependency to your **gradle.build** file:
 	
 	~~~groovy
