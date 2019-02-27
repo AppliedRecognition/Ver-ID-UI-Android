@@ -15,7 +15,24 @@ buildscript {
 }
 
 ext {
-    veridcoreversion = "1.0.0-beta.2"
+    versionMajor = 1
+    versionMinor = 0
+    versionPatch = 0
+    versionClassifier = "beta"
+    versionClassifierVersion = 3
+    minSdkVersion = 14
+}
+
+Integer generateVersionCode() {
+    return ext.minSdkVersion * 10000000 + ext.versionMajor * 10000 + ext.versionMinor * 100 + ext.versionPatch
+}
+
+String generateVersionName() {
+    String versionName = "${ext.versionMajor}.${ext.versionMinor}.${ext.versionPatch}"
+    if (ext.versionClassifier != null) {
+        versionName += "-" + ext.versionClassifier + ".${ext.versionClassifierVersion}"
+    }
+    return versionName;
 }
 
 allprojects {
