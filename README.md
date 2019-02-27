@@ -29,7 +29,7 @@
         }
     }
 	~~~
-3. Add [**VerIDModels**](./sample/src/main/assets/VerIDModels) folder to your app's **assets** folder.
+3. Clone [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16) and add the contents as a folder named **VerIDModels** to your app's **assets** folder.
 4. [Request API secret](https://dev.ver-id.com/admin/register) for your app.
 5. Add the API secret in your app's manifest XML:
 
