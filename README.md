@@ -1,3 +1,5 @@
+![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui/maven-metadata.xml.svg)
+
 # Ver-ID UI for Android
 
 ## Installation
