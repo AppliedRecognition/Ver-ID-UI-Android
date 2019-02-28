@@ -31,8 +31,8 @@ public class SettingsActivity extends AppCompatActivity {
             authThresholdPreference.setDefaultValue(40);
             faceBoundsWidthPreference = (FaceBoundsWidthPreference) findPreference(getString(R.string.pref_key_face_bounds_width));
             faceBoundsHeightPreference = (FaceBoundsHeightPreference) findPreference(getString(R.string.pref_key_face_bounds_height));
-            faceBoundsWidthPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().x*100));
-            faceBoundsHeightPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().y*100));
+            faceBoundsWidthPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().x * 20));
+            faceBoundsHeightPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().y * 20));
         }
 
         @Override
@@ -45,9 +45,9 @@ public class SettingsActivity extends AppCompatActivity {
             int val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_auth_threshold), 40);
             authThresholdPreference.setSummary(Integer.toString(val));
             SessionSettings settings = new SessionSettings();
-            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100));
+            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 5;
             faceBoundsWidthPreference.setSummary(val+"% of view width");
-            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100));
+            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 5;
             faceBoundsHeightPreference.setSummary(val+"% of view height");
         }
 
@@ -74,10 +74,10 @@ public class SettingsActivity extends AppCompatActivity {
                 int val = sharedPreferences.getInt(key, 40);
                 authThresholdPreference.setSummary(Integer.toString(val));
             } else if (key.equals(getString(R.string.pref_key_face_bounds_width))) {
-                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 100));
+                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 5;
                 faceBoundsWidthPreference.setSummary(val + "% of view width");
             } else if (key.equals(getString(R.string.pref_key_face_bounds_height))) {
-                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100));
+                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 5;
                 faceBoundsHeightPreference.setSummary(val+"% of view height");
             }
         }

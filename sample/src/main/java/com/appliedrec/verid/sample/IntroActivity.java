@@ -157,8 +157,8 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                         settings.setShowResult(true);
                         settings.setNumberOfResultsToCollect(3);
                         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 100)) / 100f;
-                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 100)) / 100f;
+                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                         Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
                         startActivityForResult(intent, REQUEST_CODE_REGISTER);
                     }
