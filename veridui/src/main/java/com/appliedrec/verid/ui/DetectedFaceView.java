@@ -76,7 +76,7 @@ DetectedFaceView extends View {
         }
     }
 
-    void setFaceRect(RectF faceRect, RectF templateRect, int faceRectColour, int faceBackgroundColour, Double angle, Double distance) {
+    public void setFaceRect(RectF faceRect, RectF templateRect, int faceRectColour, int faceBackgroundColour, Double angle, Double distance) {
         this.faceRect = faceRect;
         this.templateRect = templateRect;
         this.strokePaint.setColor(faceRectColour);
