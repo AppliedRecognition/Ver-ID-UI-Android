@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ver-ID API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<aside><h2>Classes</h2><ul><li><a href="com.appliedrec.verid.core.AuthenticationSessionSettings.html">AuthenticationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.EulerAngle.html">EulerAngle</a></li><li><a href="com.appliedrec.verid.core.Face.html">Face</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionRecognitionFactory.html">FaceDetectionRecognitionFactory</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionResult.html">FaceDetectionResult</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionServiceFactory.html">FaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.ImageWriterServiceFactory.html">ImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.LivenessDetectionSessionSettings.html">LivenessDetectionSessionSettings</a></li><li><a href="com.appliedrec.verid.core.RecognizableFace.html">RecognizableFace</a></li><li><a href="com.appliedrec.verid.core.RecognizableSubject.html">RecognizableSubject</a></li><li><a href="com.appliedrec.verid.core.RegistrationSessionSettings.html">RegistrationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.ResultEvaluationServiceFactory.html">ResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.SessionResult.html">SessionResult</a></li><li><a href="com.appliedrec.verid.core.SessionSettings.html">SessionSettings</a></li><li><a href="com.appliedrec.verid.core.SessionTask.html">SessionTask</a></li><li><a href="com.appliedrec.verid.core.Size.html">Size</a></li><li><a href="com.appliedrec.verid.core.UserIdentification.html">UserIdentification</a></li><li><a href="com.appliedrec.verid.core.UserManagementFactory.html">UserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.VerID.html">VerID</a></li><li><a href="com.appliedrec.verid.core.VerIDFactory.html">VerIDFactory</a></li><li><a href="com.appliedrec.verid.core.VerIDImage.html">VerIDImage</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogFactory.html">SessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionActivity.html">VerIDSessionActivity</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionIntent.html">VerIDSessionIntent</a></li></ul><h2>Interfaces</h2><ul><li><a href="com.appliedrec.verid.core.IFaceDetection.html">IFaceDetection</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionService.html">IFaceDetectionService</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionServiceFactory.html">IFaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IFaceRecognition.html">IFaceRecognition</a></li><li><a href="com.appliedrec.verid.core.IFaceTracking.html">IFaceTracking</a></li><li><a href="com.appliedrec.verid.core.IImageProviderService.html">IImageProviderService</a></li><li><a href="com.appliedrec.verid.core.IImageProviderServiceFactory.html">IImageProviderServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IImageWriterService.html">IImageWriterService</a></li><li><a href="com.appliedrec.verid.core.IImageWriterServiceFactory.html">IImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IRecognizable.html">IRecognizable</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationService.html">IResultEvaluationService</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationServiceFactory.html">IResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IUserManagement.html">IUserManagement</a></li><li><a href="com.appliedrec.verid.core.IUserManagementFactory.html">IUserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.SessionTaskDelegate.html">SessionTaskDelegate</a></li><li><a href="com.appliedrec.verid.ui.ISessionFailureDialogFactory.html">ISessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.IVerIDSessionFragment.html">IVerIDSessionFragment</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogListener.html">SessionFailureDialogListener</a></li></ul><h2>Enums</h2><ul><li><a href="com.appliedrec.verid.core.Bearing.html">Bearing</a></li><li><a href="com.appliedrec.verid.core.RecognizableType.html">RecognizableType</a></li></ul></aside>
+</body>
+</html>
+<h1>SessionSettings</h1>
+<section>
+<h4>Base class for session settings</h4>
+</section>
+<h4>Package com.appliedrec.verid.core</h4>
+<code>public class  SessionSettings</code>
+<ul class="ancestry"><li>com.appliedrec.verid.core.SessionSettings
+<ul class="ancestry"><li>java.lang.Object
+</li></ul>
+</li></ul>
+<h2>Implements</h2>
+<ul class="ancestry">
+<li>android.os.Parcelable</li>
+</ul>
+<section><h2>Methods</h2><dl>
+<dt><h3><a name="getShowResult()">getShowResult</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getShowResult()</code>
+<p>See whether the session will show the result to the user before reporting back to your activity or fragment.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the session will show the result</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="setShowResult(boolean)">setShowResult</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setShowResult(boolean)</code>
+<p>Set whether the session will show the result to the user before reporting back to your activity or fragment.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>showResult <code>boolean</code></dt>
+<dd>{@literal true} to show result</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getExpiryTime()">getExpiryTime</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getExpiryTime()</code>
+<p>Get the session expiry time.
+ <p>If the session fails to collect the requested number of results in the given time period the session will return with an error.</p></p>
+<h4>Returns</h4>
+<dl>
+<dt><code>long</code></dt>
+<dd>Expiry time in milliseconds</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#getNumberOfResultsToCollect()">com.appliedrec.verid.core.SessionSettings.html#getNumberOfResultsToCollect()</a></li></ul>
+</dd>
+<dt><h3><a name="setExpiryTime(long)">setExpiryTime</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setExpiryTime(long)</code>
+<p>Set the session expiry time.
+ <p>If the session fails to collect the requested number of results in the given time period the session will return with an error.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>expiryTime <code>long</code></dt>
+<dd>Expiry time in milliseconds</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setNumberOfResultsToCollect(int)">com.appliedrec.verid.core.SessionSettings.html#setNumberOfResultsToCollect(int)</a></li></ul>
+</dd>
+<dt><h3><a name="getNumberOfResultsToCollect()">getNumberOfResultsToCollect</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getNumberOfResultsToCollect()</code>
+<p>Get the number of face detection results will be returned by the session.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>int</code></dt>
+<dd>Number of results</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="setNumberOfResultsToCollect(int)">setNumberOfResultsToCollect</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setNumberOfResultsToCollect(int)</code>
+<p>Set the number of face detection results to collect in the session.
+ <p>This will affect the behaviour of the session. For example, setting the value to 2 or greater will enable liveness detection on authentication and liveness detection sessions. Setting the value on a registration session will determine how many faces will be registered for the user.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>numberOfResultsToCollect <code>int</code></dt>
+<dd>Number of results to collect</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getVideoUri()">getVideoUri</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getVideoUri()</code>
+<p>Get the URL where a screen recording of the session will be saved or null if no video should be recorded.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>android.net.Uri</code></dt>
+<dd>File URL of a screen recording</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="setVideoUri(Uri)">setVideoUri</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setVideoUri(Uri)</code>
+<p>Set a file URL of where a screen recording of the session should be saved or null if no video should be recorded.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>videoUri <code>android.net.Uri</code></dt>
+<dd>File URL of where the session should save a screen recording</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getMaxRetryCount()">getMaxRetryCount</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getMaxRetryCount()</code>
+<p>Get the number of times the user will be allowed to retry the session before finishing.
+ <p>The user will be prompted to retry only in specific circumstances: when they move too far in the requested direction, when they move in the opposite direction or when they move outside the view of the camera. Other session failures will finish the session right away.</p>
+ <p>If the retry count is greater than 0 the user will see a dialog explaining the failure and offering tips on how to get the best result. After the user retries the indicated number of times the session will return with a failure.</p></p>
+<h4>Returns</h4>
+<dl>
+<dt><code>int</code></dt>
+<dd>The number of times the user will be permitted to retry the session</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="setMaxRetryCount(int)">setMaxRetryCount</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setMaxRetryCount(int)</code>
+<p>Set the number of times the user will be allowed to retry the session before finishing.
+ <p>The user will be prompted to retry only in specific circumstances: when they move too far in the requested direction, when they move in the opposite direction or when they move outside the view of the camera. Other session failures will finish the session right away.</p>
+ <p>If the retry count is greater than 0 the user will see a dialog explaining the failure and offering tips on how to get the best result. After the user retries the indicated number of times the session will return with a failure.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>maxRetryCount <code>int</code></dt>
+<dd>The number of times the user will be permitted to retry the session</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getIncludeFaceTemplatesInResult()">getIncludeFaceTemplatesInResult</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getIncludeFaceTemplatesInResult()</code>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the session result will include face templates that can be used for face recognition.</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setIncludeFaceTemplatesInResult(boolean)">com.appliedrec.verid.core.SessionSettings.html#setIncludeFaceTemplatesInResult(boolean)</a></li></ul>
+</dd>
+<dt><h3><a name="setIncludeFaceTemplatesInResult(boolean)">setIncludeFaceTemplatesInResult</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setIncludeFaceTemplatesInResult(boolean)</code>
+<p>Set whether to include face templates in the session result.
+ <p>If you are going to use the collected faces for face recognition set this to true. Otherwise setting it to false will speed up the processing in the session. This may be useful if all you need to do is to detect liveness.</p>
+ <p>Note that calling this method on registration and authentication sessions will have no effect. Both have this parameter always set to true.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>includeFaceTemplatesInResult <code>boolean</code></dt>
+<dd>{@literal true} to extract and return face templates for face recognition</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getYawThreshold()">getYawThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getYawThreshold()</code>
+<p>Get horizontal (yaw) threshold where face is considered to be at an angle.
+ <p>For example, a value of 15 indicates that a face with yaw -15 and below is oriented left and a face with yaw 15 or above is oriented right.</p></p>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Yaw threshold</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setYawThreshold(float)">com.appliedrec.verid.core.SessionSettings.html#setYawThreshold(float)</a></li></ul>
+</dd>
+<dt><h3><a name="setYawThreshold(float)">setYawThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setYawThreshold(float)</code>
+<p>Set horizontal (yaw) threshold where face is considered to be at an angle.
+ <p>For example, a value of 15 indicates that a face with yaw -15 and below is oriented left and a face with yaw 15 or above is oriented right.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>yawThreshold <code>float</code></dt>
+<dd>Yaw threshold</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#getYawThreshold()">com.appliedrec.verid.core.SessionSettings.html#getYawThreshold()</a></li></ul>
+</dd>
+<dt><h3><a name="getPitchThreshold()">getPitchThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getPitchThreshold()</code>
+<p>Get vertical (pitch) threshold where face is considered to be at an angle.
+ <p>For example, a value of 15 indicates that a face with pitch -15 and below is oriented up and a face with pitch 15 or above is oriented down.</p></p>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Pitch threshold</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setPitchThreshold(float)">com.appliedrec.verid.core.SessionSettings.html#setPitchThreshold(float)</a></li></ul>
+</dd>
+<dt><h3><a name="setPitchThreshold(float)">setPitchThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setPitchThreshold(float)</code>
+<p>Set vertical (pitch) threshold where face is considered to be at an angle.
+ <p>For example, a value of 15 indicates that a face with pitch -15 and below is oriented up and a face with pitch 15 or above is oriented down.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>pitchThreshold <code>float</code></dt>
+<dd>Pitch threshold</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#getPitchThreshold()">com.appliedrec.verid.core.SessionSettings.html#getPitchThreshold()</a></li></ul>
+</dd>
+<dt><h3><a name="getFaceBoundsFraction()">getFaceBoundsFraction</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getFaceBoundsFraction()</code>
+<p>Get the size of the face guide oval as a fraction of the view size.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>android.graphics.PointF</code></dt>
+<dd>Fraction of the view width and height that represents the size of the face oval in the view.</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setFaceBoundsFraction(PointF)">com.appliedrec.verid.core.SessionSettings.html#setFaceBoundsFraction(PointF)</a></li></ul>
+</dd>
+<dt><h3><a name="setFaceBoundsFraction(PointF)">setFaceBoundsFraction</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setFaceBoundsFraction(PointF)</code>
+<p>Set the size of the face guide oval as a fraction of the view size.
+ <p>If the container view orientation is horizontal then the y parameter will be fraction of the view height.</p>
+ <p>If the container view orientation is vertical then the x parameter will be fraction of the view width.</p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>faceBoundsFraction <code>android.graphics.PointF</code></dt>
+<dd>Fraction of the container view</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBoundsFraction()">com.appliedrec.verid.core.SessionSettings.html#getFaceBoundsFraction()</a></li></ul>
+</dd>
+<dt><h3><a name="getPauseDuration()">getPauseDuration</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getPauseDuration()</code>
+<p>When the face is fixed the face detection will pause to allow enough time for the user to read the on-screen instructions.
+ The default pause is 1500 (1.5 seconds).
+ Decreasing the pause time will shorten the session but may lead to a frustrating user experience if the user isn't allowed enough time to read the prompts.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>long</code></dt>
+<dd>Pause time in milliseconds</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setPauseDuration(long)">com.appliedrec.verid.core.SessionSettings.html#setPauseDuration(long)</a></li></ul>
+</dd>
+<dt><h3><a name="getFaceBufferSize()">getFaceBufferSize</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getFaceBufferSize()</code>
+<p>To reduce the possibility of an unwanted face accidentally being considered in the session the service buffers a number of faces and checks that their bounds are within a given range of each other.
+ Decresing the value will speed up the session but introduce the possibility of a passing face being detected and considered for recognition. Default value is 4.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>int</code></dt>
+<dd>Size of the face buffer</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#setFaceBufferSize(int)">com.appliedrec.verid.core.SessionSettings.html#setFaceBufferSize(int)</a></li></ul>
+</dd>
+<dt><h3><a name="setFaceBufferSize(int)">setFaceBufferSize</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setFaceBufferSize(int)</code>
+<h4>Parameters</h4>
+<dl>
+<dt>faceBufferSize <code>int</code></dt>
+<dd>Size of the face buffer</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()">com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()</a></li></ul>
+</dd>
+</dl></section>

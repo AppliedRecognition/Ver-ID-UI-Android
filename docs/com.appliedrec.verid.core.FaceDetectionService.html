@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ver-ID API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<aside><h2>Classes</h2><ul><li><a href="com.appliedrec.verid.core.AuthenticationSessionSettings.html">AuthenticationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.EulerAngle.html">EulerAngle</a></li><li><a href="com.appliedrec.verid.core.Face.html">Face</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionRecognitionFactory.html">FaceDetectionRecognitionFactory</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionResult.html">FaceDetectionResult</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionServiceFactory.html">FaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.ImageWriterServiceFactory.html">ImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.LivenessDetectionSessionSettings.html">LivenessDetectionSessionSettings</a></li><li><a href="com.appliedrec.verid.core.RecognizableFace.html">RecognizableFace</a></li><li><a href="com.appliedrec.verid.core.RecognizableSubject.html">RecognizableSubject</a></li><li><a href="com.appliedrec.verid.core.RegistrationSessionSettings.html">RegistrationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.ResultEvaluationServiceFactory.html">ResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.SessionResult.html">SessionResult</a></li><li><a href="com.appliedrec.verid.core.SessionSettings.html">SessionSettings</a></li><li><a href="com.appliedrec.verid.core.SessionTask.html">SessionTask</a></li><li><a href="com.appliedrec.verid.core.Size.html">Size</a></li><li><a href="com.appliedrec.verid.core.UserIdentification.html">UserIdentification</a></li><li><a href="com.appliedrec.verid.core.UserManagementFactory.html">UserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.VerID.html">VerID</a></li><li><a href="com.appliedrec.verid.core.VerIDFactory.html">VerIDFactory</a></li><li><a href="com.appliedrec.verid.core.VerIDImage.html">VerIDImage</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogFactory.html">SessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionActivity.html">VerIDSessionActivity</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionIntent.html">VerIDSessionIntent</a></li></ul><h2>Interfaces</h2><ul><li><a href="com.appliedrec.verid.core.IFaceDetection.html">IFaceDetection</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionService.html">IFaceDetectionService</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionServiceFactory.html">IFaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IFaceRecognition.html">IFaceRecognition</a></li><li><a href="com.appliedrec.verid.core.IFaceTracking.html">IFaceTracking</a></li><li><a href="com.appliedrec.verid.core.IImageProviderService.html">IImageProviderService</a></li><li><a href="com.appliedrec.verid.core.IImageProviderServiceFactory.html">IImageProviderServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IImageWriterService.html">IImageWriterService</a></li><li><a href="com.appliedrec.verid.core.IImageWriterServiceFactory.html">IImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IRecognizable.html">IRecognizable</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationService.html">IResultEvaluationService</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationServiceFactory.html">IResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IUserManagement.html">IUserManagement</a></li><li><a href="com.appliedrec.verid.core.IUserManagementFactory.html">IUserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.SessionTaskDelegate.html">SessionTaskDelegate</a></li><li><a href="com.appliedrec.verid.ui.ISessionFailureDialogFactory.html">ISessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.IVerIDSessionFragment.html">IVerIDSessionFragment</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogListener.html">SessionFailureDialogListener</a></li></ul><h2>Enums</h2><ul><li><a href="com.appliedrec.verid.core.Bearing.html">Bearing</a></li><li><a href="com.appliedrec.verid.core.RecognizableType.html">RecognizableType</a></li></ul></aside>
+</body>
+</html>
+<h1>FaceDetectionService</h1>
+<h4>Package com.appliedrec.verid.core</h4>
+<code>public class  FaceDetectionService</code>
+<ul class="ancestry"><li>com.appliedrec.verid.core.FaceDetectionService
+<ul class="ancestry"><li>java.lang.Object
+</li></ul>
+</li></ul>
+<h2>Implements</h2>
+<ul class="ancestry">
+<li>com.appliedrec.verid.core.IFaceDetectionService</li>
+</ul>
+<section><h2>Methods</h2><dl>
+<dt><h3><a name="detectFaceInImage(VerIDImage)">detectFaceInImage</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final synchronized detectFaceInImage(VerIDImage)</code>
+<p>Detect face in image</p>
+<h4>Parameters</h4>
+<dl>
+<dt>image <code><a href="com.appliedrec.verid.core.VerIDImage.html">com.appliedrec.verid.core.VerIDImage</a></code></dt>
+<dd>Image in which to detect the face</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.FaceDetectionResult.html">com.appliedrec.verid.core.FaceDetectionResult</a></code></dt>
+<dd>Face detection result</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getSmoothingBufferSize()">getSmoothingBufferSize</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getSmoothingBufferSize()</code>
+<p>To reduce noise in face detection the face angle and bounds are kept in a buffer and a smoothed value is used for calculations and display.
+ Override this method if you need to increase or decrease the size of the buffers. Default value is 3.
+ Larger buffer size will yield smoother results but the display may appear lagging behind.
+ Smaller size will produce more responsive but potentially stuttering and error-prone user experience.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>int</code></dt>
+<dd>Buffer size</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="isFaceMisaligned(EulerAngle)">isFaceMisaligned</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>protected isFaceMisaligned(EulerAngle)</code>
+<p>Tells the service whether to consider a face with the given angle misaligned with the requested bearing.
+ Default implementation checks whether the angle matches the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getRequestedBearing()">requested bearing</a>.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>faceAngle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>EulerAngle of the detected face</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the face is misaligned.</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="isFaceAligned(Face, EulerAngle, Size)">isFaceAligned</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>protected isFaceAligned(Face, EulerAngle, Size)</code>
+<p>Tells the service whether to consider the face and the smoothed angle aligned.
+ Default implementation checks whether the angle matches the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getRequestedBearing()">requested bearing</a> and the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getFaceBuffer()">face buffer</a> is filled to the <a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()">requested size</a> and</p>
+<h4>Parameters</h4>
+<dl>
+<dt>face <code><a href="com.appliedrec.verid.core.Face.html">com.appliedrec.verid.core.Face</a></code></dt>
+<dd>Latest detected face</dd>
+<dt>faceAngle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Smoothed face angle</dd>
+<dt>size <code><a href="com.appliedrec.verid.core.Size.html">com.appliedrec.verid.core.Size</a></code></dt>
+<dd>Image size in pixels</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the face is aligned with the requested bearing</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.FaceDetectionService.html#getSmoothingBufferSize()">com.appliedrec.verid.core.FaceDetectionService.html#getSmoothingBufferSize()</a></li></ul>
+</dd>
+<dt><h3><a name="isFaceWithBoundsFixedInImageSize(RectF, Size)">isFaceWithBoundsFixedInImageSize</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public isFaceWithBoundsFixedInImageSize(RectF, Size)</code>
+<p>When the service first detects a face it checks the result of this method to see if it can consider the face "fixed" and ready to ask the user to align with a bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>faceBounds <code>android.graphics.RectF</code></dt>
+<dd>Bounds of the detected face</dd>
+<dt>size <code><a href="com.appliedrec.verid.core.Size.html">com.appliedrec.verid.core.Size</a></code></dt>
+<dd>Pixel size of the image in which the face was detected</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the face is "fixed"</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="angleMatchesBearing(EulerAngle, Bearing)">angleMatchesBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final angleMatchesBearing(EulerAngle, Bearing)</code>
+<p>Helper method to check whether an angle matches a bearing</p>
+<h4>Parameters</h4>
+<dl>
+<dt>angle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Face angle</dd>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the angle matches the bearing</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getAngleForBearing(Bearing)">getAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getAngleForBearing(Bearing)</code>
+<p>Helper method to get an angle representing the given bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Bearing angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getMinAngleForBearing(Bearing)">getMinAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getMinAngleForBearing(Bearing)</code>
+<p>Helper method to get a minimum angle for the given bearing.
+ For a face to be considered matching a bearing, its angle must lie between minimum and <a href="com.appliedrec.verid.core.FaceDetectionService.html#getMaxAngleForBearing(Bearing)">maximum</a> angles for the bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Minimum angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getMaxAngleForBearing(Bearing)">getMaxAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getMaxAngleForBearing(Bearing)</code>
+<p>Helper method to get a maximum angle for the given bearing.
+ For a face to be considered matching a bearing, its angle must lie between <a href="com.appliedrec.verid.core.FaceDetectionService.html#getMinAngleForBearing(Bearing)">minimum</a> and maximum angles for the bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Maximum angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getStatus()">getStatus</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getStatus()</code>
+<p>Returns the current status of face detection.
+ The status of a typical liveness detection session will change from <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#STARTED">started</a>
+ to <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#FACE_FOUND">face found</a> to <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#FACE_FIXED">face fixed</a>
+ to <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#FACE_ALIGNED">face aligned</a> to <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#FACE_MISALIGNED">face misaligned</a>
+ and again <a href="com.appliedrec.verid.core.FaceDetectionStatus.html#FACE_ALIGNED">face aligned</a>.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.FaceDetectionStatus.html">com.appliedrec.verid.core.FaceDetectionStatus</a></code></dt>
+<dd>Face detection status</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getFaceBuffer()">getFaceBuffer</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getFaceBuffer()</code>
+<p>Buffer of detected face bounds. Used when evaluating whether a face is aligned.
+ The maximum size of the buffer is dictated by <a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()">getFaceBufferSize()</a>.</p>
+<h4>Returns</h4>
+<dl>
+<dt><code>java.util.ArrayList&lt;RectF&gt;</code></dt>
+<dd>List of detected face bounds</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getAngleFromAngleToBearing(EulerAngle, Bearing)">getAngleFromAngleToBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getAngleFromAngleToBearing(EulerAngle, Bearing)</code>
+<p>EulerAngle from a given angle to a bearing</p>
+<h4>Parameters</h4>
+<dl>
+<dt>angle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>From angle</dd>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>To bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>double</code></dt>
+<dd>EulerAngle in radians</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getDistanceFromAngleToBearing(EulerAngle, Bearing)">getDistanceFromAngleToBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getDistanceFromAngleToBearing(EulerAngle, Bearing)</code>
+<p>Distance from a given angle to a bearing</p>
+<h4>Parameters</h4>
+<dl>
+<dt>angle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>From angle</dd>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>To bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>double</code></dt>
+<dd>Distance normalized to values between 0.0 and 1.0</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getThresholdAngleForAxis(FaceDetectionService.Axis)">getThresholdAngleForAxis</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getThresholdAngleForAxis(FaceDetectionService.Axis)</code>
+<p>Threshold angle that represents a bearing.
+ For example returning a value of 12 for the yaw axis will make bearings with yaw -12 represent left and bearings with yaw 12 represent right.
+ Values over 18 are too extreme and values below 10 are not pronounced enough.
+ Default value is 12 for both yaw and pitch.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>axis <code><a href="com.appliedrec.verid.core.FaceDetectionService.Axis.html">com.appliedrec.verid.core.FaceDetectionService.Axis</a></code></dt>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Threshold angle for the given axis</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.FaceDetectionService.html#getThresholdAngleToleranceForAxis(Axis)">com.appliedrec.verid.core.FaceDetectionService.html#getThresholdAngleToleranceForAxis(Axis)</a></li></ul>
+</dd>
+<dt><h3><a name="getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)">getThresholdAngleToleranceForAxis</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)</code>
+<p>Value added or subtracted from the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getThresholdAngleForAxis(Axis)">threshold</a> when evaluating whether an angle matches a bearing.
+ For example, given pitch <a href="com.appliedrec.verid.core.FaceDetectionService.html#getThresholdAngleForAxis(Axis)">threshold</a> of 12 and a tolerance returned by this method of 5, an angle
+ will match one of the <a href="com.appliedrec.verid.core.Bearing.html#UP">up bearings</a> if its pitch is below -7 (0 - 12 + 5).
+
+ <h4>Example</h4>
+ <p>Note: The example illustrates the calculation done by the service. The method <a href="com.appliedrec.verid.core.FaceDetectionService.html#angleMatchesBearing(EulerAngle, Bearing)">angleMatchesBearing</a> will achieve the same result with less boilerplate code.</p>
+ <p>
+ <code>
+ EulerAngleF faceAngle; // EulerAngle of the datected face
+ float yawThreshold = getThresholdAngleForAxis(Axis.YAW);
+ float yawTolerance = getThresholdAngleToleranceForAxis(Axis.YAW);
+ EulerAngleF straightBearingAngle = getAngleForBearing(Bearing.STRAIGHT);
+ boolean isYawCentred = faceAngle.getYaw() > straightBearingAngle.getYaw() - yawThreshold - yawTolerance && faceAngle.getYaw() < straightBearingAngle.getYaw() + yawThreshold + yawTolerance;
+ </code>
+ </p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>axis <code><a href="com.appliedrec.verid.core.FaceDetectionService.Axis.html">com.appliedrec.verid.core.FaceDetectionService.Axis</a></code></dt>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Threshold tolerance angle for the given axis</dd>
+</dl>
+
+</dd>
+</dl></section>

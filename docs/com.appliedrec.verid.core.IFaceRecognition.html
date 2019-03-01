@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ver-ID API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<aside><h2>Classes</h2><ul><li><a href="com.appliedrec.verid.core.AuthenticationSessionSettings.html">AuthenticationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.EulerAngle.html">EulerAngle</a></li><li><a href="com.appliedrec.verid.core.Face.html">Face</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionRecognitionFactory.html">FaceDetectionRecognitionFactory</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionResult.html">FaceDetectionResult</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionServiceFactory.html">FaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.ImageWriterServiceFactory.html">ImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.LivenessDetectionSessionSettings.html">LivenessDetectionSessionSettings</a></li><li><a href="com.appliedrec.verid.core.RecognizableFace.html">RecognizableFace</a></li><li><a href="com.appliedrec.verid.core.RecognizableSubject.html">RecognizableSubject</a></li><li><a href="com.appliedrec.verid.core.RegistrationSessionSettings.html">RegistrationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.ResultEvaluationServiceFactory.html">ResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.SessionResult.html">SessionResult</a></li><li><a href="com.appliedrec.verid.core.SessionSettings.html">SessionSettings</a></li><li><a href="com.appliedrec.verid.core.SessionTask.html">SessionTask</a></li><li><a href="com.appliedrec.verid.core.Size.html">Size</a></li><li><a href="com.appliedrec.verid.core.UserIdentification.html">UserIdentification</a></li><li><a href="com.appliedrec.verid.core.UserManagementFactory.html">UserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.VerID.html">VerID</a></li><li><a href="com.appliedrec.verid.core.VerIDFactory.html">VerIDFactory</a></li><li><a href="com.appliedrec.verid.core.VerIDImage.html">VerIDImage</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogFactory.html">SessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionActivity.html">VerIDSessionActivity</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionIntent.html">VerIDSessionIntent</a></li></ul><h2>Interfaces</h2><ul><li><a href="com.appliedrec.verid.core.IFaceDetection.html">IFaceDetection</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionService.html">IFaceDetectionService</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionServiceFactory.html">IFaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IFaceRecognition.html">IFaceRecognition</a></li><li><a href="com.appliedrec.verid.core.IFaceTracking.html">IFaceTracking</a></li><li><a href="com.appliedrec.verid.core.IImageProviderService.html">IImageProviderService</a></li><li><a href="com.appliedrec.verid.core.IImageProviderServiceFactory.html">IImageProviderServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IImageWriterService.html">IImageWriterService</a></li><li><a href="com.appliedrec.verid.core.IImageWriterServiceFactory.html">IImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IRecognizable.html">IRecognizable</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationService.html">IResultEvaluationService</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationServiceFactory.html">IResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IUserManagement.html">IUserManagement</a></li><li><a href="com.appliedrec.verid.core.IUserManagementFactory.html">IUserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.SessionTaskDelegate.html">SessionTaskDelegate</a></li><li><a href="com.appliedrec.verid.ui.ISessionFailureDialogFactory.html">ISessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.IVerIDSessionFragment.html">IVerIDSessionFragment</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogListener.html">SessionFailureDialogListener</a></li></ul><h2>Enums</h2><ul><li><a href="com.appliedrec.verid.core.Bearing.html">Bearing</a></li><li><a href="com.appliedrec.verid.core.RecognizableType.html">RecognizableType</a></li></ul></aside>
+</body>
+</html>
+<h1>IFaceRecognition</h1>
+<section>
+<h4>Face recognition</h4>
+</section>
+<h4>Package com.appliedrec.verid.core</h4>
+<code>public interface  IFaceRecognition</code>
+<ul class="ancestry"><li>com.appliedrec.verid.core.IFaceRecognition
+</li></ul>
+<section><h2>Methods</h2><dl>
+<dt><h3><a name="getAuthenticationThreshold()">getAuthenticationThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getAuthenticationThreshold()</code>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Similarity score threshold beyond which two faces are considered similar enough to be of the same person.</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.IFaceRecognition.html#compareFaceToFaces(IRecognizable, RecognizableFace[])">com.appliedrec.verid.core.IFaceRecognition.html#compareFaceToFaces(IRecognizable, RecognizableFace[])</a></li></ul>
+</dd>
+<dt><h3><a name="setAuthenticationThreshold(float)">setAuthenticationThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public setAuthenticationThreshold(float)</code>
+<p>Set authentication score threshold.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>threshold <code>float</code></dt>
+<dd>Similarity score threshold</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.IFaceRecognition.html#getAuthenticationThreshold()">com.appliedrec.verid.core.IFaceRecognition.html#getAuthenticationThreshold()</a></li></ul>
+</dd>
+<dt><h3><a name="compareFaceToFaces(IRecognizable, RecognizableFace[])">compareFaceToFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public compareFaceToFaces(IRecognizable, RecognizableFace[])</code>
+<p>Compare a face or a multi-face subject to an array of faces.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>face <code><a href="com.appliedrec.verid.core.IRecognizable.html">com.appliedrec.verid.core.IRecognizable</a></code></dt>
+<dd>The subject or face to compare to the other faces</dd>
+<dt>faces <code><a href="com.appliedrec.verid.core.RecognizableFace.html">com.appliedrec.verid.core.RecognizableFace[]</a></code></dt>
+<dd>Faces to compare to the subject or face</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Similarity score</dd>
+</dl>
+<h4>Throws</h4>
+<dl>
+<dt><code>java.lang.Exception</code></dt>
+<dd>if the comparison fails</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="createSubjectFromFaces(IRecognizable[])">createSubjectFromFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public createSubjectFromFaces(IRecognizable[])</code>
+<p>Create a recognition subject from multiple faces.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>faces <code><a href="com.appliedrec.verid.core.IRecognizable.html">com.appliedrec.verid.core.IRecognizable[]</a></code></dt>
+<dd>Faces to combine into a subject</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.RecognizableSubject.html">com.appliedrec.verid.core.RecognizableSubject</a></code></dt>
+<dd>Face recognition subject</dd>
+</dl>
+<h4>Throws</h4>
+<dl>
+<dt><code>java.lang.Exception</code></dt>
+<dd>if the creation fails</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="createRecognizableFacesFromFaces(Face[], VerIDImage)">createRecognizableFacesFromFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public createRecognizableFacesFromFaces(Face[], VerIDImage)</code>
+<p>Create faces that can be used for face recognition from faces.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>faces <code><a href="com.appliedrec.verid.core.Face.html">com.appliedrec.verid.core.Face[]</a></code></dt>
+<dd>Faces to use as source</dd>
+<dt>image <code><a href="com.appliedrec.verid.core.VerIDImage.html">com.appliedrec.verid.core.VerIDImage</a></code></dt>
+<dd>Image in which the faces were detected</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.RecognizableFace.html">com.appliedrec.verid.core.RecognizableFace[]</a></code></dt>
+<dd>Array of faces that can be used for face recognition</dd>
+</dl>
+<h4>Throws</h4>
+<dl>
+<dt><code>java.lang.Exception</code></dt>
+<dd>if the creation fails</dd>
+</dl>
+
+</dd>
+</dl></section>
