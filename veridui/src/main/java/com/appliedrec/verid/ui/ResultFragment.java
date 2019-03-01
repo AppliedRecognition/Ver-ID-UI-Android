@@ -19,7 +19,7 @@ import android.widget.TextView;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.SessionResult;
 
-public class ResultFragment extends Fragment {
+public class ResultFragment extends Fragment implements IResultFragment {
 
     private ResultFragmentListener resultFragmentListener;
     private SessionResult sessionResult;

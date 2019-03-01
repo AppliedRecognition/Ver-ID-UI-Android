@@ -43,17 +43,39 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Activity that runs a Ver-ID session
+ * @param <T> Session settings type
+ * @param <U> Fragment type
+ * @since 1.0.0
+ */
 public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener {
 
     //region Public constants
+    /**
+     * Intent extra name for settings
+     * @since 1.0.0
+     */
     public static final String EXTRA_SETTINGS = "com.appliedrec.verid.ui.EXTRA_SETTINGS";
+    /**
+     * Intent extra name for Ver-ID instance
+     * @since 1.0.0
+     */
     public static final String EXTRA_VERID_INSTANCE_ID = "com.appliedrec.verid.ui.EXTRA_VERID_INSTANCE_ID";
+    /**
+     * Intent extra name for session result
+     * @since 1.0.0
+     */
     public static final String EXTRA_RESULT = "com.appliedrec.verid.ui.EXTRA_RESULT";
+    /**
+     * Intent extra name for error
+     * @since 1.0.0
+     */
     public static final String EXTRA_ERROR = "com.appliedrec.verid.ui.EXTRA_ERROR";
-    public static final int REQUEST_CAMERA_PERMISSION = 1;
     //endregion
 
-    //region Private constants
+    //region Other constants
+    static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final int REQUEST_CODE_TIPS = 0;
     private static final String FRAGMENT_DIALOG = "fragmentDialog";
     private static final String FRAGMENT_VERID = "verid";
@@ -189,6 +211,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Start Ver-ID session
      *
      * <p>Begin executing Ver-ID session task. The task will report its progress by calling the {@link #onProgress(SessionTask, SessionResult, FaceDetectionResult) onProgress} method. When the session completes it will call the {@link #onComplete(SessionTask, SessionResult) onComplete} method.</p>
+     * @since 1.0.0
      */
     protected void startSessionTask() {
         try {
@@ -213,6 +236,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * <p>Otherwise this method sets the activity result and finishes the activity.</p>
      * <p>Override this method if wish to handle the result in this activity instead of passing it to the parent activity.</p>
      * @param sessionResult
+     * @since 1.0.0
      */
     protected void finishWithResult(SessionResult sessionResult) {
         if (sessionResult.isCanceled()) {
@@ -237,6 +261,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * <p>This method sets the activity result and finishes the activity.</p>
      * <p>Override this method if you wish to handle the error in this activity instead of passing it to the parent activity.</p>
      * @param error
+     * @since 1.0.0
      */
     protected void finishWithError(Exception error) {
         shutDownExecutor();
@@ -252,6 +277,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      *
      * <p>This method sets the activity result to {@code Activity.RESULT_CENCELED} and finishes the activity.</p>
      * <p>Override this method if you wish to handle the session cancellation in this activity instead of finishing the activity.</p>
+     * @since 1.0.0
      */
     protected void finishCancel() {
         shutDownExecutor();
@@ -262,6 +288,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     /**
      * @return Session settings
+     * @since 1.0.0
      */
     protected T getSessionSettings() {
         return sessionSettings;
@@ -269,6 +296,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     /**
      * @return Ver-ID environment used to run the Ver-ID session
+     * @since 1.0.0
      */
     protected VerID getEnvironment() {
         return environment;
@@ -283,6 +311,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @param sessionTask The task that progressed
      * @param sessionResult The session result at the point of progress
      * @param faceDetectionResult Face detection result that was used to generate the session result
+     * @since 1.0.0
      */
     @Override
     public void onProgress(SessionTask sessionTask, SessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
@@ -367,6 +396,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * <p>The default implementation shows the session result if the session settings requested it. Otherwise the method calls {@link #finishWithResult(SessionResult)}.</p>
      * @param sessionTask Task that completed
      * @param sessionResult Result of the task
+     * @since 1.0.0
      */
     @Override
     public void onComplete(SessionTask sessionTask, final SessionResult sessionResult) {
@@ -395,6 +425,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     /**
      * @return Instance of {@link ISessionFailureDialogFactory}
+     * @since 1.0.0
      */
     protected ISessionFailureDialogFactory makeSessionFailureDialogFactory() {
         return new SessionFailureDialogFactory();
@@ -404,6 +435,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Shows a dialog when the Ver-ID session fails due to the user not failing liveness detection and the user tried fewer than the {@link SessionSettings#getMaxRetryCount() maximum number of tries} set in the session settings.
      * @param faceDetectionResult
      * @param sessionResult
+     * @since 1.0.0
      */
     protected void showFailureDialog(FaceDetectionResult faceDetectionResult, SessionResult sessionResult) {
         String message;
@@ -451,6 +483,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     /**
      * Override this if you wish to supply your own instance of {@link IResultEvaluationServiceFactory}.
      * @return Result evaluation service factory
+     * @since 1.0.0
      */
     protected IResultEvaluationServiceFactory<T> makeResultEvaluationServiceFactory() {
         return new ResultEvaluationServiceFactory<>(this, environment);
@@ -465,6 +498,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Override this if you want to supply your own instance of {@link IImageProviderServiceFactory}.
      * <p>The default implementation uses this activity as the image provider service factory.</p>
      * @return Image provider service factory
+     * @since 1.0.0
      */
     protected IImageProviderServiceFactory makeImageProviderServiceFactory() {
         return this;
@@ -474,6 +508,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Override this if you want to supply your own {@link IImageProviderService}.
      * <p>The default implementation uses this activity as the image provider service.</p>
      * @return Image provider service
+     * @since 1.0.0
      */
     @Override
     public IImageProviderService makeImageProviderService() {
@@ -488,6 +523,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Implementation of {@link IImageProviderService}.
      * @return Image obtained from {@link VerIDSessionFragment}
      * @throws Exception If the session fragment is {@literal null} or if the session expired
+     * @since 1.0.0
      */
     @Override
     public VerIDImage dequeueImage() throws Exception {
@@ -507,6 +543,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     /**
      * Create an instance of {@code Fragment} that implements the {@link IVerIDSessionFragment} interface.
      * @return Fragment that implements {@link IVerIDSessionFragment}
+     * @since 1.0.0
      */
     @SuppressWarnings("unchecked")
     protected U makeVerIDSessionFragment() {
@@ -520,9 +557,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     /**
      * Create an instance of a {@code Fragment} that shows the result of the session.
      * <p>This fragment will only be shown if {@link SessionSettings#getShowResult()} is set to {@literal true}.</p>
-     * <p>The fragment must call {@link ResultFragmentListener#onResultFragmentDismissed(ResultFragment)} on the activity it's attached to when finished.</p>
+     * <p>The fragment must call {@link ResultFragmentListener#onResultFragmentDismissed(IResultFragment)} on the activity it's attached to when finished.</p>
      * @param sessionResult The result to display in the fragment
      * @return Fragment
+     * @since 1.0.0
      */
     protected Fragment makeResultFragment(SessionResult sessionResult) {
         int resourceId;
@@ -561,6 +599,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Override this if you wish to supply your own instance of {@link IFaceDetectionServiceFactory}.
      * <p>The default implementation returns an instance of {@link FaceDetectionServiceFactory}.</p>
      * @return Instance of {@link IFaceDetectionServiceFactory}
+     * @since 1.0.0
      */
     protected IFaceDetectionServiceFactory makeFaceDetectionServiceFactory() {
         return new FaceDetectionServiceFactory(environment);
@@ -574,6 +613,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Override this method if you wish to supply your own instance of {@link IImageWriterServiceFactory}.
      * <p>The default implementation returns an instance of {@link ImageWriterServiceFactory}.</p>
      * @return Instance of {@link IImageWriterServiceFactory}
+     * @since 1.0.0
      */
     protected IImageWriterServiceFactory makeImageWriterServiceFactory() {
         return new ImageWriterServiceFactory(this);
@@ -605,9 +645,10 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     /**
      * Called when the user dismisses the fragment showing the session result.
      * @param resultFragment The fragment that was dismissed
+     * @since 1.0.0
      */
     @Override
-    public void onResultFragmentDismissed(ResultFragment resultFragment) {
+    public void onResultFragmentDismissed(IResultFragment resultFragment) {
         finishWithResult(resultFragment.getSessionResult());
     }
 

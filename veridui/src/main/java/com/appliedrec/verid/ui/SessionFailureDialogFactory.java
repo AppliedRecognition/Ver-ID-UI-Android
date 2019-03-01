@@ -14,12 +14,25 @@ import android.widget.FrameLayout;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.SessionSettings;
 
+/**
+ * Creates a dialog that shows an animation of a face responding to liveness detection prompts
+ * @since 1.0.0
+ */
 public class SessionFailureDialogFactory implements ISessionFailureDialogFactory {
 
     enum ScreenDensity {
         MEDIUM, HIGH, EXTRA_HIGH
     }
 
+    /**
+     * Make a dialog that shows an animation of a face responding to liveness detection prompts.
+     * @param activity Activity that will be presenting the dialog
+     * @param message Message in the dialog
+     * @param listener Dialog listener
+     * @param sessionSettings Session settings
+     * @return Alert dialog
+     * @since 1.0.0
+     */
     @Override
     public AlertDialog makeDialog(Activity activity, String message, final SessionFailureDialogListener listener, SessionSettings sessionSettings) {
         ScreenDensity screenDensity;
