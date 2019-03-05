@@ -26,7 +26,7 @@
 <dt><code>float</code></dt>
 <dd>Similarity score threshold beyond which two faces are considered similar enough to be of the same person.</dd>
 </dl>
-<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.IFaceRecognition.html#compareFaceToFaces(IRecognizable, RecognizableFace[])">com.appliedrec.verid.core.IFaceRecognition.html#compareFaceToFaces(IRecognizable, RecognizableFace[])</a></li></ul>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.IFaceRecognition.html#compareSubjectFacesToFaces(IRecognizable[], RecognizableFace[])">com.appliedrec.verid.core.IFaceRecognition.html#compareSubjectFacesToFaces(IRecognizable[], RecognizableFace[])</a></li></ul>
 </dd>
 <dt><h3><a name="setAuthenticationThreshold(float)">setAuthenticationThreshold</a></h3><p>Introduced in version 1.0.0</p></dt>
 <dd>
@@ -39,16 +39,16 @@
 </dl>
 <h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.IFaceRecognition.html#getAuthenticationThreshold()">com.appliedrec.verid.core.IFaceRecognition.html#getAuthenticationThreshold()</a></li></ul>
 </dd>
-<dt><h3><a name="compareFaceToFaces(IRecognizable, RecognizableFace[])">compareFaceToFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dt><h3><a name="compareSubjectFacesToFaces(IRecognizable[], RecognizableFace[])">compareSubjectFacesToFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
 <dd>
-<code>public compareFaceToFaces(IRecognizable, RecognizableFace[])</code>
+<code>public compareSubjectFacesToFaces(IRecognizable[], RecognizableFace[])</code>
 <p>Compare a face or a multi-face subject to an array of faces.</p>
 <h4>Parameters</h4>
 <dl>
-<dt>face <code><a href="com.appliedrec.verid.core.IRecognizable.html">com.appliedrec.verid.core.IRecognizable</a></code></dt>
-<dd>The subject or face to compare to the other faces</dd>
+<dt>subjectFaces <code><a href="com.appliedrec.verid.core.IRecognizable.html">com.appliedrec.verid.core.IRecognizable[]</a></code></dt>
+<dd>The subject faces to compare to the other faces</dd>
 <dt>faces <code><a href="com.appliedrec.verid.core.RecognizableFace.html">com.appliedrec.verid.core.RecognizableFace[]</a></code></dt>
-<dd>Faces to compare to the subject or face</dd>
+<dd>Faces to compare to the subject faces</dd>
 </dl>
 <h4>Returns</h4>
 <dl>
@@ -59,27 +59,6 @@
 <dl>
 <dt><code>java.lang.Exception</code></dt>
 <dd>if the comparison fails</dd>
-</dl>
-
-</dd>
-<dt><h3><a name="createSubjectFromFaces(IRecognizable[])">createSubjectFromFaces</a></h3><p>Introduced in version 1.0.0</p></dt>
-<dd>
-<code>public createSubjectFromFaces(IRecognizable[])</code>
-<p>Create a recognition subject from multiple faces.</p>
-<h4>Parameters</h4>
-<dl>
-<dt>faces <code><a href="com.appliedrec.verid.core.IRecognizable.html">com.appliedrec.verid.core.IRecognizable[]</a></code></dt>
-<dd>Faces to combine into a subject</dd>
-</dl>
-<h4>Returns</h4>
-<dl>
-<dt><code><a href="com.appliedrec.verid.core.RecognizableSubject.html">com.appliedrec.verid.core.RecognizableSubject</a></code></dt>
-<dd>Face recognition subject</dd>
-</dl>
-<h4>Throws</h4>
-<dl>
-<dt><code>java.lang.Exception</code></dt>
-<dd>if the creation fails</dd>
 </dl>
 
 </dd>
