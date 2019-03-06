@@ -8,6 +8,7 @@ import android.graphics.RectF;
 import android.graphics.YuvImage;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -290,7 +291,8 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @return Session settings
      * @since 1.0.0
      */
-    protected T getSessionSettings() {
+    @Override
+    public T getSessionSettings() {
         return sessionSettings;
     }
 
@@ -314,6 +316,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @since 1.0.0
      */
     @Override
+    @MainThread
     public void onProgress(SessionTask sessionTask, SessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
         if (faceDetectionService == null) {
             return;
@@ -322,68 +325,11 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         if (defaultFaceBounds == null) {
             return;
         }
-        @Nullable String labelText;
-        boolean isHighlighted;
-        RectF ovalBounds;
-        @Nullable RectF cutoutBounds;
-        @Nullable EulerAngle faceAngle;
-        boolean showArrow;
-        @Nullable EulerAngle offsetAngleFromBearing;
-        sessionFragment.didProduceSessionResultFromFaceDetectionResult(sessionResult, faceDetectionResult);
-        if (sessionResult.isProcessing()) {
-            labelText = "Please wait";
-            isHighlighted = true;
-            ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-            cutoutBounds = null;
-            faceAngle = null;
-            showArrow = false;
-            offsetAngleFromBearing = null;
-        } else {
-            switch (faceDetectionResult.getStatus()) {
-                case FACE_FIXED:
-                case FACE_ALIGNED:
-                    labelText = getString(R.string.great_hold_it);
-                    isHighlighted = true;
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = null;
-                    showArrow = false;
-                    offsetAngleFromBearing = null;
-                    break;
-                case FACE_MISALIGNED:
-                    labelText = getString(R.string.slowly_turn_to_follow_arror);
-                    isHighlighted = false;
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = faceDetectionResult.getFaceAngle();
-                    showArrow = true;
-                    offsetAngleFromBearing = faceDetectionService.offsetFromAngleToBearing(faceAngle != null ? faceAngle : new EulerAngle(), faceDetectionResult.getRequestedBearing());
-                    break;
-                case FACE_TURNED_TOO_FAR:
-                    labelText = null;
-                    isHighlighted = false;
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = null;
-                    showArrow = false;
-                    offsetAngleFromBearing = null;
-                    break;
-                default:
-                    labelText = getString(R.string.move_face_into_oval);
-                    isHighlighted = false;
-                    ovalBounds = defaultFaceBounds;
-                    cutoutBounds = faceDetectionResult.getFaceBounds();
-                    faceAngle = null;
-                    showArrow = false;
-                    offsetAngleFromBearing = null;
-            }
+        EulerAngle offsetAngleFromBearing = null;
+        if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED) {
+            offsetAngleFromBearing = faceDetectionService.offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
-        Matrix matrix = sessionFragment.imageScaleTransformAtImageSize(faceDetectionResult.getImageSize());
-        matrix.mapRect(ovalBounds);
-        if (cutoutBounds != null) {
-            matrix.mapRect(cutoutBounds);
-        }
-        sessionFragment.drawCameraOverlay(faceDetectionResult.getRequestedBearing(), labelText, isHighlighted, ovalBounds, cutoutBounds, faceAngle, showArrow, offsetAngleFromBearing);
+        sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
         if (sessionResult.getError() != null) {
             if (retryCount < sessionSettings.getMaxRetryCount()) {
                 showFailureDialog(faceDetectionResult, sessionResult);
@@ -548,9 +494,9 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     @SuppressWarnings("unchecked")
     protected U makeVerIDSessionFragment() {
         if (sessionSettings instanceof RegistrationSessionSettings) {
-            return (U)VerIDRegistrationSessionFragment.newInstance((RegistrationSessionSettings)sessionSettings);
+            return (U)new VerIDRegistrationSessionFragment();
         } else {
-            return (U) VerIDSessionFragment.newInstance();
+            return (U)new VerIDSessionFragment();
         }
     }
 

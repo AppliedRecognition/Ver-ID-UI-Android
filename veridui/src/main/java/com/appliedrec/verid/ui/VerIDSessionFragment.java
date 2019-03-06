@@ -78,10 +78,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private int neutralColour = 0xFFFFFFFF;
     private int backgroundColour = 0x80000000;
 
-    public static VerIDSessionFragment newInstance() {
-        return new VerIDSessionFragment();
-    }
-
     //region Fragment lifecycle
 
     @Nullable
@@ -402,6 +398,40 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     //endregion
 
+    /**
+     * Indicates how to transform an image of the given size to fit to the fragment view.
+     * @param size Image size
+     * @return Transformation matrix
+     * @since 1.0.0
+     */
+    public Matrix imageScaleTransformAtImageSize(Size size) {
+        float width = (float)viewOverlays.getWidth();
+        float height = (float)viewOverlays.getHeight();
+        float viewAspectRatio = width / height;
+        float imageAspectRatio = (float)size.width / (float)size.height;
+        RectF rect = new RectF();
+        if (imageAspectRatio > viewAspectRatio) {
+            rect.bottom = size.height;
+            float w = size.height * viewAspectRatio;
+            rect.left = size.width / 2 - w / 2;
+            rect.right = size.width / 2 + w / 2;
+        } else {
+            rect.right = size.width;
+            float h = size.width / viewAspectRatio;
+            rect.top = size.height / 2 - h / 2;
+            rect.bottom = size.height / 2 + h / 2;
+        }
+        float scale = width / rect.width();
+        Matrix matrix = new Matrix();
+        matrix.setTranslate(0-rect.left, 0-rect.top);
+        matrix.postScale(scale, scale);
+        return matrix;
+    }
+
+    protected VerIDSessionFragmentDelegate getDelegate() {
+        return delegate;
+    }
+
     //region Ver-ID session fragment interface
 
     public void startCamera() {
@@ -441,37 +471,71 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
-    public Matrix imageScaleTransformAtImageSize(Size size) {
-        float width = (float)viewOverlays.getWidth();
-        float height = (float)viewOverlays.getHeight();
-        float viewAspectRatio = width / height;
-        float imageAspectRatio = (float)size.width / (float)size.height;
-        RectF rect = new RectF();
-        if (imageAspectRatio > viewAspectRatio) {
-            rect.bottom = size.height;
-            float w = size.height * viewAspectRatio;
-            rect.left = size.width / 2 - w / 2;
-            rect.right = size.width / 2 + w / 2;
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
+        @Nullable String labelText;
+        boolean isHighlighted;
+        RectF ovalBounds;
+        @Nullable RectF cutoutBounds;
+        @Nullable EulerAngle faceAngle;
+        boolean showArrow;
+        if (sessionResult.isProcessing()) {
+            labelText = getString(R.string.please_wait);
+            isHighlighted = true;
+            ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+            cutoutBounds = null;
+            faceAngle = null;
+            showArrow = false;
         } else {
-            rect.right = size.width;
-            float h = size.width / viewAspectRatio;
-            rect.top = size.height / 2 - h / 2;
-            rect.bottom = size.height / 2 + h / 2;
+            switch (faceDetectionResult.getStatus()) {
+                case FACE_FIXED:
+                case FACE_ALIGNED:
+                    labelText = getString(R.string.great_hold_it);
+                    isHighlighted = true;
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = null;
+                    faceAngle = null;
+                    showArrow = false;
+                    break;
+                case FACE_MISALIGNED:
+                    labelText = getString(R.string.slowly_turn_to_follow_arror);
+                    isHighlighted = false;
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = null;
+                    faceAngle = faceDetectionResult.getFaceAngle();
+                    showArrow = true;
+                    break;
+                case FACE_TURNED_TOO_FAR:
+                    labelText = null;
+                    isHighlighted = false;
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = null;
+                    faceAngle = null;
+                    showArrow = false;
+                    break;
+                default:
+                    labelText = getString(R.string.move_face_into_oval);
+                    isHighlighted = false;
+                    ovalBounds = defaultFaceBounds;
+                    cutoutBounds = faceDetectionResult.getFaceBounds();
+                    faceAngle = null;
+                    showArrow = false;
+            }
         }
-        float scale = width / rect.width();
-        Matrix matrix = new Matrix();
-        matrix.setTranslate(0-rect.left, 0-rect.top);
-        matrix.postScale(scale, scale);
-        return matrix;
+        Matrix matrix = imageScaleTransformAtImageSize(faceDetectionResult.getImageSize());
+        matrix.mapRect(ovalBounds);
+        if (cutoutBounds != null) {
+            matrix.mapRect(cutoutBounds);
+        }
+        drawCameraOverlay(faceDetectionResult.getRequestedBearing(), labelText, isHighlighted, ovalBounds, cutoutBounds, faceAngle, showArrow, offsetAngleFromBearing);
     }
 
     @Override
-    public void didProduceSessionResultFromFaceDetectionResult(SessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
-
+    public void clearCameraOverlay() {
+        instructionView.setVisibility(View.GONE);
+        detectedFaceView.setFaceRect(null, null, neutralColour, backgroundColour, null, null);
     }
 
-    @Override
-    public void drawCameraOverlay(Bearing bearing, @Nullable String text, boolean isHighlighted, RectF ovalBounds, @Nullable RectF cutoutBounds, @Nullable EulerAngle faceAngle, boolean showArrow, @Nullable EulerAngle offsetAngleFromBearing) {
+    private void drawCameraOverlay(Bearing bearing, @Nullable String text, boolean isHighlighted, RectF ovalBounds, @Nullable RectF cutoutBounds, @Nullable EulerAngle faceAngle, boolean showArrow, @Nullable EulerAngle offsetAngleFromBearing) {
         if (getActivity() == null) {
             return;
         }
@@ -493,12 +557,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0-offsetAngleFromBearing.getPitch()) * 2;
         }
         detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
-    }
-
-    @Override
-    public void clearCameraOverlay() {
-        instructionView.setVisibility(View.GONE);
-        detectedFaceView.setFaceRect(null, null, neutralColour, backgroundColour, null, null);
     }
 
     private void setTextViewColour(int background, int text) {

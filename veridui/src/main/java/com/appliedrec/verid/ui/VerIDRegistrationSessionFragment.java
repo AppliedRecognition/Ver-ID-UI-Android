@@ -1,10 +1,12 @@
 package com.appliedrec.verid.ui;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -20,11 +22,13 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionStatus;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.SessionSettings;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,33 +38,12 @@ import java.util.Map;
 public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 
     LinearLayout detectedFacesView;
-    RegistrationSessionSettings settings;
     Bearing requestedBearing;
-
-    public static VerIDRegistrationSessionFragment newInstance(RegistrationSessionSettings settings) {
-        Bundle args = new Bundle();
-        args.putParcelable(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-        VerIDRegistrationSessionFragment fragment = new VerIDRegistrationSessionFragment();
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Bundle args = getArguments();
-        if (args != null) {
-            settings = args.getParcelable(VerIDSessionActivity.EXTRA_SETTINGS);
-        }
-    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = super.onCreateView(inflater, container, savedInstanceState);
-        if (settings == null) {
-            return view;
-        }
         inflater.inflate(R.layout.detected_faces_view, getViewOverlays(), true);
         detectedFacesView = getViewOverlays().findViewById(R.id.detectedFacesLayout);
         RelativeLayout.LayoutParams facesViewLayoutParams = new RelativeLayout.LayoutParams(detectedFacesView.getLayoutParams());
@@ -70,8 +53,15 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
         facesViewLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         detectedFacesView.setLayoutParams(facesViewLayoutParams);
         facesViewLayoutParams.bottomMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32, getResources().getDisplayMetrics());
+        return view;
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        SessionSettings settings = getDelegate().getSessionSettings();
         for (int i=0; i<settings.getNumberOfResultsToCollect(); i++) {
-            ImageView imageView = new ImageView(view.getContext());
+            ImageView imageView = new ImageView(getView().getContext());
             imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 51, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64, getResources().getDisplayMetrics()));
             if (i+1 != settings.getNumberOfResultsToCollect()) {
@@ -79,11 +69,18 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
             }
             detectedFacesView.addView(imageView, layoutParams);
         }
-        return view;
     }
 
     @Override
-    public void didProduceSessionResultFromFaceDetectionResult(SessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
+    public void onDetach() {
+        super.onDetach();
+        detectedFacesView.removeAllViews();
+    }
+
+    @Override
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
+        super.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+
         if (!(!sessionResult.isReady() && (requestedBearing == null || requestedBearing != faceDetectionResult.getRequestedBearing() || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_ALIGNED))) {
             return;
         }
@@ -123,6 +120,7 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                 images.add(bitmap);
             }
         }
+        SessionSettings settings = getDelegate().getSessionSettings();
         for (int i=0; i<settings.getNumberOfResultsToCollect(); i++) {
             ImageView imageView = (ImageView) detectedFacesView.getChildAt(i);
             if (imageView == null) {
