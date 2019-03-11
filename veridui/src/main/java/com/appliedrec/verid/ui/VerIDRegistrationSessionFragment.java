@@ -39,6 +39,7 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 
     LinearLayout detectedFacesView;
     Bearing requestedBearing;
+    private SessionSettings sessionSettings;
 
     @Nullable
     @Override
@@ -53,28 +54,36 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
         facesViewLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         detectedFacesView.setLayoutParams(facesViewLayoutParams);
         facesViewLayoutParams.bottomMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32, getResources().getDisplayMetrics());
+        addDetectedFaceViews();
         return view;
     }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        SessionSettings settings = getDelegate().getSessionSettings();
-        for (int i=0; i<settings.getNumberOfResultsToCollect(); i++) {
-            ImageView imageView = new ImageView(getView().getContext());
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 51, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64, getResources().getDisplayMetrics()));
-            if (i+1 != settings.getNumberOfResultsToCollect()) {
-                layoutParams.rightMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
-            }
-            detectedFacesView.addView(imageView, layoutParams);
-        }
+        sessionSettings = getDelegate().getSessionSettings();
+        addDetectedFaceViews();
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
         detectedFacesView.removeAllViews();
+    }
+
+    private void addDetectedFaceViews() {
+        if (detectedFacesView == null || sessionSettings == null || getContext() == null) {
+            return;
+        }
+        for (int i=0; i<sessionSettings.getNumberOfResultsToCollect(); i++) {
+            ImageView imageView = new ImageView(getContext());
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 51, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64, getResources().getDisplayMetrics()));
+            if (i+1 != sessionSettings.getNumberOfResultsToCollect()) {
+                layoutParams.rightMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+            }
+            detectedFacesView.addView(imageView, layoutParams);
+        }
     }
 
     @Override
