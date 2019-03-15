@@ -19,7 +19,7 @@ ext {
     versionMinor = 0
     versionPatch = 0
     versionClassifier = "beta"
-    versionClassifierVersion = 6
+    versionClassifierVersion = 7
     minSdkVersion = 14
 }
 
