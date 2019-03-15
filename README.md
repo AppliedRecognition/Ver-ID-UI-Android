@@ -106,7 +106,21 @@ The Ver-ID session activity finishes as the session concludes. If you want to ch
 
 For an example of an activity that extends `VerIDSessionActivity` take a look at [AuthenticationActivity](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android/blob/master/app/src/main/java/com/appliedrec/verid/kiosk/AuthenticationActivity.java) in the [Ver-ID Kiosk sample app](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android).
 
-### Replacing components in the Ver-ID environment
+### Controlling Liveness Detection
+If you run a Ver-ID session with `LivenessDetectionSessionSettings` or its subclass `AuthenticationSessionSettings` you can control how Ver-ID detects liveness.
+
+To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.SessionSettings.html#setNumberOfResultsToCollect(int)) to `1`.
+
+To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
+
+~~~java
+LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
+settings.setNumberOfResultsToCollect(3); // 1 straight plus 2 other poses
+settings.setBearings(EnumSet.of(Bearing.STRAIGHT, Bearing.LEFT, Bearing.RIGHT)); // Limit the poses to left and right
+~~~
+The session result will contain 3 faces: 1 looking straight at the camera and 2 in random poses.
+
+### Replacing Components in the Ver-ID Environment
 You can have Ver-ID your own user management (face template storage) layer or even your own face detection and face recognition. To do that create an appropriate factory class and set it on the Ver-ID factory before calling the `createVerID()` method.
 
 For example, to add your own storage layer:
