@@ -576,29 +576,28 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public VerIDImage dequeueImage() throws Exception {
-        VerIDImage image;
-        while (currentImage == null) {
-            Thread.sleep(100);
+        synchronized (this) {
+            while (currentImage == null) {
+                this.wait();
+            }
+            VerIDImage image = currentImage;
+            currentImage = null;
+            return image;
         }
-        image = currentImage.copy();
-        currentImage = null;
-        return image;
     }
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        if (previewProcessingExecutor != null && previewProcessingExecutor.getActiveCount() + previewProcessingExecutor.getQueue().size() == 0) {
-            final byte[] dataCopy = Arrays.copyOf(data, data.length);
-            camera.addCallbackBuffer(data);
-            previewProcessingExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    YuvImage image = new YuvImage(dataCopy, previewFormat, previewSize.width, previewSize.height, null);
-                    currentImage = new VerIDImage(image, exifOrientation);
-                }
-            });
-        } else {
-            camera.addCallbackBuffer(data);
+        synchronized (this) {
+            if (currentImage == null) {
+                final byte[] dataCopy = Arrays.copyOf(data, data.length);
+                camera.addCallbackBuffer(data);
+                YuvImage image = new YuvImage(dataCopy, previewFormat, previewSize.width, previewSize.height, null);
+                currentImage = new VerIDImage(image, exifOrientation);
+                notify();
+            } else {
+                camera.addCallbackBuffer(data);
+            }
         }
     }
 }
