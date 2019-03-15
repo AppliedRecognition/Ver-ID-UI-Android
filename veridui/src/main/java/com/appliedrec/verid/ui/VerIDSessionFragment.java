@@ -36,6 +36,7 @@ import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.SessionSettings;
 import com.appliedrec.verid.core.Size;
 import com.appliedrec.verid.core.VerIDImage;
 
@@ -478,7 +479,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         @Nullable RectF cutoutBounds;
         @Nullable EulerAngle faceAngle;
         boolean showArrow;
-        if (sessionResult.isProcessing()) {
+        SessionSettings sessionSettings = getDelegate().getSessionSettings();
+        if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
             labelText = getString(R.string.please_wait);
             isHighlighted = true;
             ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;

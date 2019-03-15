@@ -40,6 +40,7 @@ import com.appliedrec.verid.core.SessionTaskDelegate;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDImage;
 
+import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -164,6 +165,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      */
     protected void shutDownExecutor() {
         if (executor != null) {
+            ArrayList<Runnable> tasks = new ArrayList<>();
+            executor.getQueue().drainTo(tasks);
+            for (Runnable task : tasks) {
+                if (task instanceof SessionTask) {
+                    ((SessionTask)task).cancel(true);
+                }
+            }
             executor.shutdownNow();
             executor = null;
         }
@@ -240,17 +248,12 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @since 1.0.0
      */
     protected void finishWithResult(SessionResult sessionResult) {
-        if (sessionResult.isCanceled()) {
-            finishCancel();
-            return;
-        }
-        if (sessionResult.getError() != null) {
-            finishWithError(sessionResult.getError());
-            return;
-        }
         shutDownExecutor();
         clearCameraOverlays();
         Intent result = new Intent();
+        if (sessionResult.getError() != null) {
+            result.putExtra(EXTRA_ERROR, sessionResult.getError());
+        }
         result.putExtra(EXTRA_RESULT, sessionResult);
         setResult(RESULT_OK, result);
         finish();
@@ -269,6 +272,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         clearCameraOverlays();
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
+        result.putExtra(EXTRA_RESULT, new SessionResult(error));
         setResult(RESULT_OK, result);
         finish();
     }
@@ -332,6 +336,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
         if (sessionResult.getError() != null) {
             if (retryCount < sessionSettings.getMaxRetryCount()) {
+                shutDownExecutor();
                 showFailureDialog(faceDetectionResult, sessionResult);
             }
         }
@@ -345,14 +350,14 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @since 1.0.0
      */
     @Override
-    public void onComplete(SessionTask sessionTask, final SessionResult sessionResult) {
+    public void onComplete(final SessionTask sessionTask, final SessionResult sessionResult) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (sessionResult.isCanceled()) {
+                if (executor == null || executor.isShutdown()) {
                     return;
                 }
-                if (sessionSettings.getShowResult() && !sessionResult.isCanceled()) {
+                if (sessionSettings.getShowResult()) {
                     shutDownExecutor();
                     clearCameraOverlays();
                     Fragment resultFragment = makeResultFragment(sessionResult);

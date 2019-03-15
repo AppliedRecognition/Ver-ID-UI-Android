@@ -89,8 +89,7 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
     @Override
     public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
         super.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
-
-        if (!(!sessionResult.isReady() && (requestedBearing == null || requestedBearing != faceDetectionResult.getRequestedBearing() || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_ALIGNED))) {
+        if (!(sessionResult.getError() == null  && (requestedBearing == null || requestedBearing != faceDetectionResult.getRequestedBearing() || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_ALIGNED))) {
             return;
         }
         requestedBearing = faceDetectionResult.getRequestedBearing();
