@@ -479,6 +479,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         @Nullable RectF cutoutBounds;
         @Nullable EulerAngle faceAngle;
         boolean showArrow;
+        if (getDelegate() == null || getDelegate().getSessionSettings() == null) {
+            return;
+        }
         SessionSettings sessionSettings = getDelegate().getSessionSettings();
         if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
             labelText = getString(R.string.please_wait);
