@@ -98,7 +98,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_ver_id);
+        setContentView(getContentViewId());
         Intent intent = getIntent();
         if (intent == null) {
             return;
@@ -113,10 +113,9 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             this.sessionSettings = settings;
             if (savedInstanceState == null) {
                 sessionFragment = makeVerIDSessionFragment();
-                getSupportFragmentManager().beginTransaction().add(R.id.container, sessionFragment, FRAGMENT_VERID).commit();
+                addVerIDSessionFragment();
             } else {
-                //noinspection unchecked
-                sessionFragment = (U) getSupportFragmentManager().findFragmentByTag(FRAGMENT_VERID);
+                sessionFragment = getVerIDSessionFragment();
             }
         } catch (Exception e) {
             finishWithError(e);
@@ -362,7 +361,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
                     clearCameraOverlays();
                     Fragment resultFragment = makeResultFragment(sessionResult);
                     sessionFragment = null;
-                    getSupportFragmentManager().beginTransaction().replace(R.id.container, resultFragment, FRAGMENT_VERID).commitAllowingStateLoss();
+                    addResultFragment(resultFragment);
                 } else {
                     finishWithResult(sessionResult);
                 }
@@ -544,6 +543,27 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     //endregion
 
+    //region Controlling layout
+
+    protected int getContentViewId() {
+        return R.layout.activity_ver_id;
+    }
+
+    protected void addVerIDSessionFragment() {
+        getSupportFragmentManager().beginTransaction().add(R.id.container, sessionFragment, FRAGMENT_VERID).commit();
+    }
+
+    protected U getVerIDSessionFragment() {
+        //noinspection unchecked
+        return (U) getSupportFragmentManager().findFragmentByTag(FRAGMENT_VERID);
+    }
+
+    protected void addResultFragment(Fragment resultFragment) {
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, resultFragment, FRAGMENT_VERID).commitAllowingStateLoss();
+    }
+
+    //endregion
+
     //region Face detection service factory
 
     /**
@@ -577,16 +597,6 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     @Override
     public void veridSessionFragmentDidFailWithError(IVerIDSessionFragment fragment, Exception error) {
         finishWithError(error);
-    }
-
-    @Override
-    public void veridSessionFragmentDidCancel(IVerIDSessionFragment fragment) {
-        finishCancel();
-    }
-
-    @Override
-    public void veridSessionFragmentDidCaptureImage(YuvImage image, int exifOrientation) {
-
     }
 
     //endregion
