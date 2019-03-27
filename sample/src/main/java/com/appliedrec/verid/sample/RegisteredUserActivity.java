@@ -213,7 +213,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
-        settings.setNumberOfResultsToCollect(3);
+        settings.setNumberOfResultsToCollect(1);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
