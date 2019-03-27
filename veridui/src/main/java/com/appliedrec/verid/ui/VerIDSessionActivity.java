@@ -336,6 +336,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         if (sessionResult.getError() != null) {
             if (retryCount < sessionSettings.getMaxRetryCount()) {
                 shutDownExecutor();
+                clearCameraOverlays();
                 showFailureDialog(faceDetectionResult, sessionResult);
             }
         }
