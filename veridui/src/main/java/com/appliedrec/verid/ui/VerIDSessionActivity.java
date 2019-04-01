@@ -333,12 +333,9 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             offsetAngleFromBearing = faceDetectionService.offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
         sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
-        if (sessionResult.getError() != null) {
-            if (retryCount < sessionSettings.getMaxRetryCount()) {
-                shutDownExecutor();
-                clearCameraOverlays();
-                showFailureDialog(faceDetectionResult, sessionResult);
-            }
+        if (sessionResult.getError() != null && retryCount < sessionSettings.getMaxRetryCount() && showFailureDialog(faceDetectionResult, sessionResult)) {
+            shutDownExecutor();
+            clearCameraOverlays();
         }
     }
 
@@ -386,20 +383,21 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * Shows a dialog when the Ver-ID session fails due to the user not failing liveness detection and the user tried fewer than the {@link SessionSettings#getMaxRetryCount() maximum number of tries} set in the session settings.
      * @param faceDetectionResult
      * @param sessionResult
+     * @return {@literal true} if the dialog was shown
      * @since 1.0.0
      */
-    protected void showFailureDialog(FaceDetectionResult faceDetectionResult, SessionResult sessionResult) {
+    protected boolean showFailureDialog(FaceDetectionResult faceDetectionResult, SessionResult sessionResult) {
         String message;
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_TOO_FAR) {
             message = getString(R.string.you_may_have_turned_too_far);
         } else if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_OPPOSITE || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_LOST) {
             message = getString(R.string.turn_your_head_in_the_direction_of_the_arrow);
         } else {
-            return;
+            return false;
         }
         ISessionFailureDialogFactory dialogFactory = makeSessionFailureDialogFactory();
         if (dialogFactory == null) {
-            return;
+            return false;
         }
         AlertDialog dialog = dialogFactory.makeDialog(this, message, new SessionFailureDialogListener() {
             @Override
@@ -421,10 +419,11 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             }
         }, sessionSettings);
         if (dialog == null) {
-            return;
+            return false;
         }
         shutDownExecutor();
         dialog.show();
+        return true;
     }
 
     //endregion
