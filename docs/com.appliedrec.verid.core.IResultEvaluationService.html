@@ -18,9 +18,9 @@
 <ul class="ancestry"><li>com.appliedrec.verid.core.IResultEvaluationService
 </li></ul>
 <section><h2>Methods</h2><dl>
-<dt><h3><a name="addResult(FaceDetectionResult, VerIDImage, IImageWriterService)">addResult</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dt><h3><a name="addResult(FaceDetectionResult, VerIDImage, Uri)">addResult</a></h3><p>Introduced in version 1.0.0</p></dt>
 <dd>
-<code>public addResult(FaceDetectionResult, VerIDImage, IImageWriterService)</code>
+<code>public addResult(FaceDetectionResult, VerIDImage, Uri)</code>
 <p>Add a face detection result and return current session result.</p>
 <h4>Parameters</h4>
 <dl>
@@ -28,12 +28,12 @@
 <dd>Face detection result to evaluate</dd>
 <dt>image <code><a href="com.appliedrec.verid.core.VerIDImage.html">com.appliedrec.verid.core.VerIDImage</a></code></dt>
 <dd>Image used in face detection</dd>
-<dt>imageWriter <code><a href="com.appliedrec.verid.core.IImageWriterService.html">com.appliedrec.verid.core.IImageWriterService</a></code></dt>
-<dd>Image writer to use to write the image to disk</dd>
+<dt>imageUri <code>android.net.Uri</code></dt>
+<dd>Optional URI of the image written to disk</dd>
 </dl>
 <h4>Returns</h4>
 <dl>
-<dt><code><a href="com.appliedrec.verid.core.SessionResult.html">com.appliedrec.verid.core.SessionResult</a></code></dt>
+<dt><code><a href="com.appliedrec.verid.core.ResultEvaluationStatus.html">com.appliedrec.verid.core.ResultEvaluationStatus</a></code></dt>
 <dd>Session result</dd>
 </dl>
 

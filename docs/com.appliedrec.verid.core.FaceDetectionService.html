@@ -72,7 +72,10 @@
 <dd>
 <code>protected isFaceAligned(Face, EulerAngle, Size)</code>
 <p>Tells the service whether to consider the face and the smoothed angle aligned.
- Default implementation checks whether the angle matches the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getRequestedBearing()">requested bearing</a> and the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getFaceBuffer()">face buffer</a> is filled to the <a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()">requested size</a> and</p>
+ Default implementation checks whether the angle matches the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getRequestedBearing()">requested bearing</a> and
+ the <a href="com.appliedrec.verid.core.FaceDetectionService.html#getFaceBuffer()">face buffer</a> is filled to the <a href="com.appliedrec.verid.core.SessionSettings.html#getFaceBufferSize()">requested size</a>
+ and the area of a union of the centers of the buffered face rectangles is smaller than a tenth of the area of a square
+ with sides equal to the shorter side of the image</p>
 <h4>Parameters</h4>
 <dl>
 <dt>face <code><a href="com.appliedrec.verid.core.Face.html">com.appliedrec.verid.core.Face</a></code></dt>
