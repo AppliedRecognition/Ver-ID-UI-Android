@@ -38,4 +38,5 @@
     <string name="you_may_have_turned_too_far" comment="Shown in a dialog as an explanation of why the face session is failing">You may have turned too far</string>
     <string name="please_wait" comment="Displayed above the face when the session is finishing">Please wait</string>
     <string name="turn_your_head_in_the_direction_of_the_arrow">Turn your head in the direction of the arrow</string>
+    <string name="moved_too_fast">Please turn slowly</string>
 </resources>

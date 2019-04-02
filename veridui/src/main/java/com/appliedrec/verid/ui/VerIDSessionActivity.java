@@ -392,6 +392,8 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
             message = getString(R.string.you_may_have_turned_too_far);
         } else if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_OPPOSITE || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_LOST) {
             message = getString(R.string.turn_your_head_in_the_direction_of_the_arrow);
+        } else if (faceDetectionResult.getStatus() == FaceDetectionStatus.MOVED_TOO_FAST) {
+            message = getString(R.string.moved_too_fast);
         } else {
             return false;
         }
