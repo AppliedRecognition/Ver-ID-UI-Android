@@ -1,6 +1,5 @@
 package com.appliedrec.verid.ui;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -22,7 +21,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
-import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.DetectedFace;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.Face;
@@ -31,11 +29,6 @@ import com.appliedrec.verid.core.FaceDetectionStatus;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.SessionResult;
 import com.appliedrec.verid.core.SessionSettings;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
 public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 
@@ -112,17 +105,20 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                         public void run() {
                             Bitmap bitmap = BitmapFactory.decodeFile(imageUri.getPath());
                             if (bitmap != null) {
-                                if (sessionSettings.getFacingOfCameraLens() == SessionSettings.LensFacing.FRONT) {
-                                    Matrix matrix = new Matrix();
-                                    matrix.setScale(-1, 1);
-                                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                                }
                                 Rect rect = new Rect();
                                 face.getBounds().round(rect);
                                 rect.bottom = Math.min(rect.bottom, bitmap.getHeight());
                                 rect.top = Math.max(rect.top, 0);
                                 rect.right = Math.min(rect.right, bitmap.getWidth());
                                 rect.left = Math.max(rect.left, 0);
+                                if (sessionSettings.getFacingOfCameraLens() == SessionSettings.LensFacing.FRONT) {
+                                    Matrix matrix = new Matrix();
+                                    matrix.setScale(-1, 1);
+                                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+                                    int left = rect.left;
+                                    rect.left = bitmap.getWidth() - rect.right;
+                                    rect.right = bitmap.getWidth() - left;
+                                }
                                 bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
                                 if (faceViewSize != null && faceViewSize.x > 0 && faceViewSize.y > 0) {
                                     double viewAspectRatio = (double)faceViewSize.x/(double)faceViewSize.y;
