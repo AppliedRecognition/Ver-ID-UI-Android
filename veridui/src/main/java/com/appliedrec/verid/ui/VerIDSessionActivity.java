@@ -324,13 +324,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         if (faceDetectionService == null) {
             return;
         }
-        RectF defaultFaceBounds = faceDetectionService.getDefaultFaceBounds(faceDetectionResult.getImageSize());
+        RectF defaultFaceBounds = faceDetectionService.getFaceAlignmentDetection().getDefaultFaceBounds(faceDetectionResult.getImageSize());
         if (defaultFaceBounds == null) {
             return;
         }
         EulerAngle offsetAngleFromBearing = null;
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED) {
-            offsetAngleFromBearing = faceDetectionService.offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
+            offsetAngleFromBearing = faceDetectionService.getAngleBearingEvaluation().offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
         sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
         if (sessionResult.getError() != null && retryCount < sessionSettings.getMaxRetryCount() && showFailureDialog(faceDetectionResult, sessionResult)) {
