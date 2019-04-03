@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ver-ID API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<aside><h2>Classes</h2><ul><li><a href="com.appliedrec.verid.core.AuthenticationSessionSettings.html">AuthenticationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.EulerAngle.html">EulerAngle</a></li><li><a href="com.appliedrec.verid.core.Face.html">Face</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionRecognitionFactory.html">FaceDetectionRecognitionFactory</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionResult.html">FaceDetectionResult</a></li><li><a href="com.appliedrec.verid.core.FaceDetectionServiceFactory.html">FaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.ImageWriterServiceFactory.html">ImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.LivenessDetectionSessionSettings.html">LivenessDetectionSessionSettings</a></li><li><a href="com.appliedrec.verid.core.RecognizableFace.html">RecognizableFace</a></li><li><a href="com.appliedrec.verid.core.RecognizableSubject.html">RecognizableSubject</a></li><li><a href="com.appliedrec.verid.core.RegistrationSessionSettings.html">RegistrationSessionSettings</a></li><li><a href="com.appliedrec.verid.core.ResultEvaluationServiceFactory.html">ResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.SessionResult.html">SessionResult</a></li><li><a href="com.appliedrec.verid.core.SessionSettings.html">SessionSettings</a></li><li><a href="com.appliedrec.verid.core.SessionTask.html">SessionTask</a></li><li><a href="com.appliedrec.verid.core.Size.html">Size</a></li><li><a href="com.appliedrec.verid.core.UserIdentification.html">UserIdentification</a></li><li><a href="com.appliedrec.verid.core.UserManagementFactory.html">UserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.VerID.html">VerID</a></li><li><a href="com.appliedrec.verid.core.VerIDFactory.html">VerIDFactory</a></li><li><a href="com.appliedrec.verid.core.VerIDImage.html">VerIDImage</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogFactory.html">SessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionActivity.html">VerIDSessionActivity</a></li><li><a href="com.appliedrec.verid.ui.VerIDSessionIntent.html">VerIDSessionIntent</a></li></ul><h2>Interfaces</h2><ul><li><a href="com.appliedrec.verid.core.IFaceDetection.html">IFaceDetection</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionService.html">IFaceDetectionService</a></li><li><a href="com.appliedrec.verid.core.IFaceDetectionServiceFactory.html">IFaceDetectionServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IFaceRecognition.html">IFaceRecognition</a></li><li><a href="com.appliedrec.verid.core.IFaceTracking.html">IFaceTracking</a></li><li><a href="com.appliedrec.verid.core.IImageProviderService.html">IImageProviderService</a></li><li><a href="com.appliedrec.verid.core.IImageProviderServiceFactory.html">IImageProviderServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IImageWriterService.html">IImageWriterService</a></li><li><a href="com.appliedrec.verid.core.IImageWriterServiceFactory.html">IImageWriterServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IRecognizable.html">IRecognizable</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationService.html">IResultEvaluationService</a></li><li><a href="com.appliedrec.verid.core.IResultEvaluationServiceFactory.html">IResultEvaluationServiceFactory</a></li><li><a href="com.appliedrec.verid.core.IUserManagement.html">IUserManagement</a></li><li><a href="com.appliedrec.verid.core.IUserManagementFactory.html">IUserManagementFactory</a></li><li><a href="com.appliedrec.verid.core.SessionTaskDelegate.html">SessionTaskDelegate</a></li><li><a href="com.appliedrec.verid.ui.ISessionFailureDialogFactory.html">ISessionFailureDialogFactory</a></li><li><a href="com.appliedrec.verid.ui.IVerIDSessionFragment.html">IVerIDSessionFragment</a></li><li><a href="com.appliedrec.verid.ui.SessionFailureDialogListener.html">SessionFailureDialogListener</a></li></ul><h2>Enums</h2><ul><li><a href="com.appliedrec.verid.core.Bearing.html">Bearing</a></li><li><a href="com.appliedrec.verid.core.RecognizableType.html">RecognizableType</a></li></ul></aside>
+</body>
+</html>
+<h1>AngleBearingEvaluation</h1>
+<h4>Package com.appliedrec.verid.core</h4>
+<code>public class  AngleBearingEvaluation</code>
+<ul class="ancestry"><li>com.appliedrec.verid.core.AngleBearingEvaluation
+<ul class="ancestry"><li>java.lang.Object
+</li></ul>
+</li></ul>
+<section><h2>Methods</h2><dl>
+<dt><h3><a name="getAngleForBearing(Bearing)">getAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getAngleForBearing(Bearing)</code>
+<p>Helper method to get an angle representing the given bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Bearing angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="angleMatchesBearing(EulerAngle, Bearing)">angleMatchesBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final angleMatchesBearing(EulerAngle, Bearing)</code>
+<p>Helper method to check whether an angle matches a bearing</p>
+<h4>Parameters</h4>
+<dl>
+<dt>angle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Face angle</dd>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>boolean</code></dt>
+<dd>true if the angle matches the bearing</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getMinAngleForBearing(Bearing)">getMinAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getMinAngleForBearing(Bearing)</code>
+<p>Helper method to get a minimum angle for the given bearing.
+ For a face to be considered matching a bearing, its angle must lie between minimum and <a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#getMaxAngleForBearing(Bearing)">maximum</a> angles for the bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Minimum angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getMaxAngleForBearing(Bearing)">getMaxAngleForBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public final getMaxAngleForBearing(Bearing)</code>
+<p>Helper method to get a maximum angle for the given bearing.
+ For a face to be considered matching a bearing, its angle must lie between <a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#getMinAngleForBearing(Bearing)">minimum</a> and maximum angles for the bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Maximum angle</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="getThresholdAngleForAxis(FaceDetectionService.Axis)">getThresholdAngleForAxis</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getThresholdAngleForAxis(FaceDetectionService.Axis)</code>
+<p>Threshold angle that represents a bearing.
+ For example returning a value of 12 for the yaw axis will make bearings with yaw -12 represent left and bearings with yaw 12 represent right.
+ Values over 18 are too extreme and values below 10 are not pronounced enough.
+ Default value is 12 for both yaw and pitch.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>axis <code><a href="com.appliedrec.verid.core.FaceDetectionService.Axis.html">com.appliedrec.verid.core.FaceDetectionService.Axis</a></code></dt>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Threshold angle for the given axis</dd>
+</dl>
+<h4>See also</h4><ul class="seeAlso"><li><a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)">com.appliedrec.verid.core.AngleBearingEvaluation.html#getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)</a></li></ul>
+</dd>
+<dt><h3><a name="getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)">getThresholdAngleToleranceForAxis</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public getThresholdAngleToleranceForAxis(FaceDetectionService.Axis)</code>
+<p>Value added or subtracted from the <a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#getThresholdAngleForAxis(FaceDetectionService.Axis)">threshold</a> when evaluating whether an angle matches a bearing.
+ For example, given pitch <a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#getThresholdAngleForAxis(FaceDetectionService.Axis)">threshold</a> of 12 and a tolerance returned by this method of 5, an angle
+ will match one of the <a href="com.appliedrec.verid.core.Bearing.html#UP">up bearings</a> if its pitch is below -7 (0 - 12 + 5).
+
+ <h4>Example</h4>
+ <p>Note: The example illustrates the calculation done by the service. The method <a href="com.appliedrec.verid.core.AngleBearingEvaluation.html#angleMatchesBearing(EulerAngle, Bearing)">angleMatchesBearing</a> will achieve the same result with less boilerplate code.</p>
+ <p>
+ <code>
+ EulerAngleF faceAngle; // EulerAngle of the datected face
+ float yawThreshold = getThresholdAngleForAxis(Axis.YAW);
+ float yawTolerance = getThresholdAngleToleranceForAxis(Axis.YAW);
+ EulerAngleF straightBearingAngle = getAngleForBearing(Bearing.STRAIGHT);
+ boolean isYawCentred = faceAngle.getYaw() > straightBearingAngle.getYaw() - yawThreshold - yawTolerance && faceAngle.getYaw() < straightBearingAngle.getYaw() + yawThreshold + yawTolerance;
+ </code>
+ </p></p>
+<h4>Parameters</h4>
+<dl>
+<dt>axis <code><a href="com.appliedrec.verid.core.FaceDetectionService.Axis.html">com.appliedrec.verid.core.FaceDetectionService.Axis</a></code></dt>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code>float</code></dt>
+<dd>Threshold tolerance angle for the given axis</dd>
+</dl>
+
+</dd>
+<dt><h3><a name="offsetFromAngleToBearing(EulerAngle, Bearing)">offsetFromAngleToBearing</a></h3><p>Introduced in version 1.0.0</p></dt>
+<dd>
+<code>public offsetFromAngleToBearing(EulerAngle, Bearing)</code>
+<p>Get angle that represents the offset from the angle to the bearing.</p>
+<h4>Parameters</h4>
+<dl>
+<dt>angle <code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Angle from which to calculate the offset</dd>
+<dt>bearing <code><a href="com.appliedrec.verid.core.Bearing.html">com.appliedrec.verid.core.Bearing</a></code></dt>
+<dd>Bearing to which to calculate the offset</dd>
+</dl>
+<h4>Returns</h4>
+<dl>
+<dt><code><a href="com.appliedrec.verid.core.EulerAngle.html">com.appliedrec.verid.core.EulerAngle</a></code></dt>
+<dd>Offset angle</dd>
+</dl>
+
+</dd>
+</dl></section>
