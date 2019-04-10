@@ -226,15 +226,15 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 int cameraRotation;
 
                 int orientationDegrees;
-                if (getCameraId() == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == SessionSettings.LensFacing.BACK) {
+                    deviceOrientation = (cameraOrientation - rotationDegrees + 360) % 360;
+                    orientationDegrees = (cameraOrientation - rotationDegrees + 360) % 360;
+                    cameraRotation = (cameraOrientation + orientation) % 360;
+                } else {
                     deviceOrientation = (cameraOrientation + rotationDegrees) % 360;
                     deviceOrientation = (360 - deviceOrientation) % 360;
                     orientationDegrees = (cameraOrientation + rotationDegrees) % 360;
                     cameraRotation = (cameraOrientation - orientation + 360) % 360;
-                } else {
-                    deviceOrientation = (cameraOrientation - rotationDegrees + 360) % 360;
-                    orientationDegrees = (cameraOrientation - rotationDegrees + 360) % 360;
-                    cameraRotation = (cameraOrientation + orientation) % 360;
                 }
 
                 switch (orientationDegrees) {
@@ -317,7 +317,34 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         });
     }
 
+    protected Camera openCamera() {
+        int numberOfCameras = Camera.getNumberOfCameras();
+        Camera.CameraInfo info = new Camera.CameraInfo();
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.getCameraInfo(i, info);
+            if (info.facing == getCameraId()) {
+                return Camera.open(i);
+            }
+        }
+        return null;
+    }
+
+    protected int getOrientationOfCamera() {
+        int numberOfCameras = Camera.getNumberOfCameras();
+        Camera.CameraInfo info = new Camera.CameraInfo();
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.getCameraInfo(i, info);
+            if (info.facing == getCameraId()) {
+                return info.orientation;
+            }
+        }
+        return 0;
+    }
+
     protected int getCameraId() {
+        if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == SessionSettings.LensFacing.BACK) {
+            return Camera.CameraInfo.CAMERA_FACING_BACK;
+        }
         return Camera.CameraInfo.CAMERA_FACING_FRONT;
     }
 
@@ -443,16 +470,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             @Override
             public void run() {
                 try {
-                    int numberOfCameras = Camera.getNumberOfCameras();
-                    Camera.CameraInfo info = new Camera.CameraInfo();
-                    for (int i = 0; i < numberOfCameras; i++) {
-                        Camera.getCameraInfo(i, info);
-                        if (info.facing == getCameraId()) {
-                            cameraOrientation = info.orientation;
-                            camera = Camera.open(i);
-                            break;
-                        }
-                    }
+                    cameraOrientation = getOrientationOfCamera();
+                    camera = openCamera();
                     if (camera == null) {
                         throw new Exception("Unable to access a front facing camera");
                     }
