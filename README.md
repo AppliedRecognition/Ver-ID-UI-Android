@@ -2,7 +2,31 @@
 
 # Ver-ID UI for Android
 
+This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-ID-Core-Android) replace the [legacy Ver-ID SDK](https://github.com/AppliedRecognition/Ver-ID-Android). The new API is not compatible with the legacy SDK. Please refer to the [migration instructions](./MigratingFromLegacySDK.md).
+
+## Prerequisites
+
+To build this project and to run the sample app you will need a computer with these applications:
+
+- [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.3.2 or newer
+- [Git](https://git-scm.com)
+- [Git LFS](https://git-lfs.github.com)
+
 ## Installation
+
+1. Open a shell console and enter the following commands:
+
+	~~~shell
+	git clone --recurse-submodules https://github.com/AppliedRecognition/Ver-ID-UI-Android.git
+	~~~
+1. Open Android Studio and from the top menu select **File/Open...**. Navigate to the directory where you checked out the Git project and press **Open**.
+1. Connect your Android device for debugging via USB.
+1. In the main menu select **Run/Run 'sample'**. Select your Android device and press **OK**.
+
+## Adding Ver-ID to your own project
+
+4. [Request API secret](https://dev.ver-id.com/admin/register) for your app. We will need your app's package name.
+
 1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
     
     ~~~groovy
@@ -16,7 +40,7 @@
 	
 	~~~groovy
     dependencies {
-	    implementation 'com.appliedrec.verid:ui:1.0.0-beta.3'
+	    implementation 'com.appliedrec.verid:ui:1.0.0'
     }
 	~~~
 2. Add RenderScript in your **gradle.build** file:
@@ -29,8 +53,11 @@
         }
     }
 	~~~
-3. Clone [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16) and add the contents as a folder named **VerIDModels** to your app's **assets** folder.
-4. [Request API secret](https://dev.ver-id.com/admin/register) for your app.
+3. Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.
+
+	~~~shell
+	git clone -b matrix-16 https://github.com/AppliedRecognition/Ver-ID-Models.git VerIDModels
+	~~~
 5. Add the API secret in your app's manifest XML:
 
 	~~~xml
@@ -92,7 +119,7 @@ class MyActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_LIVENESS_DETECTION && resultCode == RESULT_OK && data != null) {
-            SessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
+            VerIDSessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (sessionResult != null && sessionResult.getError() == null) {
                 // Liveness detection session succeeded
             }
