@@ -101,7 +101,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 }
             }
             // See documentation at
-            // https://appliedrecognition.github.io/Ver-ID-Android-Sample/com.appliedrec.ver_id.session.VerIDSessionResult.html
+            // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
         } else if (resultCode == RESULT_OK && data != null && requestCode == QR_CODE_SCAN_REQUEST_CODE && data.hasExtra(Intent.EXTRA_TEXT)) {
             getSupportLoaderManager().restartLoader(LOADER_ID_REGISTRATION_IMPORT, data.getExtras(), this).forceLoad();
         }
