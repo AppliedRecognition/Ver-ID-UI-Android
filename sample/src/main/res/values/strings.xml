@@ -84,7 +84,10 @@
     <string name="face_bounds_width">Face bounds width (for portrait mode)</string>
     <string name="pref_key_face_bounds_width">pref_key_face_bounds_width</string>
     <string name="pref_key_face_bounds_height">pref_key_face_bounds_height</string>
+    <string name="pref_key_use_back_camera">pref_key_use_back_camera</string>
     <string name="face_bounds_height">Face bounds height (for landscape mode)</string>
+    <string name="use_front_camera">Use front camera</string>
+    <string name="use_back_camera">Use back camera</string>
     <string-array name="pose_counts">
         <item>Liveness detection off</item>
         <item>Require 1 pose</item>

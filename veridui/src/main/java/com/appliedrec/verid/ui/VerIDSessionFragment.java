@@ -115,22 +115,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         detectedFaceView = (DetectedFaceView) inflater.inflate(R.layout.detected_face_view, null, false);
         viewOverlays.addTransformableView(detectedFaceView);
         inflater.inflate(R.layout.verid_authentication_fragment, viewOverlays, true);
-        if (getCameraId() == Camera.CameraInfo.CAMERA_FACING_BACK) {
-            detectedFaceView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                @Override
-                public void onGlobalLayout() {
-                    Matrix matrix = new Matrix();
-                    matrix.setScale(-1, 1, detectedFaceView.getWidth()/2, detectedFaceView.getHeight()/2);
-                    viewOverlays.setTransformationMatrix(matrix);
-                    detectedFaceView.invalidate();
-                    if (Build.VERSION.SDK_INT >= 16) {
-                        detectedFaceView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                    } else {
-                        detectedFaceView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                    }
-                }
-            });
-        }
         instructionView = viewOverlays.findViewById(R.id.instruction);
         instructionView.setVisibility(View.GONE);
         instructionTextView = viewOverlays.findViewById(R.id.instruction_textview);

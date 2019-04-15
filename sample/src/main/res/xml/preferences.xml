@@ -2,11 +2,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory android:title="@string/security">
         <ListPreference
+            android:defaultValue="1"
             android:entries="@array/pose_counts"
             android:entryValues="@array/pose_count_values"
             android:key="@string/pref_key_required_pose_count"
             android:summary="%s\nHigher pose count makes authentication more secure at the expense of usability"
-            android:defaultValue="1"
             android:title="@string/pose_count" />
         <com.appliedrec.verid.sample.YawThresholdPreference
             android:key="@string/pref_key_yaw_threshold"
@@ -23,5 +23,9 @@
         <com.appliedrec.verid.sample.FaceBoundsHeightPreference
             android:key="@string/pref_key_face_bounds_height"
             android:title="@string/face_bounds_height" />
+        <CheckBoxPreference
+            android:enabled="false"
+            android:key="@string/pref_key_use_back_camera"
+            android:title="@string/use_back_camera" />
     </PreferenceCategory>
 </PreferenceScreen>

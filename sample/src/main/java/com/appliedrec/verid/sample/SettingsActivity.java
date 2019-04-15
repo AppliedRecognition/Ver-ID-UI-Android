@@ -1,7 +1,9 @@
 package com.appliedrec.verid.sample;
 
 import android.content.SharedPreferences;
+import android.hardware.Camera;
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.PreferenceFragment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -33,6 +35,17 @@ public class SettingsActivity extends AppCompatActivity {
             faceBoundsHeightPreference = (FaceBoundsHeightPreference) findPreference(getString(R.string.pref_key_face_bounds_height));
             faceBoundsWidthPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().x * 20));
             faceBoundsHeightPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().y * 20));
+            CheckBoxPreference useBackCameraPreference = (CheckBoxPreference) findPreference(getString(R.string.pref_key_use_back_camera));
+            useBackCameraPreference.setDefaultValue(false);
+            int camCount = Camera.getNumberOfCameras();
+            for (int i=0; i<camCount; i++) {
+                Camera.CameraInfo info = new Camera.CameraInfo();
+                Camera.getCameraInfo(i, info);
+                if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                    useBackCameraPreference.setEnabled(true);
+                    break;
+                }
+            }
         }
 
         @Override
@@ -63,7 +76,6 @@ public class SettingsActivity extends AppCompatActivity {
                 return;
             }
             VerIDSessionSettings settings = new VerIDSessionSettings();
-            PreferenceHelper preferenceHelper = new PreferenceHelper(getActivity(), sharedPreferences);
             if (key.equals(getString(R.string.pref_key_yaw_threshold))) {
                 int val = sharedPreferences.getInt(key, (int)settings.getYawThreshold());
                 yawThresholdPreference.setSummary(Integer.toString(val));

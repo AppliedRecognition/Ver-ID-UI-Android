@@ -24,6 +24,7 @@ import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.PageViewActivity;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.appliedrec.verid.ui.VerIDSessionIntent;
@@ -159,6 +160,9 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                        }
                         Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
                         startActivityForResult(intent, REQUEST_CODE_REGISTER);
                     }

@@ -199,7 +199,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
-        settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+        }
         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);
@@ -219,6 +221,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+        }
         Intent intent = new Intent(this, VerIDSessionActivity.class);
         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
