@@ -1,15 +1,12 @@
 package com.appliedrec.verid.ui;
 
-import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 
-import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.IImageProviderService;
-import com.appliedrec.verid.core.SessionResult;
-import com.appliedrec.verid.core.Size;
+import com.appliedrec.verid.core.VerIDSessionResult;
 
 /**
  * Interface that works with {@link VerIDSessionActivity}.
@@ -32,7 +29,7 @@ public interface IVerIDSessionFragment extends IImageProviderService {
      * @param offsetAngleFromBearing Angle as offset from the requested bearing – can be used to draw an arrow indicating which direction the user should move
      * @since 1.0.0
      */
-    void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing);
+    void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing);
 
     /**
      * Indicates that fragment should clear the camera overlay view.

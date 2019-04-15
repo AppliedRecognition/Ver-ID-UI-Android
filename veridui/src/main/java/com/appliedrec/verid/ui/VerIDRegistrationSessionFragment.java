@@ -27,8 +27,8 @@ import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionStatus;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.SessionResult;
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 
@@ -51,7 +51,7 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
     }
 
     @Override
-    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
         super.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
         if (getDelegate() == null) {
             return;
@@ -111,7 +111,7 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                                 rect.top = Math.max(rect.top, 0);
                                 rect.right = Math.min(rect.right, bitmap.getWidth());
                                 rect.left = Math.max(rect.left, 0);
-                                if (sessionSettings.getFacingOfCameraLens() == SessionSettings.LensFacing.FRONT) {
+                                if (sessionSettings.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.FRONT) {
                                     Matrix matrix = new Matrix();
                                     matrix.setScale(-1, 1);
                                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);

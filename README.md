@@ -109,7 +109,7 @@ For an example of an activity that extends `VerIDSessionActivity` take a look at
 ### Controlling Liveness Detection
 If you run a Ver-ID session with `LivenessDetectionSessionSettings` or its subclass `AuthenticationSessionSettings` you can control how Ver-ID detects liveness.
 
-To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.SessionSettings.html#setNumberOfResultsToCollect(int)) to `1`.
+To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionSettings.html#setNumberOfResultsToCollect(int)) to `1`.
 
 To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
 

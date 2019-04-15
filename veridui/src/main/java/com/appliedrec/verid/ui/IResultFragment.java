@@ -1,7 +1,7 @@
 package com.appliedrec.verid.ui;
 
-import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.VerIDSessionResult;
 
 public interface IResultFragment {
-    SessionResult getSessionResult();
+    VerIDSessionResult getSessionResult();
 }

@@ -3,7 +3,7 @@ package com.appliedrec.verid.ui;
 import android.content.Context;
 import android.content.Intent;
 
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.VerID;
 
 /**
@@ -11,7 +11,7 @@ import com.appliedrec.verid.core.VerID;
  * @param <T> Session settings type
  * @since 1.0.0
  */
-public class VerIDSessionIntent<T extends SessionSettings> extends Intent {
+public class VerIDSessionIntent<T extends VerIDSessionSettings> extends Intent {
 
     /**
      * Constructor

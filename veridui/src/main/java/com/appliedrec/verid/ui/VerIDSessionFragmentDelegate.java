@@ -1,10 +1,8 @@
 package com.appliedrec.verid.ui;
 
-import android.graphics.YuvImage;
-
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public interface VerIDSessionFragmentDelegate {
-    SessionSettings getSessionSettings();
+    VerIDSessionSettings getSessionSettings();
     void veridSessionFragmentDidFailWithError(IVerIDSessionFragment fragment, Exception error);
 }

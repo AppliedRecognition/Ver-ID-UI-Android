@@ -35,8 +35,8 @@ import android.widget.TextView;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
-import com.appliedrec.verid.core.SessionResult;
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.Size;
 import com.appliedrec.verid.core.VerIDImage;
 
@@ -226,7 +226,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 int cameraRotation;
 
                 int orientationDegrees;
-                if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == SessionSettings.LensFacing.BACK) {
+                if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
                     deviceOrientation = (cameraOrientation - rotationDegrees + 360) % 360;
                     orientationDegrees = (cameraOrientation - rotationDegrees + 360) % 360;
                     cameraRotation = (cameraOrientation + orientation) % 360;
@@ -342,7 +342,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     protected int getCameraId() {
-        if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == SessionSettings.LensFacing.BACK) {
+        if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
             return Camera.CameraInfo.CAMERA_FACING_BACK;
         }
         return Camera.CameraInfo.CAMERA_FACING_FRONT;
@@ -491,7 +491,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
-    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, SessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
         @Nullable String labelText;
         boolean isHighlighted;
         RectF ovalBounds;
@@ -501,7 +501,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (getDelegate() == null || getDelegate().getSessionSettings() == null) {
             return;
         }
-        SessionSettings sessionSettings = getDelegate().getSessionSettings();
+        VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
         if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
             labelText = getString(R.string.please_wait);
             isHighlighted = true;

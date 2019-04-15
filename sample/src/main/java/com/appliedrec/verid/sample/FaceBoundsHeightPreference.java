@@ -6,7 +6,7 @@ import android.support.constraint.ConstraintLayout;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public class FaceBoundsHeightPreference extends FaceGuidePreference {
 
@@ -29,7 +29,7 @@ public class FaceBoundsHeightPreference extends FaceGuidePreference {
 
     @Override
     protected int getDefaultValue() {
-        return (int)(new SessionSettings().getFaceBoundsFraction().y * 20f);
+        return (int)(new VerIDSessionSettings().getFaceBoundsFraction().y * 20f);
     }
 
     @Override

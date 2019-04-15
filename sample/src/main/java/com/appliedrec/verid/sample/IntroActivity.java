@@ -22,7 +22,7 @@ import android.widget.TextView;
 
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.ui.PageViewActivity;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
@@ -99,7 +99,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
-            SessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
+            VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (result != null && result.getError() == null) {
                 Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
                 if (imageUris.length > 0) {

@@ -3,7 +3,7 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.util.AttributeSet;
 
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public class YawThresholdPreference extends NumberPreference {
 
@@ -21,7 +21,7 @@ public class YawThresholdPreference extends NumberPreference {
 
     @Override
     protected int getDefaultValue() {
-        return (int) new SessionSettings().getYawThreshold();
+        return (int) new VerIDSessionSettings().getYawThreshold();
     }
 
     @Override

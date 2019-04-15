@@ -3,7 +3,7 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.util.AttributeSet;
 
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public class PitchThresholdPreference extends NumberPreference {
 
@@ -21,7 +21,7 @@ public class PitchThresholdPreference extends NumberPreference {
 
     @Override
     protected int getDefaultValue() {
-        return (int) new SessionSettings().getPitchThreshold();
+        return (int) new VerIDSessionSettings().getPitchThreshold();
     }
 
     @Override

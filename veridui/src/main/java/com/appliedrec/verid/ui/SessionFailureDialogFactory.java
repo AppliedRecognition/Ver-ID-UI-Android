@@ -2,7 +2,6 @@ package com.appliedrec.verid.ui;
 
 import android.app.Activity;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.os.Build;
@@ -12,7 +11,7 @@ import android.view.TextureView;
 import android.widget.FrameLayout;
 
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 /**
  * Creates a dialog that shows an animation of a face responding to liveness detection prompts
@@ -34,7 +33,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
      * @since 1.0.0
      */
     @Override
-    public AlertDialog makeDialog(Activity activity, String message, final SessionFailureDialogListener listener, SessionSettings sessionSettings) {
+    public AlertDialog makeDialog(Activity activity, String message, final SessionFailureDialogListener listener, VerIDSessionSettings sessionSettings) {
         ScreenDensity screenDensity;
         float density = activity.getResources().getDisplayMetrics().density;
         if (density > 2) {
@@ -119,7 +118,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         return dialog;
     }
 
-    int getVideoResourceId(ScreenDensity screenDensity, SessionSettings sessionSettings) {
+    int getVideoResourceId(ScreenDensity screenDensity, VerIDSessionSettings sessionSettings) {
         switch (screenDensity) {
             case MEDIUM:
                 if (sessionSettings instanceof RegistrationSessionSettings) {

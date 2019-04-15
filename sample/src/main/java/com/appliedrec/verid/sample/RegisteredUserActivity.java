@@ -28,7 +28,8 @@ import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.IRecognizable;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
@@ -92,7 +93,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         super.onActivityResult(requestCode, resultCode, data);
         // To inspect the result of the session:
         if (resultCode == RESULT_OK && data != null && requestCode == REGISTRATION_REQUEST_CODE) {
-            SessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
+            VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (result != null) {
                 Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
                 if (imageUris.length > 0) {
@@ -198,6 +199,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         settings.setShowResult(true);
+        settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
         Intent intent = new Intent(this, VerIDSessionActivity.class);

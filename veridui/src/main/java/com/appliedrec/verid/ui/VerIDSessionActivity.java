@@ -3,9 +3,7 @@ package com.appliedrec.verid.ui;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Matrix;
 import android.graphics.RectF;
-import android.graphics.YuvImage;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.annotation.MainThread;
@@ -33,8 +31,8 @@ import com.appliedrec.verid.core.IResultEvaluationServiceFactory;
 import com.appliedrec.verid.core.ImageWriterServiceFactory;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.ResultEvaluationServiceFactory;
-import com.appliedrec.verid.core.SessionResult;
-import com.appliedrec.verid.core.SessionSettings;
+import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.SessionTask;
 import com.appliedrec.verid.core.SessionTaskDelegate;
 import com.appliedrec.verid.core.VerID;
@@ -51,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  * @param <U> Fragment type
  * @since 1.0.0
  */
-public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener {
 
     //region Public constants
     /**
@@ -218,7 +216,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     /**
      * Start Ver-ID session
      *
-     * <p>Begin executing Ver-ID session task. The task will report its progress by calling the {@link #onProgress(SessionTask, SessionResult, FaceDetectionResult) onProgress} method. When the session completes it will call the {@link #onComplete(SessionTask, SessionResult) onComplete} method.</p>
+     * <p>Begin executing Ver-ID session task. The task will report its progress by calling the {@link #onProgress(SessionTask, VerIDSessionResult, FaceDetectionResult) onProgress} method. When the session completes it will call the {@link #onComplete(SessionTask, VerIDSessionResult) onComplete} method.</p>
      * @since 1.0.0
      */
     protected void startSessionTask() {
@@ -246,7 +244,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      * @param sessionResult
      * @since 1.0.0
      */
-    protected void finishWithResult(SessionResult sessionResult) {
+    protected void finishWithResult(VerIDSessionResult sessionResult) {
         shutDownExecutor();
         clearCameraOverlays();
         Intent result = new Intent();
@@ -271,7 +269,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
         clearCameraOverlays();
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
-        result.putExtra(EXTRA_RESULT, new SessionResult(error));
+        result.putExtra(EXTRA_RESULT, new VerIDSessionResult(error));
         setResult(RESULT_OK, result);
         finish();
     }
@@ -320,7 +318,7 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
      */
     @Override
     @MainThread
-    public void onProgress(SessionTask sessionTask, SessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
+    public void onProgress(SessionTask sessionTask, VerIDSessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
         if (faceDetectionService == null) {
             return;
         }
@@ -341,13 +339,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     /**
      * Called by {@link SessionTask} when the session completes.
-     * <p>The default implementation shows the session result if the session settings requested it. Otherwise the method calls {@link #finishWithResult(SessionResult)}.</p>
+     * <p>The default implementation shows the session result if the session settings requested it. Otherwise the method calls {@link #finishWithResult(VerIDSessionResult)}.</p>
      * @param sessionTask Task that completed
      * @param sessionResult Result of the task
      * @since 1.0.0
      */
     @Override
-    public void onComplete(final SessionTask sessionTask, final SessionResult sessionResult) {
+    public void onComplete(final SessionTask sessionTask, final VerIDSessionResult sessionResult) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -380,13 +378,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
     }
 
     /**
-     * Shows a dialog when the Ver-ID session fails due to the user not failing liveness detection and the user tried fewer than the {@link SessionSettings#getMaxRetryCount() maximum number of tries} set in the session settings.
+     * Shows a dialog when the Ver-ID session fails due to the user not failing liveness detection and the user tried fewer than the {@link VerIDSessionSettings#getMaxRetryCount() maximum number of tries} set in the session settings.
      * @param faceDetectionResult
      * @param sessionResult
      * @return {@literal true} if the dialog was shown
      * @since 1.0.0
      */
-    protected boolean showFailureDialog(FaceDetectionResult faceDetectionResult, SessionResult sessionResult) {
+    protected boolean showFailureDialog(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult) {
         String message;
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_TOO_FAR) {
             message = getString(R.string.you_may_have_turned_too_far);
@@ -508,13 +506,13 @@ public class VerIDSessionActivity<T extends SessionSettings & Parcelable, U exte
 
     /**
      * Create an instance of a {@code Fragment} that shows the result of the session.
-     * <p>This fragment will only be shown if {@link SessionSettings#getShowResult()} is set to {@literal true}.</p>
+     * <p>This fragment will only be shown if {@link VerIDSessionSettings#getShowResult()} is set to {@literal true}.</p>
      * <p>The fragment must call {@link ResultFragmentListener#onResultFragmentDismissed(IResultFragment)} on the activity it's attached to when finished.</p>
      * @param sessionResult The result to display in the fragment
      * @return Fragment
      * @since 1.0.0
      */
-    protected Fragment makeResultFragment(SessionResult sessionResult) {
+    protected Fragment makeResultFragment(VerIDSessionResult sessionResult) {
         int resourceId;
         if (sessionSettings instanceof AuthenticationSessionSettings) {
             if (sessionResult.getError() == null) {

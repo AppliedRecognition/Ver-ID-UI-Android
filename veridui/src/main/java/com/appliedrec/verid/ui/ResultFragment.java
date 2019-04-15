@@ -17,14 +17,14 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.VerIDSessionResult;
 
 public class ResultFragment extends Fragment implements IResultFragment {
 
     private ResultFragmentListener resultFragmentListener;
-    private SessionResult sessionResult;
+    private VerIDSessionResult sessionResult;
 
-    public static ResultFragment newInstance(SessionResult result, String text) {
+    public static ResultFragment newInstance(VerIDSessionResult result, String text) {
         ResultFragment fragment = new ResultFragment();
         Bundle args = new Bundle();
         args.putParcelable(VerIDSessionActivity.EXTRA_RESULT, result);
@@ -111,7 +111,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
         resultFragmentListener = null;
     }
 
-    public SessionResult getSessionResult() {
+    public VerIDSessionResult getSessionResult() {
         return sessionResult;
     }
 }
