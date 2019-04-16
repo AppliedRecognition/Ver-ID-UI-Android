@@ -88,6 +88,9 @@
     <string name="face_bounds_height">Face bounds height (for landscape mode)</string>
     <string name="use_front_camera">Use front camera</string>
     <string name="use_back_camera">Use back camera</string>
+    <string name="pref_key_version">pref_key_version</string>
+    <string name="version">Version</string>
+    <string name="input">Input</string>
     <string-array name="pose_counts">
         <item>Liveness detection off</item>
         <item>Require 1 pose</item>
@@ -95,4 +98,19 @@
         <item>Require 3 poses</item>
         <item>Require 4 poses</item>
     </string-array>
+    <string-array name="registration_face_counts">
+        <item>1 face</item>
+        <item>3 faces</item>
+    </string-array>
+    <string name="pref_key_version_code">pref_key_version_code</string>
+    <string name="version_code">Version code</string>
+    <string name="pref_key_package_name">pref_key_package_name</string>
+    <string name="package_name">Package name</string>
+    <string name="pref_key_first_installed">pref_key_first_installed</string>
+    <string name="first_installed">First installed</string>
+    <string name="pref_key_last_updated">pref_key_last_updated</string>
+    <string name="last_updated">Last updated</string>
+    <string name="pref_key_number_of_faces_to_register">pref_key_number_of_faces_to_register</string>
+    <string name="number_of_faces_to_register">Number of faces to register</string>
+    <string name="help">Help</string>
 </resources>

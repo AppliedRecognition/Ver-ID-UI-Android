@@ -3,20 +3,11 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.RectF;
-import android.preference.DialogPreference;
-import android.support.constraint.ConstraintLayout;
+import android.support.v7.preference.DialogPreference;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewTreeObserver;
-import android.widget.SeekBar;
 
-import com.appliedrec.verid.ui.DetectedFaceView;
+public abstract class FaceGuidePreference extends DialogPreference {
 
-public abstract class FaceGuidePreference extends DialogPreference implements SeekBar.OnSeekBarChangeListener, ViewTreeObserver.OnGlobalLayoutListener {
-
-    private SeekBar seekBar;
-    private DetectedFaceView detectedFaceView;
     private int value;
 
     public FaceGuidePreference(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -34,28 +25,8 @@ public abstract class FaceGuidePreference extends DialogPreference implements Se
     }
 
     @Override
-    protected View onCreateDialogView() {
-        ConstraintLayout constraintLayout = createView();
-        seekBar = constraintLayout.findViewById(R.id.seekBar);
-        seekBar.setProgress(value);
-        seekBar.setOnSeekBarChangeListener(this);
-        detectedFaceView = constraintLayout.findViewById(R.id.detectedFaceView);
-        detectedFaceView.getViewTreeObserver().addOnGlobalLayoutListener(this);
-        return constraintLayout;
-    }
-
-    @Override
-    protected void onDialogClosed(boolean positiveResult) {
-        detectedFaceView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-        if (positiveResult) {
-            seekBar.clearFocus();
-            setValue(seekBar.getProgress());
-        }
-    }
-
-    @Override
     protected Object onGetDefaultValue(TypedArray a, int index) {
-        return a.getInt(index, getDefaultValue());
+        return getDefaultValue();
     }
 
     @Override
@@ -64,44 +35,23 @@ public abstract class FaceGuidePreference extends DialogPreference implements Se
     }
 
     public void setValue(int value) {
+        setSummary(getSummaryFromValue(value));
         if (shouldPersist()) {
             persistInt(value);
         }
         if (value != this.value) {
             this.value = value;
-            onProgressChanged(seekBar, value, false);
             notifyChanged();
         }
     }
 
-    protected abstract ConstraintLayout createView();
+    public int getValue() {
+        return value;
+    }
 
     protected abstract int getDefaultValue();
 
     protected abstract RectF createFaceRect(float progress, int viewWidth, int viewHeight);
 
-    @Override
-    public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-        if (seekBar == null || detectedFaceView == null) {
-            return;
-        }
-        float progress = (float)seekBar.getProgress()/ (float)seekBar.getMax();
-        RectF faceRect = createFaceRect(progress, detectedFaceView.getWidth(), detectedFaceView.getHeight());
-        detectedFaceView.setFaceRect(faceRect, null, getContext().getResources().getColor(R.color.verid_green), 0x80000000, null, null);
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onGlobalLayout() {
-        onProgressChanged(seekBar, value, false);
-    }
+    protected abstract String getSummaryFromValue(int value);
 }

@@ -2,20 +2,30 @@ package com.appliedrec.verid.sample;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.preference.DialogPreference;
+import android.support.v7.preference.DialogPreference;
 import android.util.AttributeSet;
-import android.view.View;
-import android.widget.NumberPicker;
 
-public abstract class NumberPreference extends DialogPreference {
+public class NumberPreference extends DialogPreference {
 
-    NumberPicker numberPicker;
     private int value;
+    private int minValue = 0;
+    private int maxValue = 100;
 
     public NumberPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         setPositiveButtonText(android.R.string.ok);
         setNegativeButtonText(android.R.string.cancel);
+        if (attrs != null) {
+            for (int i=0; i<attrs.getAttributeCount(); i++) {
+                String name = attrs.getAttributeName(i);
+                String value = attrs.getAttributeValue(i);
+                if ("minValue".equalsIgnoreCase(name)) {
+                    minValue = Integer.parseInt(value);
+                } else if ("maxValue".equalsIgnoreCase(name)) {
+                    maxValue = Integer.parseInt(value);
+                }
+            }
+        }
     }
 
     public NumberPreference(Context context, AttributeSet attrs) {
@@ -27,25 +37,13 @@ public abstract class NumberPreference extends DialogPreference {
     }
 
     @Override
-    protected View onCreateDialogView() {
-        numberPicker = new NumberPicker(getContext());
-        numberPicker.setMinValue(getMinValue());
-        numberPicker.setMaxValue(getMaxValue());
-        numberPicker.setValue(value);
-        return numberPicker;
-    }
-
-    @Override
-    protected void onDialogClosed(boolean positiveResult) {
-        if (positiveResult) {
-            numberPicker.clearFocus();
-            setValue(numberPicker.getValue());
-        }
+    public int getDialogLayoutResource() {
+        return R.layout.pref_number_picker;
     }
 
     @Override
     protected Object onGetDefaultValue(TypedArray a, int index) {
-        return a.getInt(index, getDefaultValue());
+        return a.getInt(index, 0);
     }
 
     @Override
@@ -53,7 +51,12 @@ public abstract class NumberPreference extends DialogPreference {
         setValue(restorePersistedValue ? getPersistedInt(value) : (int) defaultValue);
     }
 
+    public int getValue() {
+        return value;
+    }
+
     public void setValue(int value) {
+        setSummary(Integer.toString(value));
         if (shouldPersist()) {
             persistInt(value);
         }
@@ -63,9 +66,11 @@ public abstract class NumberPreference extends DialogPreference {
         }
     }
 
-    protected abstract int getDefaultValue();
+    public int getMinValue() {
+        return minValue;
+    }
 
-    protected abstract int getMinValue();
-
-    protected abstract int getMaxValue();
+    public int getMaxValue() {
+        return maxValue;
+    }
 }

@@ -156,8 +156,8 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                     public void run() {
                         RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
                         settings.setShowResult(true);
-                        settings.setNumberOfResultsToCollect(1);
                         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                         if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {

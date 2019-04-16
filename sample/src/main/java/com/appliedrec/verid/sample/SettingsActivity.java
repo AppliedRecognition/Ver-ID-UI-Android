@@ -1,40 +1,45 @@
 package com.appliedrec.verid.sample;
 
-import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.preference.CheckBoxPreference;
-import android.preference.PreferenceFragment;
-import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.CheckBoxPreference;
+import android.support.v7.preference.ListPreference;
+import android.support.v7.preference.ListPreferenceDialogFragmentCompat;
+import android.support.v7.preference.Preference;
+import android.support.v7.preference.PreferenceFragmentCompat;
 
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    public static class SettingsFragment extends PreferenceFragment implements SharedPreferences.OnSharedPreferenceChangeListener {
+    public static class SettingsFragment extends PreferenceFragmentCompat {
 
-        private YawThresholdPreference yawThresholdPreference;
-        private PitchThresholdPreference pitchThresholdPreference;
-        private AuthenticationThresholdPreference authThresholdPreference;
-        private FaceBoundsWidthPreference faceBoundsWidthPreference;
-        private FaceBoundsHeightPreference faceBoundsHeightPreference;
+        static String ARG_VERSION_NAME = "versionName";
+        static String ARG_VERSION_CODE = "versionCode";
+        static String ARG_PACKAGE_NAME = "packageName";
+        static String ARG_LAST_UPDATE_TIME = "lastUpdateTime";
+        static String ARG_FIRST_INSTALL_TIME = "firstInstallTime";
+
+        public static SettingsFragment newInstance(PackageInfo packageInfo) {
+            SettingsFragment fragment = new SettingsFragment();
+            Bundle args = new Bundle();
+            args.putString(ARG_VERSION_NAME, packageInfo.versionName);
+            args.putInt(ARG_VERSION_CODE, packageInfo.versionCode);
+            args.putString(ARG_PACKAGE_NAME, packageInfo.packageName);
+            args.putLong(ARG_LAST_UPDATE_TIME, packageInfo.lastUpdateTime);
+            args.putLong(ARG_FIRST_INSTALL_TIME, packageInfo.firstInstallTime);
+            fragment.setArguments(args);
+            return fragment;
+        }
 
         @Override
-        public void onCreate(@Nullable Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             addPreferencesFromResource(R.xml.preferences);
-            yawThresholdPreference = (YawThresholdPreference) findPreference(getString(R.string.pref_key_yaw_threshold));
-            pitchThresholdPreference = (PitchThresholdPreference) findPreference(getString(R.string.pref_key_pitch_threshold));
-            authThresholdPreference = (AuthenticationThresholdPreference) findPreference(getString(R.string.pref_key_auth_threshold));
-            VerIDSessionSettings settings = new VerIDSessionSettings();
-            yawThresholdPreference.setDefaultValue(settings.getYawThreshold());
-            pitchThresholdPreference.setDefaultValue(settings.getPitchThreshold());
-            authThresholdPreference.setDefaultValue(40);
-            faceBoundsWidthPreference = (FaceBoundsWidthPreference) findPreference(getString(R.string.pref_key_face_bounds_width));
-            faceBoundsHeightPreference = (FaceBoundsHeightPreference) findPreference(getString(R.string.pref_key_face_bounds_height));
-            faceBoundsWidthPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().x * 20));
-            faceBoundsHeightPreference.setDefaultValue((int)(settings.getFaceBoundsFraction().y * 20));
             CheckBoxPreference useBackCameraPreference = (CheckBoxPreference) findPreference(getString(R.string.pref_key_use_back_camera));
             useBackCameraPreference.setDefaultValue(false);
             int camCount = Camera.getNumberOfCameras();
@@ -46,51 +51,32 @@ public class SettingsActivity extends AppCompatActivity {
                     break;
                 }
             }
-        }
-
-        @Override
-        public void onResume() {
-            super.onResume();
-            getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
-            PreferenceHelper preferenceHelper = new PreferenceHelper(getActivity(), getPreferenceScreen().getSharedPreferences());
-            yawThresholdPreference.setSummary(Integer.toString(Math.round(preferenceHelper.getYawThreshold())));
-            pitchThresholdPreference.setSummary(Integer.toString(Math.round(preferenceHelper.getPitchThreshold())));
-            int val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_auth_threshold), 40);
-            authThresholdPreference.setSummary(Integer.toString(val));
-            VerIDSessionSettings settings = new VerIDSessionSettings();
-            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 5;
-            faceBoundsWidthPreference.setSummary(val+"% of view width");
-            val = getPreferenceScreen().getSharedPreferences().getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 5;
-            faceBoundsHeightPreference.setSummary(val+"% of view height");
-        }
-
-        @Override
-        public void onPause() {
-            super.onPause();
-            getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
-        }
-
-        @Override
-        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            if (key == null) {
-                return;
+            Bundle args = getArguments();
+            if (args != null) {
+                String version = args.getString(ARG_VERSION_NAME);
+                findPreference(getString(R.string.pref_key_version)).setSummary(version);
+                findPreference(getString(R.string.pref_key_version_code)).setSummary(Integer.toString(args.getInt(ARG_VERSION_CODE)));
+                findPreference(getString(R.string.pref_key_package_name)).setSummary(args.getString(ARG_PACKAGE_NAME));
+                DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.MEDIUM, SimpleDateFormat.MEDIUM);
+                findPreference(getString(R.string.pref_key_first_installed)).setSummary(dateFormat.format(new Date(args.getLong(ARG_FIRST_INSTALL_TIME))));
+                findPreference(getString(R.string.pref_key_last_updated)).setSummary(dateFormat.format(new Date(args.getLong(ARG_LAST_UPDATE_TIME))));
             }
-            VerIDSessionSettings settings = new VerIDSessionSettings();
-            if (key.equals(getString(R.string.pref_key_yaw_threshold))) {
-                int val = sharedPreferences.getInt(key, (int)settings.getYawThreshold());
-                yawThresholdPreference.setSummary(Integer.toString(val));
-            } else if (key.equals(getString(R.string.pref_key_pitch_threshold))) {
-                int val = sharedPreferences.getInt(key, (int)settings.getPitchThreshold());
-                pitchThresholdPreference.setSummary(Integer.toString(val));
-            } else if (key.equals(getString(R.string.pref_key_auth_threshold))) {
-                int val = sharedPreferences.getInt(key, 40);
-                authThresholdPreference.setSummary(Integer.toString(val));
-            } else if (key.equals(getString(R.string.pref_key_face_bounds_width))) {
-                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 5;
-                faceBoundsWidthPreference.setSummary(val + "% of view width");
-            } else if (key.equals(getString(R.string.pref_key_face_bounds_height))) {
-                int val = sharedPreferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 5;
-                faceBoundsHeightPreference.setSummary(val+"% of view height");
+        }
+
+        @Override
+        public void onDisplayPreferenceDialog(Preference preference) {
+            if (preference instanceof NumberPreference) {
+                NumberPreferenceDialog dialogFragment = NumberPreferenceDialog.newInstance(preference.getKey(), ((NumberPreference) preference).getMinValue(), ((NumberPreference) preference).getMaxValue());
+                dialogFragment.setTargetFragment(this, 0);
+                dialogFragment.show(getFragmentManager(), null);
+            } else if (preference instanceof FaceGuidePreference) {
+                FaceGuidePreferenceFragment dialogFragment = FaceGuidePreferenceFragment.newInstance(preference.getKey());
+                dialogFragment.setTargetFragment(this, 1);
+                dialogFragment.show(getFragmentManager(), null);
+            } else if (preference instanceof ListPreference) {
+                ListPreferenceDialogFragmentCompat dialogFragment = ListPreferenceDialogFragmentCompat.newInstance(preference.getKey());
+                dialogFragment.setTargetFragment(this, 2);
+                dialogFragment.show(getFragmentManager(), null);
             }
         }
     }
@@ -98,8 +84,16 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SettingsFragment settingsFragment;
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            settingsFragment = SettingsFragment.newInstance(packageInfo);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            settingsFragment = new SettingsFragment();
+        }
         setContentView(R.layout.activity_settings);
-        getFragmentManager().beginTransaction().replace(R.id.root_view, new SettingsFragment()).commit();
+        getSupportFragmentManager().beginTransaction().replace(R.id.root_view, settingsFragment).commit();
 
     }
 }

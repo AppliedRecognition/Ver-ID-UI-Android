@@ -27,4 +27,8 @@
         <item>High</item>
         <item>Highest</item>
     </string-array>
+    <string-array name="registration_face_count_values">
+        <item>1</item>
+        <item>3</item>
+    </string-array>
 </resources>

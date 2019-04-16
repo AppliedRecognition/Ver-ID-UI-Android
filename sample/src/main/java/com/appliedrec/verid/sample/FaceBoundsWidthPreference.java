@@ -23,8 +23,8 @@ public class FaceBoundsWidthPreference extends FaceGuidePreference {
     }
 
     @Override
-    protected ConstraintLayout createView() {
-        return (ConstraintLayout)((LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.fragment_face_guide_portrait, null);
+    public int getDialogLayoutResource() {
+        return R.layout.fragment_face_guide_portrait;
     }
 
     @Override
@@ -39,5 +39,10 @@ public class FaceBoundsWidthPreference extends FaceGuidePreference {
         float x = (float)viewWidth / 2f - width / 2f;
         float y = (float)viewHeight / 2f - height / 2f;
         return new RectF(x, y, x+width, y+height);
+    }
+
+    @Override
+    protected String getSummaryFromValue(int value) {
+        return (value*5)+"% of view width";
     }
 }

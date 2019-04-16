@@ -1,14 +1,17 @@
 package com.appliedrec.verid.sample;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.PreferenceManager;
 
-import com.appliedrec.verid.core.SessionResult;
+import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDFactory;
 import com.appliedrec.verid.core.VerIDFactoryDelegate;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
 
@@ -57,12 +60,42 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
 
     @Override
     public void veridFactoryDidCreateEnvironment(VerIDFactory factory, VerID environment) {
+        registerPreferences(environment);
         loadRegisteredUsers(environment);
     }
 
     @Override
     public void veridFactoryDidFailWithException(VerIDFactory factory, Exception error) {
         showError("Failed to create Ver-ID environment");
+    }
+
+    private void registerPreferences(VerID environment) {
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        LivenessDetectionSessionSettings defaultSessionSettings = new LivenessDetectionSessionSettings();
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        if (!sharedPreferences.contains(getString(R.string.pref_key_required_pose_count))) {
+            editor.putString(getString(R.string.pref_key_required_pose_count), Integer.toString(defaultSessionSettings.getNumberOfResultsToCollect()-1));
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_yaw_threshold))) {
+            editor.putInt(getString(R.string.pref_key_yaw_threshold), (int) defaultSessionSettings.getYawThreshold());
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_pitch_threshold))) {
+            editor.putInt(getString(R.string.pref_key_pitch_threshold), (int) defaultSessionSettings.getPitchThreshold());
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_auth_threshold))) {
+            editor.putInt(getString(R.string.pref_key_auth_threshold), (int) (environment.getFaceRecognition().getAuthenticationThreshold() * 10));
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_face_bounds_width))) {
+            editor.putInt(getString(R.string.pref_key_face_bounds_width), (int) (defaultSessionSettings.getFaceBoundsFraction().x * 20f));
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_face_bounds_height))) {
+            editor.putInt(getString(R.string.pref_key_face_bounds_height), (int) (defaultSessionSettings.getFaceBoundsFraction().y * 20f));
+        }
+        if (!sharedPreferences.contains(getString(R.string.pref_key_number_of_faces_to_register))) {
+            editor.putString(getString(R.string.pref_key_number_of_faces_to_register), "1");
+        }
+        editor.apply();
     }
 
     private void loadRegisteredUsers(final VerID verID) {
