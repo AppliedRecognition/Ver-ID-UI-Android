@@ -92,6 +92,12 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
             // that scans a QR code and returns a URL string in its intent's Intent.EXTRA_TEXT extra.
             Intent intent = new Intent("com.appliedrec.ACTION_SCAN_QR_CODE");
             startActivityForResult(intent, QR_CODE_SCAN_REQUEST_CODE);
+            return true;
+        }
+        if (item.getItemId() == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
         }
         return false;
     }
