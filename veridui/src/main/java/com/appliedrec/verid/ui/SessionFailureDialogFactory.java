@@ -87,10 +87,19 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         FixedAspectRatioFrameLayout frameLayout = new FixedAspectRatioFrameLayout(activity, 4, 3);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
         frameLayout.addView(textureView, layoutParams);
+        String cancel = "Cancel";
+        String tips = "Tips";
+        String tryAgain = "Try again";
+        if (activity instanceof IStringTranslator) {
+            IStringTranslator translator = (IStringTranslator) activity;
+            cancel = translator.getTranslatedString(cancel);
+            tips = translator.getTranslatedString(tips);
+            tryAgain = translator.getTranslatedString(tryAgain);
+        }
         AlertDialog dialog = new AlertDialog.Builder(activity).
                 setMessage(message).
                 setView(frameLayout).
-                setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                setNegativeButton(cancel, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         if (listener != null) {
@@ -98,7 +107,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
                         }
                     }
                 }).
-                setNeutralButton(R.string.tips, new DialogInterface.OnClickListener() {
+                setNeutralButton(tips, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         if (listener != null) {
@@ -106,7 +115,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
                         }
                     }
                 }).
-                setPositiveButton(R.string.try_again, new DialogInterface.OnClickListener() {
+                setPositiveButton(tryAgain, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         if (listener != null) {

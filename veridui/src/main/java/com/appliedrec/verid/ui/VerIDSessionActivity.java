@@ -3,7 +3,9 @@ package com.appliedrec.verid.ui;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.XmlResourceParser;
 import android.graphics.RectF;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.annotation.MainThread;
@@ -38,6 +40,11 @@ import com.appliedrec.verid.core.SessionTaskDelegate;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDImage;
 
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -49,7 +56,7 @@ import java.util.concurrent.TimeUnit;
  * @param <U> Fragment type
  * @since 1.0.0
  */
-public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
 
     //region Public constants
     /**
@@ -72,6 +79,10 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @since 1.0.0
      */
     public static final String EXTRA_ERROR = "com.appliedrec.verid.ui.EXTRA_ERROR";
+
+    public static final String EXTRA_TRANSLATION_FILE_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_FILE_PATH";
+
+    public static final String EXTRA_TRANSLATION_ASSET_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_ASSET_PATH";
     //endregion
 
     //region Other constants
@@ -89,6 +100,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     private IFaceDetectionService faceDetectionService;
     private ThreadPoolExecutor executor;
     private int retryCount = 0;
+    private TranslatedStrings translatedStrings = new TranslatedStrings();
     //endregion
 
     //region Activity lifecycle
@@ -105,6 +117,36 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         int instanceId = intent.getIntExtra(EXTRA_VERID_INSTANCE_ID, -1);
         if (settings == null || instanceId == -1) {
             return;
+        }
+        final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
+        final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
+        if (translationFilePath != null) {
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        translatedStrings.loadTranslatedStrings(translationFilePath);
+                    } catch (XmlPullParserException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } else if (translationAssetPath != null) {
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        InputStream inputStream = getAssets().open(translationAssetPath);
+                        translatedStrings.loadTranslatedStrings(inputStream);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (XmlPullParserException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         }
         try {
             this.environment = VerID.getInstance(instanceId);
@@ -198,7 +240,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                CameraPermissionErrorDialog.newInstance(getString(R.string.access_to_camera)).show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+                CameraPermissionErrorDialog.newInstance(translatedStrings.getTranslatedString("Camera used for face authentication")).show(getSupportFragmentManager(), FRAGMENT_DIALOG);
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -387,11 +429,11 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected boolean showFailureDialog(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult) {
         String message;
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_TOO_FAR) {
-            message = getString(R.string.you_may_have_turned_too_far);
+            message = translatedStrings.getTranslatedString("You may have turned too far");
         } else if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_TURNED_OPPOSITE || faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_LOST) {
-            message = getString(R.string.turn_your_head_in_the_direction_of_the_arrow);
+            message = translatedStrings.getTranslatedString("Turn your head in the direction of the arrow");
         } else if (faceDetectionResult.getStatus() == FaceDetectionStatus.MOVED_TOO_FAST) {
-            message = getString(R.string.moved_too_fast);
+            message = translatedStrings.getTranslatedString("Please turn slowly");
         } else {
             return false;
         }
@@ -513,32 +555,32 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @since 1.0.0
      */
     protected Fragment makeResultFragment(VerIDSessionResult sessionResult) {
-        int resourceId;
+        String result;
         if (sessionSettings instanceof AuthenticationSessionSettings) {
             if (sessionResult.getError() == null) {
-                resourceId = R.string.auth_result;
+                result = "Great. You authenticated using your face.";
             } else {
-                resourceId = R.string.auth_failed;
+                result = "Authentication failed";
             }
         } else if (sessionSettings instanceof RegistrationSessionSettings) {
             if (sessionResult.getError() == null) {
-                resourceId = R.string.registration_result;
+                result = "Great. You are now registered.";
             } else {
-                resourceId = R.string.registration_failed;
+                result = "Registration failed";
             }
         } else if (sessionResult.getError() == null) {
-            resourceId = R.string.liveness_result;
+            result = "Great. Session succeeded.";
         } else {
-            resourceId = R.string.liveness_failure;
+            result = "Session failed";
         }
         if (getSupportActionBar() != null) {
             if (sessionResult.getError() == null) {
-                getSupportActionBar().setTitle(R.string.success);
+                getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Success"));
             } else {
-                getSupportActionBar().setTitle(R.string.failed);
+                getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Failed"));
             }
         }
-        return ResultFragment.newInstance(sessionResult, getString(resourceId));
+        return ResultFragment.newInstance(sessionResult, translatedStrings.getTranslatedString(result));
     }
 
     //endregion
@@ -597,6 +639,11 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     public void veridSessionFragmentDidFailWithError(IVerIDSessionFragment fragment, Exception error) {
         finishWithError(error);
+    }
+
+    @Override
+    public String getTranslatedString(String original, Object... args) {
+        return translatedStrings.getTranslatedString(original, args);
     }
 
     //endregion

@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/rounded_corner_white"
             android:gravity="center"
-            android:text="Look straight at the camera"
+            android:text=""
             android:textAppearance="@style/TextAppearance.AppCompat.Headline"
             android:textColor="@android:color/black" />
     </LinearLayout>

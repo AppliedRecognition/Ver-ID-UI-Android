@@ -23,6 +23,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
 
     private ResultFragmentListener resultFragmentListener;
     private VerIDSessionResult sessionResult;
+    private IStringTranslator stringTranslator;
 
     public static ResultFragment newInstance(VerIDSessionResult result, String text) {
         ResultFragment fragment = new ResultFragment();
@@ -56,7 +57,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
         layoutParams.gravity = Gravity.CENTER;
         imageView.setLayoutParams(layoutParams);
         Button doneButton = view.findViewById(R.id.buttonRight);
-        doneButton.setText(R.string.done);
+        doneButton.setText(getTranslatedString("Done"));
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -83,7 +84,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
                 }
             } else {
                 imageView.setImageResource(R.mipmap.face_failure);
-                tipsButton.setText(R.string.tips);
+                tipsButton.setText(getTranslatedString("Tips"));
                 tipsButton.setVisibility(View.VISIBLE);
                 tipsButton.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -103,15 +104,27 @@ public class ResultFragment extends Fragment implements IResultFragment {
         if (context instanceof ResultFragmentListener) {
             resultFragmentListener = (ResultFragmentListener)context;
         }
+        if (context instanceof IStringTranslator) {
+            stringTranslator = (IStringTranslator) context;
+        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
         resultFragmentListener = null;
+        stringTranslator = null;
     }
 
     public VerIDSessionResult getSessionResult() {
         return sessionResult;
+    }
+
+    private String getTranslatedString(String original, Object ...args) {
+        if (stringTranslator != null) {
+            return stringTranslator.getTranslatedString(original, args);
+        } else {
+            return String.format(original, args);
+        }
     }
 }

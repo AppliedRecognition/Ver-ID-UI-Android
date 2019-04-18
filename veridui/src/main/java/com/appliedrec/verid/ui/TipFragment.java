@@ -1,5 +1,6 @@
 package com.appliedrec.verid.ui;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -15,6 +16,8 @@ import android.widget.TextView;
  */
 public class TipFragment extends Fragment {
 
+    IStringTranslator translator;
+
     public static TipFragment newInstance(int tipIndex) {
         Bundle args = new Bundle();
         args.putInt("tipIndex", tipIndex);
@@ -23,28 +26,31 @@ public class TipFragment extends Fragment {
         return tipFragment;
     }
 
-    public static View createView(LayoutInflater inflater, ViewGroup container, int tipIndex) {
+    public static View createView(LayoutInflater inflater, ViewGroup container, int tipIndex, IStringTranslator translator) {
         View view = inflater.inflate(R.layout.fragment_guide, container, false);
         ((ViewGroup)view.findViewById(R.id.hero)).removeView(view.findViewById(R.id.textureView));
         View lineView = new CrossOutView(view.getContext());
         FrameLayout.LayoutParams lineLayoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         ((FrameLayout)view.findViewById(R.id.hero)).addView(lineView, 1, lineLayoutParams);
         int imgSrc;
-        int tipTextSrc;
+        String tipText;
+        if (translator == null) {
+            translator = new TranslatedStrings();
+        }
         switch (tipIndex) {
             case 1:
                 imgSrc = R.mipmap.head_with_glasses;
-                tipTextSrc = R.string.tip2;
+                tipText = translator.getTranslatedString("If you can, take off your glasses.");
                 break;
             case 2:
                 imgSrc = R.mipmap.busy_background;
-                tipTextSrc = R.string.tip3;
+                tipText = translator.getTranslatedString("Avoid standing in front of busy backgrounds.");
                 break;
             default:
                 imgSrc = R.mipmap.tip_sharp_light;
-                tipTextSrc = R.string.tip1;
+                tipText = translator.getTranslatedString("Avoid standing in a light that throws sharp shadows like in sharp sunlight or directly under a lamp.");
         }
-        ((TextView) view.findViewById(R.id.text)).setText(tipTextSrc);
+        ((TextView) view.findViewById(R.id.text)).setText(tipText);
         ((ImageView) view.findViewById(R.id.imageView)).setImageResource(imgSrc);
         view.findViewById(R.id.buttonLeft).setVisibility(View.GONE);
         view.findViewById(R.id.buttonRight).setVisibility(View.GONE);
@@ -63,6 +69,20 @@ public class TipFragment extends Fragment {
         } else {
             tipIndex = 0;
         }
-        return TipFragment.createView(inflater, container, tipIndex);
+        return TipFragment.createView(inflater, container, tipIndex, translator);
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof IStringTranslator) {
+            translator = (IStringTranslator) context;
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        translator = null;
     }
 }

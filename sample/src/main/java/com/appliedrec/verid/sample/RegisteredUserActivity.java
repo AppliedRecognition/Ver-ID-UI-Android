@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -33,6 +34,7 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
+import java.io.IOException;
 import java.net.URL;
 
 public class RegisteredUserActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks {
@@ -187,27 +189,41 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
     //region Authentication
 
     private void authenticate() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
-        // The higher the count the more confident we can be of a live face at the expense of usability
-        // Note that 1 is added to the setting to include the initial mandatory straight pose
-        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_required_pose_count), "1")) + 1);
-        PreferenceHelper preferenceHelper = new PreferenceHelper(this, preferences);
-        settings.setYawThreshold(preferenceHelper.getYawThreshold());
-        settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
-        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
-        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
-        settings.setShowResult(true);
-        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-        }
-        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-        Intent intent = new Intent(this, VerIDSessionActivity.class);
-        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
+        new android.support.v7.app.AlertDialog.Builder(this)
+                .setItems(new String[]{
+                        "English", "Français"
+                }, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+                        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
+                        // The higher the count the more confident we can be of a live face at the expense of usability
+                        // Note that 1 is added to the setting to include the initial mandatory straight pose
+                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_required_pose_count), "1")) + 1);
+                        PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
+                        settings.setYawThreshold(preferenceHelper.getYawThreshold());
+                        settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
+                        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
+                        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
+                        settings.setShowResult(true);
+                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                        }
+                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
+                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
+                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                        if (i == 1) {
+                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
+                        }
+                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
+                    }
+                })
+                .setTitle("Select language")
+                .create()
+                .show();
     }
     //endregion
 

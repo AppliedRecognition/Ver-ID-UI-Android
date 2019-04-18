@@ -61,6 +61,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private DetectedFaceView detectedFaceView;
     private ThreadPoolExecutor previewProcessingExecutor;
     private VerIDSessionFragmentDelegate delegate;
+    private IStringTranslator stringTranslator;
     private int cameraOrientation = 0;
     private int deviceOrientation = 0;
     private Camera.Size previewSize;
@@ -118,7 +119,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         instructionView = viewOverlays.findViewById(R.id.instruction);
         instructionView.setVisibility(View.GONE);
         instructionTextView = viewOverlays.findViewById(R.id.instruction_textview);
-        instructionTextView.setText(R.string.preparing_face_detection);
+        instructionTextView.setText(getTranslatedString("Preparing face detection"));
         setTextViewColour(neutralColour, neutralTextColour);
         return view;
     }
@@ -129,12 +130,16 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (context instanceof VerIDSessionFragmentDelegate) {
             delegate = (VerIDSessionFragmentDelegate)context;
         }
+        if (context instanceof IStringTranslator) {
+            stringTranslator = (IStringTranslator) context;
+        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
         delegate = null;
+        stringTranslator = null;
     }
 
     @Override
@@ -235,7 +240,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                         exifOrientation = ExifInterface.ORIENTATION_NORMAL;
                 }
 
-//                final Point displaySize = new Point(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
                 final Point displaySize = new Point(getView().getWidth(), getView().getHeight());
 
                 final Point adjustedDisplaySize;
@@ -261,10 +265,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 } else {
                     scaledSize = camera.new Size(previewSize.width, previewSize.height);
                 }
-
-//                            if (params.getFocusMode().equals(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE) || params.getFocusMode().equals(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
-//                                camera.cancelAutoFocus();
-//                            }
                 List<String> supportedFocusModes = params.getSupportedFocusModes();
                 if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                     params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
@@ -273,9 +273,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
                     params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
                 }
-//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-//                    camera.setAutoFocusMoveCallback(VerIDSessionFragment.this);
-//                }
                 params.setPreviewSize(previewSize.width, previewSize.height);
                 // Some camera drivers write the rotation to exif but some apply it to the raw jpeg data.
                 // If the camera rotation is set to 0 then we can use the exif orientation to right the image reliably.
@@ -487,7 +484,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         }
         VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
         if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
-            labelText = getString(R.string.please_wait);
+            labelText = getTranslatedString("Please wait");
             isHighlighted = true;
             ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
             cutoutBounds = null;
@@ -497,7 +494,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             switch (faceDetectionResult.getStatus()) {
                 case FACE_FIXED:
                 case FACE_ALIGNED:
-                    labelText = getString(R.string.great_hold_it);
+                    labelText = getTranslatedString("Great, hold it");
                     isHighlighted = true;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
                     cutoutBounds = null;
@@ -505,7 +502,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     showArrow = false;
                     break;
                 case FACE_MISALIGNED:
-                    labelText = getString(R.string.slowly_turn_to_follow_arror);
+                    labelText = getTranslatedString("Slowly turn to follow the arrow");
                     isHighlighted = false;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
                     cutoutBounds = null;
@@ -521,7 +518,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     showArrow = false;
                     break;
                 default:
-                    labelText = getString(R.string.move_face_into_oval);
+                    labelText = getTranslatedString("Align your face with the oval");
                     isHighlighted = false;
                     ovalBounds = defaultFaceBounds;
                     cutoutBounds = faceDetectionResult.getFaceBounds();
@@ -606,6 +603,14 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             } else {
                 camera.addCallbackBuffer(data);
             }
+        }
+    }
+
+    private String getTranslatedString(String original, Object ...args) {
+        if (stringTranslator != null) {
+            return stringTranslator.getTranslatedString(original, args);
+        } else {
+            return String.format(original, args);
         }
     }
 }
