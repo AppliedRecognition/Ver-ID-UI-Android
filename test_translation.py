@@ -16,6 +16,10 @@ for word in words:
     match = re.search("<original>"+word+"</original>", xml)
     if match == None and word not in missing:
         missing.append(word)
+    else:
+        match = re.search(r"<original>"+word+"</original>\s*<translation></translation>", xml)
+        if match != None:
+            missing.append(word)
 
 if len(missing) == 0:
     print("All translated")
