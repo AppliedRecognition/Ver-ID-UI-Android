@@ -200,3 +200,6 @@ verIDFactory.createVerID();
 ~~~
 
 Full documentation available on the project's [Github page](https://appliedrecognition.github.io/Ver-ID-UI-Android/).
+
+## Change log
+We maintain a separate [page](./CHANGELOG.md) with our API change log.
