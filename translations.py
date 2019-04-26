@@ -26,7 +26,7 @@ def strings():
     for file in javafiles:
         f = open(file, "r")
         src = f.read()
-        matchlist = re.findall(r"\.getTranslatedString\(\"(.+?)\"", src)
+        matchlist = re.findall(r"getTranslatedString\(\"(.+?)\"", src)
         for word in matchlist:
             if word not in words:
                 words.append(word)
