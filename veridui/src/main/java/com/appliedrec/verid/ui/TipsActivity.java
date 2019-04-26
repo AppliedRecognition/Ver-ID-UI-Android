@@ -1,20 +1,14 @@
 package com.appliedrec.verid.ui;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.xmlpull.v1.XmlPullParserException;
+public class TipsActivity extends PageViewActivity implements IStringTranslator {
 
-import java.io.IOException;
-import java.io.InputStream;
-
-public class TipsActivity extends PageViewActivity {
-
-    private TranslatedStrings translatedStrings = new TranslatedStrings();
+    private TranslatedStrings translatedStrings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,7 +16,10 @@ public class TipsActivity extends PageViewActivity {
         if (getIntent() == null) {
             return;
         }
-        translatedStrings.loadFromIntent(this, getIntent());
+        translatedStrings = new TranslatedStrings(this, getIntent());
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Tip 1 of 3"));
+        }
     }
 
     @Override
@@ -79,5 +76,10 @@ public class TipsActivity extends PageViewActivity {
             }
         }
         invalidateOptionsMenu();
+    }
+
+    @Override
+    public String getTranslatedString(String original, Object... args) {
+        return translatedStrings.getTranslatedString(original, args);
     }
 }

@@ -35,7 +35,7 @@ public class TipFragment extends Fragment {
         int imgSrc;
         String tipText;
         if (translator == null) {
-            translator = new TranslatedStrings();
+            translator = new TranslatedStrings(view.getContext(), null);
         }
         switch (tipIndex) {
             case 1:

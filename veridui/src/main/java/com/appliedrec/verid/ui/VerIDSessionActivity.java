@@ -101,7 +101,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     private IFaceDetectionService faceDetectionService;
     private ThreadPoolExecutor executor;
     private int retryCount = 0;
-    private TranslatedStrings translatedStrings = new TranslatedStrings();
+    private TranslatedStrings translatedStrings;
     //endregion
 
     //region Activity lifecycle
@@ -119,7 +119,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (settings == null || instanceId == -1) {
             return;
         }
-        translatedStrings.loadFromIntent(this, intent);
+        translatedStrings = new TranslatedStrings(this, intent);
         try {
             this.environment = VerID.getInstance(instanceId);
             this.sessionSettings = settings;
@@ -344,7 +344,9 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED) {
             offsetAngleFromBearing = faceDetectionService.getAngleBearingEvaluation().offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
-        sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+        if (sessionFragment != null) {
+            sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+        }
         if (sessionResult.getError() != null && retryCount < sessionSettings.getMaxRetryCount() && showFailureDialog(faceDetectionResult, sessionResult)) {
             shutDownExecutor();
             clearCameraOverlays();

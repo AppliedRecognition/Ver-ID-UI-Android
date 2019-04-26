@@ -26,43 +26,49 @@ import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_FIL
 public class TranslatedStrings implements IStringTranslator {
 
     private Map<String,String> strings = new HashMap<>();
-    private boolean loaded = true;
+    private boolean loaded = false;
 
-    public void loadFromIntent(final Context context, Intent intent) {
-        final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
-        final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
-        if (translationFilePath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        loadTranslatedStrings(translationFilePath);
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+    public TranslatedStrings(final Context context, Intent intent) {
+        if (intent != null) {
+            final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
+            final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
+            if (translationFilePath != null) {
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            loadTranslatedStrings(translationFilePath);
+                        } catch (XmlPullParserException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-            });
-        } else if (translationAssetPath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        InputStream inputStream = context.getAssets().open(translationAssetPath);
-                        loadTranslatedStrings(inputStream);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
+                });
+                return;
+            }
+            if (translationAssetPath != null) {
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            InputStream inputStream = context.getAssets().open(translationAssetPath);
+                            loadTranslatedStrings(inputStream);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (XmlPullParserException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-            });
-        } else {
+                });
+                return;
+            }
+        }
+        if (context != null) {
             Locale[] locales;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 locales = new Locale[context.getResources().getConfiguration().getLocales().size()];
-                for (int i=0; i<locales.length; i++) {
+                for (int i = 0; i < locales.length; i++) {
                     locales[i] = context.getResources().getConfiguration().getLocales().get(i);
                 }
             } else {
@@ -123,12 +129,16 @@ public class TranslatedStrings implements IStringTranslator {
                                 }
                             }
                         });
-                        break;
+                        return;
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
+        }
+        synchronized (this) {
+            loaded = true;
+            notifyAll();
         }
     }
 
@@ -152,10 +162,6 @@ public class TranslatedStrings implements IStringTranslator {
 
     @WorkerThread
     public void loadTranslatedStrings(XmlPullParser parser) throws XmlPullParserException, IOException {
-        synchronized (this) {
-            loaded = false;
-            notifyAll();
-        }
         try {
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
             parser.nextTag();
