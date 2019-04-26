@@ -113,4 +113,8 @@
     <string name="pref_key_number_of_faces_to_register">pref_key_number_of_faces_to_register</string>
     <string name="number_of_faces_to_register">Number of faces to register</string>
     <string name="help">Help</string>
+    <string name="authenticate">Authenticate</string>
+    <string name="next">Next</string>
+    <string name="register">Register</string>
+    <string name="done">Done</string>
 </resources>
