@@ -22,36 +22,7 @@ public class TipsActivity extends PageViewActivity {
         if (getIntent() == null) {
             return;
         }
-        final String translationFilePath = getIntent().getStringExtra(VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH);
-        final String translationAssetPath = getIntent().getStringExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH);
-        if (translationFilePath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        translatedStrings.loadTranslatedStrings(translationFilePath);
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        } else if (translationAssetPath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        InputStream inputStream = getAssets().open(translationAssetPath);
-                        translatedStrings.loadTranslatedStrings(inputStream);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
+        translatedStrings.loadFromIntent(this, getIntent());
     }
 
     @Override

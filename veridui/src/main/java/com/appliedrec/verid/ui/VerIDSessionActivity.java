@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
 import android.graphics.RectF;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.annotation.MainThread;
@@ -118,36 +119,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (settings == null || instanceId == -1) {
             return;
         }
-        final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
-        final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
-        if (translationFilePath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        translatedStrings.loadTranslatedStrings(translationFilePath);
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        } else if (translationAssetPath != null) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        InputStream inputStream = getAssets().open(translationAssetPath);
-                        translatedStrings.loadTranslatedStrings(inputStream);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (XmlPullParserException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
+        translatedStrings.loadFromIntent(this, intent);
         try {
             this.environment = VerID.getInstance(instanceId);
             this.sessionSettings = settings;
