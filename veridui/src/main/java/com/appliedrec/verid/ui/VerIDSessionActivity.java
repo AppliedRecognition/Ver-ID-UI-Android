@@ -212,7 +212,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                CameraPermissionErrorDialog.newInstance(translatedStrings.getTranslatedString("Camera used for face authentication")).show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+                new CameraPermissionErrorDialog().show(getSupportFragmentManager(), FRAGMENT_DIALOG);
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
