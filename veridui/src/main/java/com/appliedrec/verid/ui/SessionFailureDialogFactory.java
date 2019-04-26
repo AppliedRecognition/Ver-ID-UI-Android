@@ -92,9 +92,9 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         String tryAgain = "Try again";
         if (activity instanceof IStringTranslator) {
             IStringTranslator translator = (IStringTranslator) activity;
-            cancel = translator.getTranslatedString(cancel);
-            tips = translator.getTranslatedString(tips);
-            tryAgain = translator.getTranslatedString(tryAgain);
+            cancel = translator.getTranslatedString("Cancel");
+            tips = translator.getTranslatedString("Tips");
+            tryAgain = translator.getTranslatedString("Try again");
         }
         AlertDialog dialog = new AlertDialog.Builder(activity).
                 setMessage(message).

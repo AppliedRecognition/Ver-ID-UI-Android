@@ -531,20 +531,20 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         String result;
         if (sessionSettings instanceof AuthenticationSessionSettings) {
             if (sessionResult.getError() == null) {
-                result = "Great. You authenticated using your face.";
+                result = translatedStrings.getTranslatedString("Great. You authenticated using your face.");
             } else {
-                result = "Authentication failed";
+                result = translatedStrings.getTranslatedString("Authentication failed");
             }
         } else if (sessionSettings instanceof RegistrationSessionSettings) {
             if (sessionResult.getError() == null) {
-                result = "Great. You are now registered.";
+                result = translatedStrings.getTranslatedString("Great. You are now registered.");
             } else {
-                result = "Registration failed";
+                result = translatedStrings.getTranslatedString("Registration failed");
             }
         } else if (sessionResult.getError() == null) {
-            result = "Great. Session succeeded.";
+            result = translatedStrings.getTranslatedString("Great. Session succeeded.");
         } else {
-            result = "Session failed";
+            result = translatedStrings.getTranslatedString("Session failed");
         }
         if (getSupportActionBar() != null) {
             if (sessionResult.getError() == null) {
@@ -553,7 +553,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Failed"));
             }
         }
-        return ResultFragment.newInstance(sessionResult, translatedStrings.getTranslatedString(result));
+        return ResultFragment.newInstance(sessionResult, result);
     }
 
     //endregion
