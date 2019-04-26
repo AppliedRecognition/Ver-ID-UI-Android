@@ -90,6 +90,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
                     @Override
                     public void onClick(View v) {
                         Intent tipsIntent = new Intent(getContext(), TipsActivity.class);
+                        tipsIntent.putExtras(getActivity().getIntent());
                         startActivity(tipsIntent);
                     }
                 });

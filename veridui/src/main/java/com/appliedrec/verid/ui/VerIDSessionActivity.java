@@ -423,6 +423,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             public void onShowTips() {
                 retryCount ++;
                 Intent intent = new Intent(VerIDSessionActivity.this, TipsActivity.class);
+                intent.putExtras(getIntent());
                 startActivityForResult(intent, REQUEST_CODE_TIPS);
             }
 
