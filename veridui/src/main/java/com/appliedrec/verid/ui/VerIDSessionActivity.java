@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Activity that runs a Ver-ID session
@@ -495,7 +496,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     public VerIDImage dequeueImage() throws Exception {
         if (startTime + sessionSettings.getExpiryTime() < System.currentTimeMillis()) {
-            throw new Exception("Session expired");
+            throw new TimeoutException("Session expired");
         }
         if (sessionFragment != null) {
             return sessionFragment.dequeueImage();
