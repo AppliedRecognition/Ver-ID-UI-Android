@@ -595,10 +595,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     public void onPreviewFrame(byte[] data, Camera camera) {
         synchronized (this) {
             if (currentImage == null) {
-                final byte[] dataCopy = Arrays.copyOf(data, data.length);
-                camera.addCallbackBuffer(data);
-                YuvImage image = new YuvImage(dataCopy, previewFormat, previewSize.width, previewSize.height, null);
+                YuvImage image = new YuvImage(data, previewFormat, previewSize.width, previewSize.height, null);
                 currentImage = new VerIDImage(image, exifOrientation);
+                camera.addCallbackBuffer(data);
                 notify();
             } else {
                 camera.addCallbackBuffer(data);
