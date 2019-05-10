@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -182,17 +183,18 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     protected void setupCamera() {
-        runOnUIThread(new Runnable() {
+        final Activity activity = getActivity();
+        if (activity == null || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && activity.isDestroyed()) || activity.isFinishing() || camera == null) {
+            return;
+        }
+        final Point displaySize = new Point(getView().getWidth(), getView().getHeight());
+        final Display display = ((WindowManager) activity.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        final int rotation = display.getRotation();
+        previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                Activity activity = getActivity();
-                if (activity == null || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && activity.isDestroyed()) || activity.isFinishing() || camera == null) {
-                    return;
-                }
                 final Camera.Parameters params = camera.getParameters();
 
-                Display display = ((WindowManager) activity.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-                int rotation = display.getRotation();
                 deviceOrientation = 0;
                 int rotationDegrees = 0;
                 switch (rotation) {
@@ -240,7 +242,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                         exifOrientation = ExifInterface.ORIENTATION_NORMAL;
                 }
 
-                final Point displaySize = new Point(getView().getWidth(), getView().getHeight());
 
                 final Point adjustedDisplaySize;
                 if (cameraRotation % 180 > 0) {
@@ -292,8 +293,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 }
                 scaledSize.width *= scale;
                 scaledSize.height *= scale;
-                cameraSurfaceView.setCamera(camera);
-                cameraSurfaceView.setFixedSize(scaledSize.width, scaledSize.height);
+                runOnUIThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        cameraSurfaceView.setCamera(camera);
+                        cameraSurfaceView.setFixedSize(scaledSize.width, scaledSize.height);
+                    }
+                });
             }
         });
     }
@@ -384,23 +390,28 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     protected final void releaseCamera() {
-        if (camera != null) {
-            camera.stopPreview();
-            camera.release();
-            camera = null;
-            runOnUIThread(new Runnable() {
-                @Override
-                public void run() {
-//                    onCameraReleased();
-                }
-            });
-        }
-        runOnUIThread(new Runnable() {
+        previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                if (cameraSurfaceView != null) {
-                    cameraSurfaceView.setCamera(null);
+                if (camera != null) {
+                    camera.stopPreview();
+                    camera.release();
+                    camera = null;
+//                    runOnUIThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                    onCameraReleased();
+//                        }
+//                    });
                 }
+                runOnUIThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (cameraSurfaceView != null) {
+                            cameraSurfaceView.setCamera(null);
+                        }
+                    }
+                });
             }
         });
     }
@@ -456,7 +467,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     if (camera == null) {
                         throw new Exception("Unable to access a front facing camera");
                     }
-                    setupCamera();
+                    runOnUIThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            setupCamera();
+                        }
+                    });
                 } catch (final Exception e) {
                     runOnUIThread(new Runnable() {
                         @Override
