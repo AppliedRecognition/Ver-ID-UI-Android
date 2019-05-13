@@ -465,7 +465,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     cameraOrientation = getOrientationOfCamera();
                     camera = openCamera();
                     if (camera == null) {
-                        throw new Exception("Unable to access a front facing camera");
+                        throw new Exception("Unable to access camera");
                     }
                     runOnUIThread(new Runnable() {
                         @Override
