@@ -193,6 +193,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
+                if (camera == null) {
+                    return;
+                }
                 final Camera.Parameters params = camera.getParameters();
 
                 deviceOrientation = 0;
@@ -296,6 +299,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 runOnUIThread(new Runnable() {
                     @Override
                     public void run() {
+                        if (camera == null) {
+                            return;
+                        }
                         cameraSurfaceView.setCamera(camera);
                         cameraSurfaceView.setFixedSize(scaledSize.width, scaledSize.height);
                     }
@@ -463,7 +469,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             public void run() {
                 try {
                     cameraOrientation = getOrientationOfCamera();
-                    camera = openCamera();
+                    if (camera == null) {
+                        camera = openCamera();
+                    }
                     if (camera == null) {
                         throw new Exception("Unable to access camera");
                     }
