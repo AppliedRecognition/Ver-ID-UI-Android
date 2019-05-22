@@ -144,14 +144,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        if (getActivity() != null && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
-        }
-    }
-
-    @Override
     public void onPause() {
         super.onPause();
         releaseCamera();
@@ -396,6 +388,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     protected final void releaseCamera() {
+        if (previewProcessingExecutor == null) {
+            return;
+        }
         previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -420,6 +415,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 });
             }
         });
+        previewProcessingExecutor = null;
     }
 
     //endregion

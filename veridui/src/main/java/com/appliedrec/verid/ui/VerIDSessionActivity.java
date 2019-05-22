@@ -152,6 +152,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 requestCameraPermission();
                 return;
             }
+            sessionFragment.startCamera();
             startSessionTask();
         }
     }
@@ -214,13 +215,12 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                 new CameraPermissionErrorDialog().show(getSupportFragmentManager(), FRAGMENT_DIALOG);
-            }
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-            if (sessionFragment != null) {
+            } else if (sessionFragment != null) {
                 sessionFragment.startCamera();
                 startSessionTask();
             }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
