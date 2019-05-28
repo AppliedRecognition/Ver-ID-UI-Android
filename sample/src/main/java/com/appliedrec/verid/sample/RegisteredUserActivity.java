@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -29,12 +28,11 @@ import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.IRecognizable;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
+import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
-import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
-import java.io.IOException;
 import java.net.URL;
 
 public class RegisteredUserActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks {
@@ -105,7 +103,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
             // See documentation at
             // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
         } else if (resultCode == RESULT_OK && data != null && requestCode == QR_CODE_SCAN_REQUEST_CODE && data.hasExtra(Intent.EXTRA_TEXT)) {
-            getSupportLoaderManager().restartLoader(LOADER_ID_REGISTRATION_IMPORT, data.getExtras(), this).forceLoad();
+            LoaderManager.getInstance(this).restartLoader(LOADER_ID_REGISTRATION_IMPORT, data.getExtras(), this).forceLoad();
         }
     }
 

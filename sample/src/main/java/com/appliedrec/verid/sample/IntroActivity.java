@@ -118,7 +118,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                 finish();
             }
         } else if (requestCode == QR_CODE_SCAN_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.hasExtra(Intent.EXTRA_TEXT)) {
-            getSupportLoaderManager().restartLoader(LOADER_ID_IMPORT_REGISTRATION, data.getExtras(), this).forceLoad();
+            LoaderManager.getInstance(this).restartLoader(LOADER_ID_IMPORT_REGISTRATION, data.getExtras(), this).forceLoad();
         } else if (requestCode == REQUEST_CODE_IMPORT) {
             AsyncTask.execute(new Runnable() {
                 @Override
