@@ -15,4 +15,5 @@ public interface ICameraPreviewView {
     void setListener(CameraPreviewViewListener listener);
     void setCamera(Camera camera);
     void setFixedSize(int width, int height);
+    void clearPreview();
 }

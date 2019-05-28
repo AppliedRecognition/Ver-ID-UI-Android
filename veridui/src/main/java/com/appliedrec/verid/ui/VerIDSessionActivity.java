@@ -366,6 +366,9 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (sessionFragment != null) {
+                    sessionFragment.clearCameraPreview();
+                }
                 if (executor == null || executor.isShutdown()) {
                     return;
                 }

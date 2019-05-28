@@ -398,18 +398,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     camera.stopPreview();
                     camera.release();
                     camera = null;
-//                    runOnUIThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                    onCameraReleased();
-//                        }
-//                    });
                 }
                 runOnUIThread(new Runnable() {
                     @Override
                     public void run() {
                         if (cameraSurfaceView != null) {
                             cameraSurfaceView.setCamera(null);
+                            cameraSurfaceView.clearPreview();
                         }
                     }
                 });
@@ -489,6 +484,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 }
             }
         });
+    }
+
+    @Override
+    public void clearCameraPreview() {
+        if (cameraSurfaceView != null) {
+            cameraSurfaceView.clearPreview();
+        }
     }
 
     @Override

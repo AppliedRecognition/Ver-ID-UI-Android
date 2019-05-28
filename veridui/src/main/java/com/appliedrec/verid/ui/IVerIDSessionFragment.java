@@ -2,6 +2,7 @@ package com.appliedrec.verid.ui;
 
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
@@ -36,4 +37,11 @@ public interface IVerIDSessionFragment extends IImageProviderService {
      * @since 1.0.0
      */
     void clearCameraOverlay();
+
+    /**
+     * Clears the camera preview
+     * @since 1.4.0
+     */
+    @UiThread
+    void clearCameraPreview();
 }

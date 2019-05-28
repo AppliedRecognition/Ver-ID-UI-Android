@@ -1,6 +1,8 @@
 package com.appliedrec.verid.ui;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.PorterDuff;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.util.AttributeSet;
@@ -64,6 +66,17 @@ public class CameraTextureView extends TextureView implements TextureView.Surfac
         startPreview();
     }
 
+    @Override
+    public void clearPreview() {
+        if (textureCreated && isAvailable()) {
+            Canvas canvas = lockCanvas();
+            if (canvas != null) {
+                canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+                unlockCanvasAndPost(canvas);
+            }
+        }
+    }
+
     public int getFixedWidth() {
         return this.width;
     }
@@ -91,6 +104,9 @@ public class CameraTextureView extends TextureView implements TextureView.Surfac
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
         textureCreated = false;
+        if (camera != null) {
+            camera.stopPreview();
+        }
         return true;
     }
 
