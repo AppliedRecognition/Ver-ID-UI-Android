@@ -21,6 +21,7 @@ import android.view.WindowManager;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.EulerAngle;
+import com.appliedrec.verid.core.FaceAlignmentDetection;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionServiceFactory;
 import com.appliedrec.verid.core.FaceDetectionStatus;
@@ -585,6 +586,18 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
 
     //endregion
 
+    //region Face alignment detection
+
+    /**
+     * Override if you wish to supply your own subclass of face alignment detection
+     * @return Instance of {@link FaceAlignmentDetection} or {@literal null} to use default
+     */
+    protected FaceAlignmentDetection getFaceAlignmentDetection() {
+        return null;
+    }
+
+    //endregion
+
     //region Face detection service factory
 
     /**
@@ -594,7 +607,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @since 1.0.0
      */
     protected IFaceDetectionServiceFactory makeFaceDetectionServiceFactory() {
-        return new FaceDetectionServiceFactory(environment);
+        return new FaceDetectionServiceFactory(environment, getFaceAlignmentDetection());
     }
 
     //endregion
