@@ -137,14 +137,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_TIPS) {
-            startSessionTask();
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         if (sessionFragment != null) {
@@ -431,12 +423,15 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 retryCount ++;
                 Intent intent = new Intent(VerIDSessionActivity.this, TipsActivity.class);
                 intent.putExtras(getIntent());
-                startActivityForResult(intent, REQUEST_CODE_TIPS);
+                startActivity(intent);
             }
 
             @Override
             public void onRetry() {
                 retryCount ++;
+                if (sessionFragment != null) {
+                    sessionFragment.startCamera();
+                }
                 startSessionTask();
             }
         }, sessionSettings);

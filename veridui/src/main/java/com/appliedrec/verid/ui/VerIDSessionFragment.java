@@ -1,9 +1,7 @@
 package com.appliedrec.verid.ui;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -16,20 +14,17 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
 import android.support.media.ExifInterface;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -37,6 +32,7 @@ import android.widget.TextView;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
+import com.appliedrec.verid.core.FaceDetectionStatus;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.Size;
@@ -46,7 +42,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -77,10 +72,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     protected View instructionView;
 
     private static final int IMAGE_FORMAT_CERIDIAN_NV12 = 0x103;
-    private int highlightedTextColour = 0xFFFFFFFF;
-    private int neutralTextColour = 0xFF000000;
-    private int highlightedColour = 0xFF36AF00;
-    private int neutralColour = 0xFFFFFFFF;
     private int backgroundColour = 0x80000000;
 
     //region Fragment lifecycle
@@ -105,7 +96,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         instructionView.setVisibility(View.GONE);
         instructionTextView = viewOverlays.findViewById(R.id.instruction_textview);
         instructionTextView.setText(getTranslatedString("Preparing face detection"));
-        setTextViewColour(neutralColour, neutralTextColour);
+        setTextViewColour(getOvalColourFromFaceDetectionStatus(FaceDetectionStatus.STARTED, null), getTextColourFromFaceDetectionStatus(FaceDetectionStatus.STARTED, null));
         return view;
     }
 
@@ -517,7 +508,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Override
     public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
         @Nullable String labelText;
-        boolean isHighlighted;
         RectF ovalBounds;
         @Nullable RectF cutoutBounds;
         @Nullable EulerAngle faceAngle;
@@ -528,7 +518,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
         if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
             labelText = getTranslatedString("Please wait");
-            isHighlighted = true;
             ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
             cutoutBounds = null;
             faceAngle = null;
@@ -538,7 +527,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 case FACE_FIXED:
                 case FACE_ALIGNED:
                     labelText = getTranslatedString("Great, hold it");
-                    isHighlighted = true;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
                     cutoutBounds = null;
                     faceAngle = null;
@@ -546,7 +534,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     break;
                 case FACE_MISALIGNED:
                     labelText = getTranslatedString("Slowly turn to follow the arrow");
-                    isHighlighted = false;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
                     cutoutBounds = null;
                     faceAngle = faceDetectionResult.getFaceAngle();
@@ -554,7 +541,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     break;
                 case FACE_TURNED_TOO_FAR:
                     labelText = null;
-                    isHighlighted = false;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
                     cutoutBounds = null;
                     faceAngle = null;
@@ -562,7 +548,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     break;
                 default:
                     labelText = getTranslatedString("Align your face with the oval");
-                    isHighlighted = false;
                     ovalBounds = defaultFaceBounds;
                     cutoutBounds = faceDetectionResult.getFaceBounds();
                     faceAngle = null;
@@ -574,26 +559,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (cutoutBounds != null) {
             matrix.mapRect(cutoutBounds);
         }
-        drawCameraOverlay(faceDetectionResult.getRequestedBearing(), labelText, isHighlighted, ovalBounds, cutoutBounds, faceAngle, showArrow, offsetAngleFromBearing);
-    }
+        int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
+        int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
+        instructionTextView.setText(labelText);
+        instructionTextView.setTextColor(textColour);
+        instructionTextView.setBackgroundColor(colour);
+        instructionView.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
 
-    @Override
-    public void clearCameraOverlay() {
-        instructionView.setVisibility(View.GONE);
-        detectedFaceView.setFaceRect(null, null, neutralColour, backgroundColour, null, null);
-    }
-
-    private void drawCameraOverlay(Bearing bearing, @Nullable String text, boolean isHighlighted, RectF ovalBounds, @Nullable RectF cutoutBounds, @Nullable EulerAngle faceAngle, boolean showArrow, @Nullable EulerAngle offsetAngleFromBearing) {
-        if (getActivity() == null) {
-            return;
-        }
-        instructionTextView.setText(text);
-        instructionTextView.setTextColor(isHighlighted ? highlightedTextColour : neutralTextColour);
-        instructionTextView.setBackgroundColor(isHighlighted ? highlightedColour : neutralColour);
-        instructionView.setVisibility(text != null ? View.VISIBLE : View.GONE);
-
-        int colour = isHighlighted ? highlightedColour : neutralColour;
-        int textColour = isHighlighted ? highlightedTextColour : neutralTextColour;
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(instructionView.getLayoutParams());
         params.topMargin = (int)(ovalBounds.top - instructionView.getHeight() - getResources().getDisplayMetrics().density * 16f);
         instructionView.setLayoutParams(params);
@@ -605,6 +577,51 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0-offsetAngleFromBearing.getPitch()) * 2;
         }
         detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+    }
+
+    @Override
+    public void clearCameraOverlay() {
+        instructionView.setVisibility(View.GONE);
+        detectedFaceView.setFaceRect(null, null, getOvalColourFromFaceDetectionStatus(FaceDetectionStatus.STARTED, null), backgroundColour, null, null);
+    }
+
+    /**
+     * Get the colour of the oval drawn around the face and of the background of the instruction text label. The colour should reflect the supplied state of the face detection.
+     * @param faceDetectionStatus Face detection status
+     * @param resultError Error that will be returned in the session result
+     * @return Integer representing a colour in ARGB space
+     * @since 1.6.0
+     */
+    public int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
+        if (resultError != null) {
+            return 0xFFFF0000;
+        }
+        switch (faceDetectionStatus) {
+            case FACE_FIXED:
+            case FACE_ALIGNED:
+                return 0xFF36AF00;
+            default:
+                return 0xFFFFFFFF;
+        }
+    }
+
+    /**
+     * Get the colour of the text inside the instruction text label. The colour should reflect the supplied state of the face detection.
+     * @param faceDetectionStatus Face detection status
+     * @return Integer representing a colour in ARGB space
+     * @since 1.6.0
+     */
+    public int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
+        if (resultError != null) {
+            return 0xFFFFFFFF;
+        }
+        switch (faceDetectionStatus) {
+            case FACE_FIXED:
+            case FACE_ALIGNED:
+                return 0xFFFFFFFF;
+            default:
+                return 0xFF000000;
+        }
     }
 
     private void setTextViewColour(int background, int text) {
