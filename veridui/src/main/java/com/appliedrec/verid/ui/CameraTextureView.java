@@ -66,17 +66,6 @@ public class CameraTextureView extends TextureView implements TextureView.Surfac
         startPreview();
     }
 
-    @Override
-    public void clearPreview() {
-        if (textureCreated && isAvailable()) {
-            Canvas canvas = lockCanvas();
-            if (canvas != null) {
-                canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-                unlockCanvasAndPost(canvas);
-            }
-        }
-    }
-
     public int getFixedWidth() {
         return this.width;
     }

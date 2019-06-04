@@ -16,8 +16,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.support.media.ExifInterface;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
@@ -91,24 +93,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         view.setLayoutParams(layoutParams);
         view.setBackgroundResource(android.R.color.black);
 
-        cameraSurfaceView = createCameraView();
-        cameraSurfaceView.setId(2);
-        cameraSurfaceView.setListener(this);
-        layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
-        cameraSurfaceView.setLayoutParams(layoutParams);
-        view.addView((View)cameraSurfaceView);
-
-        cameraOverlaysView = new TransformableRelativeLayout(getActivity());
-        layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        layoutParams.addRule(RelativeLayout.ALIGN_LEFT, cameraSurfaceView.getId());
-        layoutParams.addRule(RelativeLayout.ALIGN_TOP, cameraSurfaceView.getId());
-        layoutParams.addRule(RelativeLayout.ALIGN_RIGHT, cameraSurfaceView.getId());
-        layoutParams.addRule(RelativeLayout.ALIGN_BOTTOM, cameraSurfaceView.getId());
-        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
-        cameraOverlaysView.setLayoutParams(layoutParams);
-        view.addView(cameraOverlaysView);
-
         viewOverlays = new TransformableRelativeLayout(getActivity());
         layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         viewOverlays.setLayoutParams(layoutParams);
@@ -171,6 +155,43 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             return new CameraTextureView(getActivity(), null);
         } else {
             return new CameraSurfaceView(getActivity(), null);
+        }
+    }
+
+    @UiThread
+    private void addCameraView() {
+        removeCameraView();
+        ViewGroup view = (ViewGroup) getView();
+        if (view == null) {
+            return;
+        }
+        cameraSurfaceView = createCameraView();
+        cameraSurfaceView.setId(2);
+        cameraSurfaceView.setListener(this);
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        cameraSurfaceView.setLayoutParams(layoutParams);
+        view.addView((View)cameraSurfaceView, 0);
+
+        cameraOverlaysView = new TransformableRelativeLayout(getActivity());
+        view.addView(cameraOverlaysView, 1);
+        layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        layoutParams.addRule(RelativeLayout.ALIGN_LEFT, cameraSurfaceView.getId());
+        layoutParams.addRule(RelativeLayout.ALIGN_TOP, cameraSurfaceView.getId());
+        layoutParams.addRule(RelativeLayout.ALIGN_RIGHT, cameraSurfaceView.getId());
+        layoutParams.addRule(RelativeLayout.ALIGN_BOTTOM, cameraSurfaceView.getId());
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        cameraOverlaysView.setLayoutParams(layoutParams);
+    }
+
+    @UiThread
+    private void removeCameraView() {
+        if (cameraSurfaceView != null && ((View)cameraSurfaceView).getParent() != null) {
+            ((ViewGroup)((View)cameraSurfaceView).getParent()).removeView(((View)cameraSurfaceView));
+            cameraSurfaceView = null;
+        }
+        if (cameraOverlaysView != null && cameraOverlaysView.getParent() != null) {
+            ((ViewGroup)cameraOverlaysView.getParent()).removeView(cameraOverlaysView);
         }
     }
 
@@ -291,7 +312,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 runOnUIThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (camera == null) {
+                        if (camera == null || cameraSurfaceView == null) {
                             return;
                         }
                         cameraSurfaceView.setCamera(camera);
@@ -404,7 +425,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     public void run() {
                         if (cameraSurfaceView != null) {
                             cameraSurfaceView.setCamera(null);
-                            cameraSurfaceView.clearPreview();
                         }
                     }
                 });
@@ -451,7 +471,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     //region Ver-ID session fragment interface
 
+    @UiThread
     public void startCamera() {
+        addCameraView();
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
             previewProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
         }
@@ -486,11 +508,10 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         });
     }
 
+    @UiThread
     @Override
     public void clearCameraPreview() {
-        if (cameraSurfaceView != null) {
-            cameraSurfaceView.clearPreview();
-        }
+        removeCameraView();
     }
 
     @Override

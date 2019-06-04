@@ -60,21 +60,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 			}
 		}
 	}
-
-	@Override
-	public void clearPreview() {
-		if (!mSurfaceCreated) {
-			return;
-		}
-		SurfaceHolder holder = getHolder();
-		if (holder != null) {
-			Canvas canvas = holder.lockCanvas();
-			if (canvas != null) {
-				canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-				holder.unlockCanvasAndPost(canvas);
-			}
-		}
-	}
 	
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
