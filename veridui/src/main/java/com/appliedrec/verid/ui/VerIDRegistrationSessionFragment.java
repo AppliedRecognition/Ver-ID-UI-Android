@@ -115,9 +115,6 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                                     Matrix matrix = new Matrix();
                                     matrix.setScale(-1, 1);
                                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                                    int left = rect.left;
-                                    rect.left = bitmap.getWidth() - rect.right;
-                                    rect.right = bitmap.getWidth() - left;
                                 }
                                 bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
                                 if (faceViewSize != null && faceViewSize.x > 0 && faceViewSize.y > 0) {
