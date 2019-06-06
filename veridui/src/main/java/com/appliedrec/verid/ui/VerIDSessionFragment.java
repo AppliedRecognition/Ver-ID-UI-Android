@@ -73,6 +73,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     private static final int IMAGE_FORMAT_CERIDIAN_NV12 = 0x103;
     private int backgroundColour = 0x80000000;
+    private boolean isCameraStartRequested = false;
 
     //region Fragment lifecycle
 
@@ -98,6 +99,15 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         instructionTextView.setText(getTranslatedString("Preparing face detection"));
         setTextViewColour(getOvalColourFromFaceDetectionStatus(FaceDetectionStatus.STARTED, null), getTextColourFromFaceDetectionStatus(FaceDetectionStatus.STARTED, null));
         return view;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        if (isCameraStartRequested) {
+            isCameraStartRequested = false;
+            startCamera();
+        }
     }
 
     @Override
@@ -154,6 +164,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         removeCameraView();
         ViewGroup view = (ViewGroup) getView();
         if (view == null) {
+            isCameraStartRequested = true;
             return;
         }
         cameraSurfaceView = createCameraView();
@@ -400,6 +411,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     protected final void releaseCamera() {
+        isCameraStartRequested = false;
         if (previewProcessingExecutor == null) {
             return;
         }
