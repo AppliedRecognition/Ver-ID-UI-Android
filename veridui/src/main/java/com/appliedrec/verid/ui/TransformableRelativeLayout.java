@@ -2,7 +2,7 @@ package com.appliedrec.verid.ui;
 
 import android.content.Context;
 import android.graphics.Matrix;
-import android.support.v4.util.ArraySet;
+import androidx.collection.ArraySet;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.Transformation;

@@ -4,14 +4,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.preference.PreferenceManager;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDFactory;
 import com.appliedrec.verid.core.VerIDFactoryDelegate;
-import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
 

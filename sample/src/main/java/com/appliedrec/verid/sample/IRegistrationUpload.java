@@ -1,6 +1,6 @@
 package com.appliedrec.verid.sample;
 
-import android.support.annotation.WorkerThread;
+import androidx.annotation.WorkerThread;
 
 import java.net.URL;
 

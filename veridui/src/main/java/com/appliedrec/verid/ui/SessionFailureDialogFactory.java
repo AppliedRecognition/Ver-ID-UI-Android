@@ -5,7 +5,7 @@ import android.content.DialogInterface;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.os.Build;
-import android.support.v7.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.FrameLayout;

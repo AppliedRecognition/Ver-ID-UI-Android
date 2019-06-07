@@ -5,7 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.support.media.ExifInterface;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.appliedrec.verid.core.ImageUtils;
 

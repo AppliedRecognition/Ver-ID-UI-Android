@@ -1,8 +1,8 @@
 package com.appliedrec.verid.ui;
 
 import android.graphics.RectF;
-import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
