@@ -25,6 +25,7 @@ import android.widget.ProgressBar;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.IRecognizable;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
@@ -34,6 +35,8 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 
 import java.net.URL;
+import java.util.Iterator;
+import java.util.Map;
 
 public class RegisteredUserActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks {
 
@@ -95,9 +98,10 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
         if (resultCode == RESULT_OK && data != null && requestCode == REGISTRATION_REQUEST_CODE) {
             VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (result != null) {
-                Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
-                if (imageUris.length > 0) {
-                    profilePhotoHelper.setProfilePhotoUri(imageUris[0]);
+                Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
+                if (faceUriIterator.hasNext()) {
+                    Map.Entry<Face,Uri> entry = faceUriIterator.next();
+                    profilePhotoHelper.setProfilePhotoUri(entry.getValue(), entry.getKey().getBounds());
                 }
             }
             // See documentation at

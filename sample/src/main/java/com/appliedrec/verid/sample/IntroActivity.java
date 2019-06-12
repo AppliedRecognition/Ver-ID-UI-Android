@@ -21,6 +21,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerID;
@@ -28,6 +29,10 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.PageViewActivity;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.appliedrec.verid.ui.VerIDSessionIntent;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 public class IntroActivity extends PageViewActivity implements LoaderManager.LoaderCallbacks {
 
@@ -108,9 +113,10 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
         if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
             VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (result != null && result.getError() == null) {
-                Uri[] imageUris = result.getImageUris(Bearing.STRAIGHT);
-                if (imageUris.length > 0) {
-                    new ProfilePhotoHelper(this).setProfilePhotoUri(imageUris[0]);
+                Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
+                if (faceUriIterator.hasNext()) {
+                    Map.Entry<Face,Uri> entry = faceUriIterator.next();
+                    new ProfilePhotoHelper(this).setProfilePhotoUri(entry.getValue(), entry.getKey().getBounds());
                 }
                 Intent intent = new Intent(this, RegisteredUserActivity.class);
                 intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());

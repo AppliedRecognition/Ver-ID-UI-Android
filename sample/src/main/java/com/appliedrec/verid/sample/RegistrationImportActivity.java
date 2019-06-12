@@ -138,7 +138,7 @@ public class RegistrationImportActivity extends AppCompatActivity {
                     faceTemplatesFile.delete();
                     Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
                     if (imageUri != null) {
-                        profilePhotoHelper.setProfilePhotoUri(imageUri);
+                        profilePhotoHelper.setProfilePhotoUri(imageUri, null);
                     }
                     runOnUiThread(new Runnable() {
                         @Override

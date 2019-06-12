@@ -111,12 +111,12 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                                 rect.top = Math.max(rect.top, 0);
                                 rect.right = Math.min(rect.right, bitmap.getWidth());
                                 rect.left = Math.max(rect.left, 0);
+                                bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
                                 if (sessionSettings.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.FRONT) {
                                     Matrix matrix = new Matrix();
                                     matrix.setScale(-1, 1);
                                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
                                 }
-                                bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
                                 if (faceViewSize != null && faceViewSize.x > 0 && faceViewSize.y > 0) {
                                     double viewAspectRatio = (double)faceViewSize.x/(double)faceViewSize.y;
                                     double imageAspectRatio = (double)bitmap.getWidth()/(double)bitmap.getHeight();

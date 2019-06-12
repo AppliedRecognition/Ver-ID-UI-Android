@@ -97,7 +97,7 @@ public class TranslatedStrings implements IStringTranslator {
                         }
                     }
                     if (assetFile == null) {
-                        // Check if there is an asset whose name starts withe the locale language
+                        // Check if there is an asset whose name starts with the locale language
                         for (String asset : assets) {
                             if (asset.toLowerCase().startsWith(locale.getLanguage().toLowerCase() + "-") && asset.toLowerCase().endsWith(".xml")) {
                                 assetFile = asset;
