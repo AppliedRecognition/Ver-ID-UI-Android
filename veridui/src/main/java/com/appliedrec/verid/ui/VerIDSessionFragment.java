@@ -418,19 +418,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                if (camera != null) {
-                    camera.stopPreview();
-                    camera.release();
-                    camera = null;
-                }
-                runOnUIThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (cameraSurfaceView != null) {
-                            cameraSurfaceView.setCamera(null);
-                        }
-                    }
-                });
+                camera = null;
             }
         });
         previewProcessingExecutor = null;
