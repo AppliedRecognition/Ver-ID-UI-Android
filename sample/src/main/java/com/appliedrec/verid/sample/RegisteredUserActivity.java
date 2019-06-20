@@ -102,6 +102,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 if (faceUriIterator.hasNext()) {
                     Map.Entry<Face,Uri> entry = faceUriIterator.next();
                     profilePhotoHelper.setProfilePhotoUri(entry.getValue(), entry.getKey().getBounds());
+                    loadProfilePicture();
                 }
             }
             // See documentation at
