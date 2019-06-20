@@ -82,7 +82,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 		mSurfaceCreated = false;
 		if (mCamera != null) {
 			mCamera.stopPreview();
-			mCamera.release();
+			if (mListener != null) {
+				mListener.onCameraReleased(mCamera);
+			}
 			mCamera = null;
 		}
 	}

@@ -14,11 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
-import androidx.exifinterface.media.ExifInterface;
-import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -29,13 +24,19 @@ import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.exifinterface.media.ExifInterface;
+import androidx.fragment.app.Fragment;
+
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionStatus;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.Size;
 import com.appliedrec.verid.core.VerIDImage;
+import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -140,6 +141,22 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Override
     public void onCameraPreviewStarted(Camera camera) {
 
+    }
+
+    @Override
+    public void onCameraReleased(Camera camera) {
+        if (previewProcessingExecutor == null) {
+            return;
+        }
+        previewProcessingExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (VerIDSessionFragment.this.camera != null) {
+                    VerIDSessionFragment.this.camera.release();
+                    VerIDSessionFragment.this.camera = null;
+                }
+            }
+        });
     }
 
     //endregion
@@ -411,16 +428,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     protected final void releaseCamera() {
         isCameraStartRequested = false;
-        if (previewProcessingExecutor == null) {
-            return;
-        }
-        previewProcessingExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                camera = null;
-            }
-        });
-        previewProcessingExecutor = null;
     }
 
     //endregion
@@ -440,13 +447,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (imageAspectRatio > viewAspectRatio) {
             rect.bottom = size.height;
             float w = size.height * viewAspectRatio;
-            rect.left = size.width / 2 - w / 2;
-            rect.right = size.width / 2 + w / 2;
+            rect.left = (float)size.width / 2 - w / 2;
+            rect.right = (float)size.width / 2 + w / 2;
         } else {
             rect.right = size.width;
             float h = size.width / viewAspectRatio;
-            rect.top = size.height / 2 - h / 2;
-            rect.bottom = size.height / 2 + h / 2;
+            rect.top = (float)size.height / 2 - h / 2;
+            rect.bottom = (float)size.height / 2 + h / 2;
         }
         float scale = width / rect.width();
         Matrix matrix = new Matrix();
