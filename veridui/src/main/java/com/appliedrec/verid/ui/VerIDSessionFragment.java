@@ -336,7 +336,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         return null;
     }
 
-    protected int getOrientationOfCamera() {
+    public int getOrientationOfCamera() {
         int numberOfCameras = Camera.getNumberOfCameras();
         Camera.CameraInfo info = new Camera.CameraInfo();
         for (int i = 0; i < numberOfCameras; i++) {

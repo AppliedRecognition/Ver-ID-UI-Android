@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.RectF;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import androidx.annotation.MainThread;
@@ -29,6 +30,8 @@ import com.appliedrec.verid.core.IImageProviderServiceFactory;
 import com.appliedrec.verid.core.IImageWriterServiceFactory;
 import com.appliedrec.verid.core.IResultEvaluationService;
 import com.appliedrec.verid.core.IResultEvaluationServiceFactory;
+import com.appliedrec.verid.core.IVideoEncoderService;
+import com.appliedrec.verid.core.IVideoEncoderServiceFactory;
 import com.appliedrec.verid.core.ImageWriterServiceFactory;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.ResultEvaluationServiceFactory;
@@ -38,7 +41,10 @@ import com.appliedrec.verid.core.SessionTask;
 import com.appliedrec.verid.core.SessionTaskDelegate;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDImage;
+import com.appliedrec.verid.core.VideoEncoderService;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -51,7 +57,7 @@ import java.util.concurrent.TimeoutException;
  * @param <U> Fragment type
  * @since 1.0.0
  */
-public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator, IVideoEncoderServiceFactory {
 
     //region Public constants
     /**
@@ -224,7 +230,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             startTime = System.currentTimeMillis();
             faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(sessionSettings);
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(sessionSettings);
-            SessionTask sessionTask = new SessionTask(makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
+            SessionTask sessionTask = new SessionTask(makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
             if (executor == null || executor.isShutdown()) {
                 executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
             }
@@ -495,6 +501,14 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         throw new Exception("Image provider is null");
     }
 
+    @Override
+    public int getOrientationOfCamera() {
+        if (sessionFragment != null) {
+            return sessionFragment.getOrientationOfCamera();
+        }
+        return 0;
+    }
+
     //endregion
 
     //region Fragment creation
@@ -637,6 +651,19 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     public void onResultFragmentDismissed(IResultFragment resultFragment) {
         finishWithResult(resultFragment.getSessionResult());
+    }
+
+    @Override
+    public IVideoEncoderService makeVideoEncoderService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && sessionSettings.shouldRecordSessionVideo()) {
+            try {
+                File tempFile = File.createTempFile("video_", ".mp4");
+                return new VideoEncoderService(tempFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     //endregion
