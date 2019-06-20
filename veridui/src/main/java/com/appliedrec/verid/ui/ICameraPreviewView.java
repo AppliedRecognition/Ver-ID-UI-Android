@@ -7,6 +7,7 @@ public interface ICameraPreviewView {
 
     interface CameraPreviewViewListener {
         void onCameraPreviewStarted(Camera camera);
+        void onCameraReleased(Camera camera);
     }
 
     int getId();

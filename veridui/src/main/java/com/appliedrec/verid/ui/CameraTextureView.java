@@ -95,7 +95,9 @@ public class CameraTextureView extends TextureView implements TextureView.Surfac
         textureCreated = false;
         if (camera != null) {
             camera.stopPreview();
-            camera.release();
+            if (listener != null) {
+                listener.onCameraReleased(camera);
+            }
             camera = null;
         }
         return true;
