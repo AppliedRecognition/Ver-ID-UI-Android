@@ -215,9 +215,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                         }
                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            settings.shouldRecordSessionVideo(true);
-                        }
                         Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
                         intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
                         intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
