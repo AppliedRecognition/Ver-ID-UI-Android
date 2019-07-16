@@ -416,14 +416,16 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
 
     protected void setPreviewCallbackWithBuffer() {
-        final int bufferLength;
-        if (previewFormat == IMAGE_FORMAT_CERIDIAN_NV12) {
-            bufferLength = (previewSize.width * previewSize.height * 12 + 7) / 8;
-        } else {
-            bufferLength = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
-        }
-        camera.addCallbackBuffer(new byte[bufferLength]);
+        camera.addCallbackBuffer(new byte[getPreviewBufferLength()]);
         camera.setPreviewCallbackWithBuffer(VerIDSessionFragment.this);
+    }
+
+    private int getPreviewBufferLength() {
+        if (previewFormat == IMAGE_FORMAT_CERIDIAN_NV12) {
+            return (previewSize.width * previewSize.height * 12 + 7) / 8;
+        } else {
+            return previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
+        }
     }
 
     protected final void releaseCamera() {
@@ -659,6 +661,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+        if (camera == null) {
+            return;
+        }
+        if (data == null) {
+            camera.addCallbackBuffer(new byte[getPreviewBufferLength()]);
+            return;
+        }
         synchronized (this) {
             if (currentImage == null) {
                 YuvImage image = new YuvImage(data, previewFormat, previewSize.width, previewSize.height, null);
