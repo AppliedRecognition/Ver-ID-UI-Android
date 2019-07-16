@@ -3,8 +3,8 @@ package com.appliedrec.verid.ui;
 import android.content.Context;
 import android.content.Intent;
 
-import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core.VerIDSessionSettings;
 
 /**
  * Convenience Intent wrapper that constructs an intent to launch a Ver-ID session activity

@@ -29,7 +29,6 @@ import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionStatus;
