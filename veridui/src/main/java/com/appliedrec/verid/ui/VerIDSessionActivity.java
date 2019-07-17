@@ -229,7 +229,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             startTime = System.currentTimeMillis();
             faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(sessionSettings);
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(sessionSettings);
-            SessionTask sessionTask = new SessionTask(makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
+            SessionTask sessionTask = new SessionTask(environment, makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
             if (executor == null || executor.isShutdown()) {
                 executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
             }
