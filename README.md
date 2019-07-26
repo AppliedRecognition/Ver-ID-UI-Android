@@ -10,14 +10,13 @@ To build this project and to run the sample app you will need a computer with th
 
 - [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.3.2 or newer
 - [Git](https://git-scm.com)
-- [Git LFS](https://git-lfs.github.com)
 
 ## Installation
 
 1. Open a shell console and enter the following commands:
 
 	~~~shell
-	git clone --recurse-submodules https://github.com/AppliedRecognition/Ver-ID-UI-Android.git
+	git clone https://github.com/AppliedRecognition/Ver-ID-UI-Android.git
 	~~~
 1. Open Android Studio and from the top menu select **File/Open...**. Navigate to the directory where you checked out the Git project and press **Open**.
 1. Connect your Android device for debugging via USB.
@@ -25,7 +24,7 @@ To build this project and to run the sample app you will need a computer with th
 
 ## Adding Ver-ID to your own project
 
-4. [Request API secret](https://dev.ver-id.com/admin/register) for your app. We will need your app's package name.
+1. [Request API secret](https://dev.ver-id.com/admin/register) for your app. We will need your app's package name.
 
 1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
     
@@ -36,26 +35,9 @@ To build this project and to run the sample app you will need a computer with th
         }
     }
     ~~~
-1. Add the following dependency to your **gradle.build** file:
-	
-	~~~groovy
-    dependencies {
-	    implementation 'com.appliedrec.verid:ui:1.7.4'
-    }
-	~~~
-2. Add RenderScript in your **gradle.build** file:
+1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~<br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
 
-	~~~groovy
-    android {
-        defaultConfig {
-            renderscriptTargetApi 14
-            renderscriptSupportModeEnabled true
-        }
-    }
-	~~~
-3. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~<br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
-
-5. Add the API secret in your app's manifest XML:
+1. Add the API secret in your app's manifest XML:
 
 	~~~xml
     <manifest>
@@ -65,7 +47,37 @@ To build this project and to run the sample app you will need a computer with th
                 android:value="yourApiSecret" />
         </application>
     </manifest>
-	~~~
+	~~~	
+1.
+	### If you are targeting Android API level 18 or later
+	
+	1. Add the following dependency to your **gradle.build** file:
+
+		~~~groovy
+	    dependencies {
+		    implementation 'com.appliedrec.verid:ui:1.7.8'
+	    }
+		~~~
+
+	### If you are targeting Android API level 14–17
+
+	1. Add the following dependency to your **gradle.build** file:
+
+		~~~groovy
+	    dependencies {
+		    implementation 'com.appliedrec.verid-api14:ui:1.7.8'
+	    }
+		~~~
+	2. Add RenderScript in your **gradle.build** file:
+
+		~~~groovy
+	    android {
+		    defaultConfig {
+		        renderscriptTargetApi 14
+		        renderscriptSupportModeEnabled true
+		    }
+	    }
+		~~~
 
 ## Usage
 
