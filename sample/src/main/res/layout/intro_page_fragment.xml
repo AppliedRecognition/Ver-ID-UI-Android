@@ -38,6 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Ver-ID Person SDK"
+                app:layout_constraintTop_toTopOf="parent"
                 android:textAppearance="@style/TextAppearance.AppCompat.Title" />
 
             <TextView
