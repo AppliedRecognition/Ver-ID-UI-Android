@@ -35,7 +35,7 @@ To build this project and to run the sample app you will need a computer with th
         }
     }
     ~~~
-1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~<br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
+1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~ <br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
 
 1. Add the API secret in your app's manifest XML:
 
@@ -48,33 +48,33 @@ To build this project and to run the sample app you will need a computer with th
         </application>
     </manifest>
 	~~~	
-1.
-	### If you are targeting Android API level 18 or later
+1. If you are targeting Android API level 21 or later
 	
-	1. Add the following dependency to your **gradle.build** file:
+	- Add the following dependency to your **gradle.build** file:
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.7.8'
+		    implementation 'com.appliedrec.verid:ui:1.7.11'
 	    }
 		~~~
 
-	### If you are targeting Android API level 14–17
+1. If you are targeting Android API level 14–20
 
-	1. Add the following dependency to your **gradle.build** file:
+	- Add the following dependency to your **gradle.build** file:
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid-api14:ui:1.7.8'
+		    implementation 'com.appliedrec.verid-api14:ui:1.7.11'
 	    }
 		~~~
-	2. Add RenderScript in your **gradle.build** file:
+	- Add RenderScript in your **gradle.build** file:
 
 		~~~groovy
 	    android {
 		    defaultConfig {
 		        renderscriptTargetApi 14
 		        renderscriptSupportModeEnabled true
+		        maxSdkVersion 20
 		    }
 	    }
 		~~~
