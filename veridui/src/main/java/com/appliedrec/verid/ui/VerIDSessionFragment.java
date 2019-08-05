@@ -220,6 +220,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         final Point displaySize = new Point(getView().getWidth(), getView().getHeight());
         final Display display = ((WindowManager) activity.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
         final int rotation = display.getRotation();
+        if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
+            return;
+        }
         previewProcessingExecutor.execute(new Runnable() {
             @Override
             public void run() {
