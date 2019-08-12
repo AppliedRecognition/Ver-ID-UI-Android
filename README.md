@@ -8,7 +8,7 @@ This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-I
 
 To build this project and to run the sample app you will need a computer with these applications:
 
-- [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.3.2 or newer
+- [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.4.2 or newer
 - [Git](https://git-scm.com)
 
 ## Installation
@@ -54,7 +54,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.7.11'
+		    implementation 'com.appliedrec.verid:ui:1.8.0'
 	    }
 		~~~
 
@@ -64,7 +64,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid-api14:ui:1.7.11'
+		    implementation 'com.appliedrec.verid-api14:ui:1.8.0'
 	    }
 		~~~
 	- Add RenderScript in your **gradle.build** file:
