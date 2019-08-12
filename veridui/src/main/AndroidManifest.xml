@@ -6,11 +6,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true">
-        <activity android:name=".VerIDSessionActivity" />
+        <activity android:name=".VerIDSessionActivity" android:theme="@style/CameraActivityTheme" />
         <activity android:name=".TipsActivity" />
     </application>
 
