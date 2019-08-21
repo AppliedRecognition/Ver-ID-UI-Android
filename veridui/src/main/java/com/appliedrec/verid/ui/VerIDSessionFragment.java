@@ -79,12 +79,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        TransformableRelativeLayout view = new TransformableRelativeLayout(container.getContext());
+        TransformableRelativeLayout view = new TransformableRelativeLayout(inflater.getContext());
         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         view.setLayoutParams(layoutParams);
         view.setBackgroundResource(android.R.color.black);
 
-        viewOverlays = new TransformableRelativeLayout(getActivity());
+        viewOverlays = new TransformableRelativeLayout(inflater.getContext());
         layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         viewOverlays.setLayoutParams(layoutParams);
         view.addView(viewOverlays);
