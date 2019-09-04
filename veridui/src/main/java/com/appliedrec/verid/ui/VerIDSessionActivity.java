@@ -113,15 +113,16 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (intent == null) {
             return;
         }
-        T settings = intent.getParcelableExtra(EXTRA_SETTINGS);
+        sessionSettings = intent.getParcelableExtra(EXTRA_SETTINGS);
         int instanceId = intent.getIntExtra(EXTRA_VERID_INSTANCE_ID, -1);
-        if (settings == null || instanceId == -1) {
+        if (getSessionSettings() == null) {
             return;
         }
         translatedStrings = new TranslatedStrings(this, intent);
         try {
-            this.environment = VerID.getInstance(instanceId);
-            this.sessionSettings = settings;
+            if (getEnvironment() == null) {
+                this.environment = VerID.getInstance(instanceId);
+            }
             if (savedInstanceState == null) {
                 sessionFragment = makeVerIDSessionFragment();
                 addVerIDSessionFragment();
@@ -181,6 +182,13 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     }
 
     /**
+     * @return {@literal true} if the session task executor is shut down
+     */
+    protected boolean isExecutorShutdown() {
+        return executor == null || executor.isShutdown();
+    }
+
+    /**
      * Clear face oval and text laid over the camera fragment
      */
     protected void clearCameraOverlays() {
@@ -227,9 +235,9 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected void startSessionTask() {
         try {
             startTime = System.currentTimeMillis();
-            faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(sessionSettings);
-            IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(sessionSettings);
-            SessionTask sessionTask = new SessionTask(this.environment, makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
+            faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(getSessionSettings());
+            IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(getSessionSettings());
+            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
             if (executor == null || executor.isShutdown()) {
                 executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
             }
@@ -257,6 +265,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             result.putExtra(EXTRA_ERROR, sessionResult.getError());
         }
         result.putExtra(EXTRA_RESULT, sessionResult);
+        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -275,6 +284,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
         result.putExtra(EXTRA_RESULT, new VerIDSessionResult(error));
+        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -450,7 +460,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @since 1.0.0
      */
     protected IResultEvaluationServiceFactory<T> makeResultEvaluationServiceFactory() {
-        return new ResultEvaluationServiceFactory<>(this, environment);
+        return new ResultEvaluationServiceFactory<>(getEnvironment());
     }
 
     //endregion
@@ -607,7 +617,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @since 1.0.0
      */
     protected IFaceDetectionServiceFactory makeFaceDetectionServiceFactory() {
-        return new FaceDetectionServiceFactory(environment, getFaceAlignmentDetection());
+        return new FaceDetectionServiceFactory(getEnvironment(), getFaceAlignmentDetection());
     }
 
     //endregion
