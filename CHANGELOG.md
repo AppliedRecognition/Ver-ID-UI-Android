@@ -1,5 +1,14 @@
 # Change Log
 
+## Version 1.11.0
+- Added protected method `startTipsActivity()` on `VerIDSessionActivity`. Override the method if you want to present your own version of tips.
+
+## Version 1.10.0
+Ver-ID Core changes:
+ 
+- Introduced a new constructor for `ResultEvaluationServiceFactory`. The new constructor doesn't need `Context`.
+- Added `getFaceLandmarks()` method on `Face`
+
 ## Version 1.9.0
 - Improvements of processing images for face detection and recognition.
 	- The library now supports setting multiple image processors that each generate an image optimised for face detection.

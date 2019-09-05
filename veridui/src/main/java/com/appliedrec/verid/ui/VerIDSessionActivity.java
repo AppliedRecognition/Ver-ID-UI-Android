@@ -334,6 +334,9 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     @MainThread
     public void onProgress(SessionTask sessionTask, VerIDSessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
+        if (isExecutorShutdown()) {
+            return;
+        }
         if (faceDetectionService == null) {
             return;
         }
@@ -428,9 +431,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             @Override
             public void onShowTips() {
                 retryCount ++;
-                Intent intent = new Intent(VerIDSessionActivity.this, TipsActivity.class);
-                intent.putExtras(getIntent());
-                startActivity(intent);
+                startTipsActivity();
             }
 
             @Override
@@ -448,6 +449,16 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         shutDownExecutor();
         dialog.show();
         return true;
+    }
+
+    /**
+     * Start an activity showing face detection tips
+     * @since 1.11.0
+     */
+    protected void startTipsActivity() {
+        Intent intent = new Intent(VerIDSessionActivity.this, TipsActivity.class);
+        intent.putExtras(getIntent());
+        startActivity(intent);
     }
 
     //endregion

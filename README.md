@@ -54,7 +54,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.9.0'
+		    implementation 'com.appliedrec.verid:ui:1.11.0'
 	    }
 		~~~
 
@@ -64,7 +64,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid-api14:ui:1.9.0'
+		    implementation 'com.appliedrec.verid-api14:ui:1.11.0'
 	    }
 		~~~
 	- Add RenderScript in your **gradle.build** file:
