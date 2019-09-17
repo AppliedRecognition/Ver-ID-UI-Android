@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 1.11.1
+- Added face template encryption
+
 ## Version 1.11.0
 - Added protected method `startTipsActivity()` on `VerIDSessionActivity`. Override the method if you want to present your own version of tips.
 
