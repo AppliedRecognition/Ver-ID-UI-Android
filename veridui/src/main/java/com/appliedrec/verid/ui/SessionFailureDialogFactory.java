@@ -10,6 +10,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.widget.FrameLayout;
 
+import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
@@ -17,7 +19,7 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
  * Creates a dialog that shows an animation of a face responding to liveness detection prompts
  * @since 1.0.0
  */
-public class SessionFailureDialogFactory implements ISessionFailureDialogFactory {
+public class SessionFailureDialogFactory implements ISessionFailureDialogFactory2 {
 
     enum ScreenDensity {
         MEDIUM, HIGH, EXTRA_HIGH
@@ -29,11 +31,12 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
      * @param message Message in the dialog
      * @param listener Dialog listener
      * @param sessionSettings Session settings
+     * @param faceDetectionResult Latest face detection result
      * @return Alert dialog
-     * @since 1.0.0
+     * @since 1.12.0
      */
     @Override
-    public AlertDialog makeDialog(Activity activity, String message, final SessionFailureDialogListener listener, VerIDSessionSettings sessionSettings) {
+    public AlertDialog makeDialog(Activity activity, String message, final SessionFailureDialogListener listener, VerIDSessionSettings sessionSettings, FaceDetectionResult faceDetectionResult) {
         ScreenDensity screenDensity;
         float density = activity.getResources().getDisplayMetrics().density;
         if (density > 2) {
@@ -43,7 +46,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         } else {
             screenDensity = ScreenDensity.MEDIUM;
         }
-        final MediaPlayer mediaPlayer = MediaPlayer.create(activity, getVideoResourceId(screenDensity, sessionSettings));
+        final MediaPlayer mediaPlayer = MediaPlayer.create(activity, getVideoResourceId(screenDensity, faceDetectionResult));
         mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer mp, int what, int extra) {
@@ -127,25 +130,70 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         return dialog;
     }
 
-    int getVideoResourceId(ScreenDensity screenDensity, VerIDSessionSettings sessionSettings) {
+    int getVideoResourceId(ScreenDensity screenDensity, FaceDetectionResult faceDetectionResult) {
         switch (screenDensity) {
             case MEDIUM:
-                if (sessionSettings instanceof RegistrationSessionSettings) {
-                    return R.raw.registration_1;
-                } else {
-                    return R.raw.liveness_detection_1;
+                switch (faceDetectionResult.getRequestedBearing()) {
+                    case STRAIGHT:
+                        return R.raw.registration_1;
+                    case UP:
+                        return R.raw.up_1;
+                    case LEFT_UP:
+                        return R.raw.right_up_1;
+                    case LEFT:
+                        return R.raw.right_1;
+                    case LEFT_DOWN:
+                        return R.raw.right_down_1;
+                    case DOWN:
+                        return R.raw.down_1;
+                    case RIGHT_DOWN:
+                        return R.raw.left_down_1;
+                    case RIGHT:
+                        return R.raw.left_1;
+                    case RIGHT_UP:
+                        return R.raw.left_up_1;
                 }
             case HIGH:
-                if (sessionSettings instanceof RegistrationSessionSettings) {
-                    return R.raw.registration_2;
-                } else {
-                    return R.raw.liveness_detection_2;
+                switch (faceDetectionResult.getRequestedBearing()) {
+                    case STRAIGHT:
+                        return R.raw.registration_2;
+                    case UP:
+                        return R.raw.up_2;
+                    case LEFT_UP:
+                        return R.raw.right_up_2;
+                    case LEFT:
+                        return R.raw.right_2;
+                    case LEFT_DOWN:
+                        return R.raw.right_down_2;
+                    case DOWN:
+                        return R.raw.down_2;
+                    case RIGHT_DOWN:
+                        return R.raw.left_down_2;
+                    case RIGHT:
+                        return R.raw.left_2;
+                    case RIGHT_UP:
+                        return R.raw.left_up_2;
                 }
             case EXTRA_HIGH:
-                if (sessionSettings instanceof RegistrationSessionSettings) {
-                    return R.raw.registration_3;
-                } else {
-                    return R.raw.liveness_detection_3;
+                switch (faceDetectionResult.getRequestedBearing()) {
+                    case STRAIGHT:
+                        return R.raw.registration_3;
+                    case UP:
+                        return R.raw.up_3;
+                    case LEFT_UP:
+                        return R.raw.right_up_3;
+                    case LEFT:
+                        return R.raw.right_3;
+                    case LEFT_DOWN:
+                        return R.raw.right_down_3;
+                    case DOWN:
+                        return R.raw.down_3;
+                    case RIGHT_DOWN:
+                        return R.raw.left_down_3;
+                    case RIGHT:
+                        return R.raw.left_3;
+                    case RIGHT_UP:
+                        return R.raw.left_up_3;
                 }
         }
         return -1;

@@ -395,8 +395,19 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     /**
      * @return Instance of {@link ISessionFailureDialogFactory}
      * @since 1.0.0
+     * @deprecated In 1.12.0 See {@link #makeSessionFailureDialogFactory2()}
      */
+    @Deprecated
     protected ISessionFailureDialogFactory makeSessionFailureDialogFactory() {
+        return null;
+    }
+
+    /**
+     *
+     * @return Instance of {@link ISessionFailureDialogFactory2}
+     * @since 1.12.0
+     */
+    protected ISessionFailureDialogFactory2 makeSessionFailureDialogFactory2() {
         return new SessionFailureDialogFactory();
     }
 
@@ -418,11 +429,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         } else {
             return false;
         }
-        ISessionFailureDialogFactory dialogFactory = makeSessionFailureDialogFactory();
-        if (dialogFactory == null) {
-            return false;
-        }
-        AlertDialog dialog = dialogFactory.makeDialog(this, message, new SessionFailureDialogListener() {
+        SessionFailureDialogListener failureDialogListener = new SessionFailureDialogListener() {
             @Override
             public void onCancel() {
                 finishCancel();
@@ -442,7 +449,19 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 }
                 startSessionTask();
             }
-        }, sessionSettings);
+        };
+        AlertDialog dialog;
+        ISessionFailureDialogFactory2 dialogFactory2 = makeSessionFailureDialogFactory2();
+        if (dialogFactory2 != null) {
+            dialog = dialogFactory2.makeDialog(this, message, failureDialogListener, sessionSettings, faceDetectionResult);
+        } else {
+            ISessionFailureDialogFactory dialogFactory = makeSessionFailureDialogFactory();
+            if (dialogFactory != null) {
+                dialog = dialogFactory.makeDialog(this, message, failureDialogListener, sessionSettings);
+            } else {
+                return false;
+            }
+        }
         if (dialog == null) {
             return false;
         }
