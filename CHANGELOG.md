@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 1.11.2
+- Animations showing how to follow the arrow directions take into account the requested direction. For example, if the user is asked to turn left and fails the animation will show a head following the arrow to the left.
+
 ## Version 1.11.1
 - Added face template encryption
 
