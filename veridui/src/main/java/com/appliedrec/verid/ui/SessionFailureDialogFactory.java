@@ -135,7 +135,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
             case MEDIUM:
                 switch (faceDetectionResult.getRequestedBearing()) {
                     case STRAIGHT:
-                        return R.raw.registration_1;
+                        return R.raw.up_to_centre_1;
                     case UP:
                         return R.raw.up_1;
                     case LEFT_UP:
@@ -156,7 +156,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
             case HIGH:
                 switch (faceDetectionResult.getRequestedBearing()) {
                     case STRAIGHT:
-                        return R.raw.registration_2;
+                        return R.raw.up_to_centre_2;
                     case UP:
                         return R.raw.up_2;
                     case LEFT_UP:
@@ -177,7 +177,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
             case EXTRA_HIGH:
                 switch (faceDetectionResult.getRequestedBearing()) {
                     case STRAIGHT:
-                        return R.raw.registration_3;
+                        return R.raw.up_to_centre_3;
                     case UP:
                         return R.raw.up_3;
                     case LEFT_UP:
