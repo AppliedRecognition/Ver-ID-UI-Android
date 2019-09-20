@@ -23,6 +23,7 @@
     <string name="pref_key_use_antispoofing">pref_key_use_antispoofing</string>
     <string name="pref_key_authenticate_bearings">pref_key_authenticate_bearings</string>
     <string name="pref_key_enable_logging">pref_key_enable_logging</string>
+    <string name="pref_key_disable_encryption">pref_key_disable_encryption</string>
     <string name="show_registration_guide_summary">Show a set of instructions before registration</string>
     <string name="show_session_result_summary">Show a screen with the result at the end of the session</string>
     <string name="register_separate_bearings_summary">Capture and register faces in different poses for extra security</string>
@@ -117,4 +118,6 @@
     <string name="next">Next</string>
     <string name="register">Register</string>
     <string name="done">Done</string>
+    <string name="pref_disable_encryption">Disable face template encryption</string>
+    <string name="app_will_restart">The app will restart</string>
 </resources>

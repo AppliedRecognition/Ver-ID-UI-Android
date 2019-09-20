@@ -8,6 +8,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.preference.PreferenceManager;
 
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core.UserManagementFactory;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDFactory;
 import com.appliedrec.verid.core.VerIDFactoryDelegate;
@@ -25,6 +26,7 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         if (savedInstanceState != null) {
             int veridInstanceId = savedInstanceState.getInt(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
             if (veridInstanceId > -1) {
@@ -54,12 +56,24 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     }
 
     private void createVerID() {
+        if (veridInstanceId > -1) {
+            try {
+                VerID verID = VerID.getInstance(veridInstanceId);
+                verID.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         VerIDFactory verIDFactory = new VerIDFactory(this, this);
+        boolean disableEncryption = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_key_disable_encryption), false);
+        UserManagementFactory userManagementFactory = new UserManagementFactory(this, disableEncryption);
+        verIDFactory.setUserManagementFactory(userManagementFactory);
         verIDFactory.createVerID();
     }
 
     @Override
     public void veridFactoryDidCreateEnvironment(VerIDFactory factory, VerID environment) {
+        veridInstanceId = environment.getInstanceId();
         registerPreferences(environment);
         loadRegisteredUsers(environment);
     }
@@ -70,7 +84,6 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     }
 
     private void registerPreferences(VerID environment) {
-        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         LivenessDetectionSessionSettings defaultSessionSettings = new LivenessDetectionSessionSettings();
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -99,7 +112,6 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     }
 
     private void loadRegisteredUsers(final VerID verID) {
-        veridInstanceId = verID.getInstanceId();
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {

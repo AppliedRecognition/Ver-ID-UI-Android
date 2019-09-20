@@ -56,6 +56,7 @@ import java.util.concurrent.TimeoutException;
  * @param <U> Fragment type
  * @since 1.0.0
  */
+@SuppressWarnings("unchecked")
 public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator, IVideoEncoderServiceFactory {
 
     //region Public constants

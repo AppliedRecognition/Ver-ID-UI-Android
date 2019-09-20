@@ -35,6 +35,9 @@
             android:entries="@array/registration_face_counts"
             android:entryValues="@array/registration_face_count_values"
             android:summary="%s" />
+        <android.support.v7.preference.CheckBoxPreference
+            android:key="@string/pref_key_disable_encryption"
+            android:title="@string/pref_disable_encryption"/>
     </android.support.v7.preference.PreferenceCategory>
     <android.support.v7.preference.PreferenceCategory android:title="@string/input">
         <android.support.v7.preference.CheckBoxPreference
