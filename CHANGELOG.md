@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 1.12.0
+- Fixed error where sessions returned encrypted face templates.
+- Added the option to [disable face template encryption](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.UserManagementFactory.html#UserManagementFactory(Context,%20boolean)).
+- Added a [method](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.UserManagement.html#getFaceTemplateEncryption()) to access face template encryption.
+
 ## Version 1.11.2
 - Animations showing how to follow the arrow directions take into account the requested direction. For example, if the user is asked to turn left and fails the animation will show a head following the arrow to the left.
 
