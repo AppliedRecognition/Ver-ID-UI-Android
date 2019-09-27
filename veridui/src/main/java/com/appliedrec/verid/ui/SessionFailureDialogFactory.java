@@ -125,7 +125,9 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
                             listener.onRetry();
                         }
                     }
-                }).create();
+                }).
+                setCancelable(false).
+                create();
         dialog.setCanceledOnTouchOutside(false);
         return dialog;
     }
