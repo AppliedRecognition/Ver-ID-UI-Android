@@ -1,5 +1,11 @@
 # Change Log
 
+## Version 1.13.1
+- Fixed session not restarting after dismissing the session failure dialog using the system back button.
+
+## Version 1.13.0
+- Added a [blocking method](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDFactory.html#createVerIDSync()) to create `VerID` instance.
+
 ## Version 1.12.0
 - Fixed error where sessions returned encrypted face templates.
 - Added the option to [disable face template encryption](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.UserManagementFactory.html#UserManagementFactory(Context,%20boolean)).
