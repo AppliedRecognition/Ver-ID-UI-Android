@@ -4,13 +4,8 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,19 +15,31 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
+
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.PageViewActivity;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.appliedrec.verid.ui.VerIDSessionIntent;
+import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
+import com.trello.rxlifecycle3.LifecycleProvider;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import io.reactivex.Completable;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 public class IntroActivity extends PageViewActivity implements LoaderManager.LoaderCallbacks {
 
@@ -44,6 +51,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
     boolean showRegistration = true;
     private AlertDialog tempDialog;
     private VerID verID;
+    private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +124,7 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
                 Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
                 if (faceUriIterator.hasNext()) {
                     Map.Entry<Face,Uri> entry = faceUriIterator.next();
-                    new ProfilePhotoHelper(this).setProfilePhotoUri(entry.getValue(), entry.getKey().getBounds());
+                    new ProfilePhotoHelper(this).setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds()).subscribeOn(Schedulers.io()).subscribe();
                 }
                 Intent intent = new Intent(this, RegisteredUserActivity.class);
                 intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
@@ -126,60 +134,63 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
         } else if (requestCode == QR_CODE_SCAN_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.hasExtra(Intent.EXTRA_TEXT)) {
             LoaderManager.getInstance(this).restartLoader(LOADER_ID_IMPORT_REGISTRATION, data.getExtras(), this).forceLoad();
         } else if (requestCode == REQUEST_CODE_IMPORT) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        final String[] users = verID.getUserManagement().getUsers();
-                        if (users.length > 0) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Intent intent = new Intent(IntroActivity.this, RegisteredUserActivity.class);
-                                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                                    startActivity(intent);
-                                    finish();
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+            Completable.create(emitter -> {
+                try {
+                    final String[] users = verID.getUserManagement().getUsers();
+                    if (users.length > 0) {
+                        emitter.onComplete();
+                    } else {
+                        throw new Exception("No users registered");
                     }
+                } catch (Exception e) {
+                    emitter.onError(e);
                 }
+            }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
+                Intent intent = new Intent(IntroActivity.this, RegisteredUserActivity.class);
+                intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                startActivity(intent);
+                finish();
             });
-
         }
     }
 
     private void register() {
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String[] users = verID.getUserManagement().getUsers();
-                    if (users.length > 0) {
-                        verID.getUserManagement().deleteUsers(users);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+        Observable.create(emitter -> {
+            try {
+                String[] users = verID.getUserManagement().getUsers();
+                for (String user : users) {
+                    emitter.onNext(user);
                 }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                        settings.setShowResult(true);
-                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
-                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                        }
-                        Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
-                        startActivityForResult(intent, REQUEST_CODE_REGISTER);
-                    }
-                });
+                emitter.onComplete();
+                if (users.length > 0) {
+                    verID.getUserManagement().deleteUsers(users);
+                }
+            } catch (Exception e) {
+                emitter.onError(e);
             }
+        }).toList().flatMapCompletable(users -> observer -> {
+            try {
+                if (!users.isEmpty()) {
+                    String[] userArray = new String[users.size()];
+                    users.toArray(userArray);
+                    verID.getUserManagement().deleteUsers(userArray);
+                }
+                observer.onComplete();
+            } catch (Exception e) {
+                observer.onError(e);
+            }
+        }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
+            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+            settings.setShowResult(true);
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
+            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+            }
+            Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
+            startActivityForResult(intent, REQUEST_CODE_REGISTER);
         });
     }
 

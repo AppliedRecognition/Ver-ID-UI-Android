@@ -5,8 +5,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PointF;
 import android.graphics.RectF;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -19,11 +20,15 @@ DetectedFaceView extends View {
 
     Paint strokePaint;
     Paint faceTemplatePaint;
+    Paint landmarkPaint;
     RectF faceRect;
     RectF templateRect;
     RectF viewRect;
     Double angle;
     Double distance;
+    PointF[] landmarks;
+    float landmarkRadius;
+    private Path landmarkPath = new Path();
     private Path path = new Path();
     private Path arrowPath = new Path();
     private Path templatePath = new Path();
@@ -51,6 +56,10 @@ DetectedFaceView extends View {
         faceTemplatePaint.setColor(Color.argb(128, 0, 0, 0));
 
         templatePath.setFillType(Path.FillType.WINDING);
+
+        landmarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        landmarkPaint.setStyle(Paint.Style.FILL);
+        landmarkPaint.setColor(Color.CYAN);
     }
 
     @Override
@@ -59,6 +68,7 @@ DetectedFaceView extends View {
         path.rewind();
         arrowPath.rewind();
         templatePath.rewind();
+        landmarkPath.rewind();
         if (templateRect != null) {
             viewRect = new RectF(0, 0, getWidth(), getHeight());
             templatePath.addRect(viewRect, Path.Direction.CCW);
@@ -66,6 +76,7 @@ DetectedFaceView extends View {
             canvas.drawPath(templatePath, faceTemplatePaint);
         }
         if (faceRect != null) {
+            landmarkRadius = faceRect.width() * 0.01f;
             strokePaint.setStrokeWidth(faceRect.width() * 0.038f);
             strokePaint.setShadowLayer(15, 0, 0, Color.argb(0x33, 0, 0, 0));
             path.addOval(faceRect, Path.Direction.CW);
@@ -73,7 +84,21 @@ DetectedFaceView extends View {
             if (angle != null && distance != null) {
                 drawArrow(canvas, angle, distance);
             }
+        } else {
+            landmarkRadius = 6f;
         }
+        if (landmarks != null && landmarks.length > 0) {
+            for (PointF point : landmarks) {
+                landmarkPath.moveTo(point.x, point.y);
+                landmarkPath.addCircle(point.x, point.y, landmarkRadius, Path.Direction.CW);
+            }
+            canvas.drawPath(landmarkPath, landmarkPaint);
+        }
+    }
+
+    public void setFaceLandmarks(PointF[] landmarks) {
+        this.landmarks = landmarks;
+        postInvalidate();
     }
 
     public void setFaceRect(RectF faceRect, RectF templateRect, int faceRectColour, int faceBackgroundColour, Double angle, Double distance) {

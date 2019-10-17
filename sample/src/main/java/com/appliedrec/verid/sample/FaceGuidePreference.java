@@ -3,7 +3,7 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.RectF;
-import android.support.v7.preference.DialogPreference;
+import androidx.preference.DialogPreference;
 import android.util.AttributeSet;
 
 public abstract class FaceGuidePreference extends DialogPreference {

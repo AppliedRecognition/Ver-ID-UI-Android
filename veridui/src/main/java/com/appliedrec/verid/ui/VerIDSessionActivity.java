@@ -7,13 +7,13 @@ import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import android.view.WindowManager;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
@@ -132,6 +132,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             }
         } catch (Exception e) {
             finishWithError(e);
+            return;
         }
     }
 

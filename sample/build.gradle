@@ -3,8 +3,6 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 28
 
-
-
     defaultConfig {
         applicationId "com.appliedrec.verid.sample"
         minSdkVersion rootProject.minSdkVersion
@@ -12,7 +10,7 @@ android {
         versionCode rootProject.generateVersionCode()
         versionName rootProject.generateVersionName()
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
 
@@ -27,6 +25,10 @@ android {
         main.java.srcDirs += ["src/main/application"]
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
@@ -34,11 +36,17 @@ dependencies {
     debugApi project(':veridui')
     debugImplementation "com.appliedrec.verid:core:${rootProject.generateVersionName()}"
     releaseImplementation "com.appliedrec.verid:ui:${rootProject.generateVersionName()}"
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support:preference-v7:28.0.0'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.preference:preference:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.12'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'com.trello.rxlifecycle3:rxlifecycle:3.1.0'
+    implementation 'com.trello.rxlifecycle3:rxlifecycle-android:3.1.0'
+    implementation 'com.trello.rxlifecycle3:rxlifecycle-components:3.1.0'
+    implementation 'com.trello.rxlifecycle3:rxlifecycle-components-preference:3.1.0'
+    implementation 'com.trello.rxlifecycle3:rxlifecycle-android-lifecycle:3.1.0'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
 }

@@ -5,23 +5,19 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.Loader;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
-import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Lifecycle;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
@@ -33,21 +29,30 @@ import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
+import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
+import com.trello.rxlifecycle3.LifecycleProvider;
 
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
 
-public class RegisteredUserActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks {
+import io.reactivex.Completable;
+import io.reactivex.Observable;
+import io.reactivex.Single;
+import io.reactivex.SingleSource;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
+public class RegisteredUserActivity extends AppCompatActivity {
 
     private static final int AUTHENTICATION_REQUEST_CODE = 0;
     private static final int REGISTRATION_REQUEST_CODE = 1;
     private static final int QR_CODE_SCAN_REQUEST_CODE = 2;
-    private static final int LOADER_ID_REGISTRATION_IMPORT = 0;
 
     private AlertDialog tempDialog;
     private VerID verID;
     private ProfilePhotoHelper profilePhotoHelper;
+    private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,14 +106,43 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
                 if (faceUriIterator.hasNext()) {
                     Map.Entry<Face,Uri> entry = faceUriIterator.next();
-                    profilePhotoHelper.setProfilePhotoUri(entry.getValue(), entry.getKey().getBounds());
-                    loadProfilePicture();
+                    profilePhotoHelper.setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds())
+                            .compose(lifecycleProvider.bindToLifecycle())
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(() -> {
+                                loadProfilePicture();
+                            });
                 }
             }
             // See documentation at
             // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
         } else if (resultCode == RESULT_OK && data != null && requestCode == QR_CODE_SCAN_REQUEST_CODE && data.hasExtra(Intent.EXTRA_TEXT)) {
-            LoaderManager.getInstance(this).restartLoader(LOADER_ID_REGISTRATION_IMPORT, data.getExtras(), this).forceLoad();
+            tempDialog = new AlertDialog.Builder(this)
+                    .setTitle(R.string.downloading)
+                    .setView(new ProgressBar(this))
+                    .create();
+            tempDialog.show();
+            RegistrationImport.importRegistration(data.getStringExtra(Intent.EXTRA_TEXT), ((SampleApplication)getApplication()).getRegistrationDownload())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(bundle -> {
+                    if (tempDialog != null) {
+                        tempDialog.dismiss();
+                        tempDialog = null;
+                    }
+                    Intent intent = new Intent(RegisteredUserActivity.this, RegistrationImportActivity.class);
+                    intent.putExtras(bundle);
+                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                    startActivity(intent);
+                }, error -> {
+                    if (tempDialog != null) {
+                        tempDialog.dismiss();
+                        tempDialog = null;
+                    }
+                    showImportError();
+                });
         }
     }
 
@@ -152,28 +186,12 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                     profileImageView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
                 }
                 final int width = profileImageView.getWidth();
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        Uri profilePhotoUri = profilePhotoHelper.getProfilePhotoUri();
-                        Bitmap grayscaleBitmap = BitmapFactory.decodeFile(profilePhotoUri.getPath());
-                        if (grayscaleBitmap != null) {
-                            int size = Math.min(grayscaleBitmap.getWidth(), grayscaleBitmap.getHeight());
-                            int x = (int) ((double) grayscaleBitmap.getWidth() / 2.0 - (double) size / 2.0);
-                            int y = (int) ((double) grayscaleBitmap.getHeight() / 2.0 - (double) size / 2.0);
-                            grayscaleBitmap = Bitmap.createBitmap(grayscaleBitmap, x, y, size, size);
-                            grayscaleBitmap = Bitmap.createScaledBitmap(grayscaleBitmap, width, width, true);
-                            final RoundedBitmapDrawable roundedBitmapDrawable = RoundedBitmapDrawableFactory.create(getResources(), grayscaleBitmap);
-                            roundedBitmapDrawable.setCornerRadius((float) width / 2f);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    profileImageView.setImageDrawable(roundedBitmapDrawable);
-                                }
-                            });
-                        }
-                    }
-                });
+                profilePhotoHelper.getProfilePhotoDrawable(width)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(drawable -> {
+                            profileImageView.setImageDrawable(drawable);
+                        });
             }
         });
     }
@@ -192,7 +210,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
     //region Authentication
 
     private void authenticate() {
-        new android.support.v7.app.AlertDialog.Builder(this)
+        new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setItems(new String[]{
                         "English", "Français"
                 }, new DialogInterface.OnClickListener() {
@@ -256,24 +274,18 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 .setPositiveButton(R.string.unregister, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        AsyncTask.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
-                                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                                            startActivity(intent);
-                                            finish();
-                                        }
-                                    });
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                        Completable.create(emitter -> {
+                            try {
+                                verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
+                                emitter.onComplete();
+                            } catch (Exception e) {
+                                emitter.onError(e);
                             }
+                        }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
+                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
+                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                            startActivity(intent);
+                            finish();
                         });
                     }
                 })
@@ -312,47 +324,54 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 .setView(new ProgressBar(this))
                 .create();
         alertDialog.show();
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    SampleApplication app = (SampleApplication)getApplication();
-                    IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
-                    FaceTemplate[] faceTemplates = new FaceTemplate[faces.length];
-                    for (int i=0; i<faces.length; i++) {
-                        faceTemplates[i] = new FaceTemplate(faces[i].getRecognitionData(), faces[i].getVersion(), VerIDUser.DEFAULT_USER_ID);
-                    }
-                    Bitmap profilePicture = BitmapFactory.decodeFile(profilePhotoHelper.getProfilePhotoUri().getPath());
-                    RegistrationData registrationData = new RegistrationData();
-                    registrationData.setProfilePicture(profilePicture);
-                    registrationData.setFaceTemplates(faceTemplates);
-                    URL exportURL = app.getRegistrationUpload().uploadRegistration(registrationData);
-                    final Bitmap bitmap = app.getQRCodeGenerator().generateQRCode(exportURL.toString());
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            alertDialog.dismiss();
-                            ImageView imageView = new ImageView(RegisteredUserActivity.this);
-                            imageView.setImageBitmap(bitmap);
-                            new AlertDialog.Builder(RegisteredUserActivity.this)
-                                    .setView(imageView)
-                                    .setTitle(R.string.scan_to_import)
-                                    .setPositiveButton(R.string.done, null)
-                                    .create()
-                                    .show();
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            alertDialog.dismiss();
-                            showExportError();
-                        }
-                    });
+        final SampleApplication app = (SampleApplication)getApplication();
+        Observable<FaceTemplate> faceTemplateObservable = Observable.create(emitter -> {
+            try {
+                IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
+                for (IRecognizable face : faces) {
+                    emitter.onNext(new FaceTemplate(face.getRecognitionData(), face.getVersion(), VerIDUser.DEFAULT_USER_ID));
                 }
+                emitter.onComplete();
+            } catch (Exception e) {
+                emitter.onError(e);
             }
+        });
+        Single<Bitmap> bitmapSingle = faceTemplateObservable
+                .toList()
+                .flatMap(faceTemplates -> profilePhotoHelper.getProfilePhotoBitmap()
+                            .flatMap(bitmap -> (SingleSource<URL>) observer -> {
+                                try {
+                                    RegistrationData registrationData = new RegistrationData();
+                                    registrationData.setProfilePicture(bitmap);
+                                    FaceTemplate[] templatesArray = new FaceTemplate[faceTemplates.size()];
+                                    faceTemplates.toArray(templatesArray);
+                                    registrationData.setFaceTemplates(templatesArray);
+                                    URL exportURL = app.getRegistrationUpload().uploadRegistration(registrationData);
+                                    observer.onSuccess(exportURL);
+                                } catch (Exception e) {
+                                    observer.onError(e);
+                                }
+                            })).flatMap(url -> observer -> {
+                                try {
+                                    Bitmap bitmap = app.getQRCodeGenerator().generateQRCode(url.toString());
+                                    observer.onSuccess(bitmap);
+                                } catch (Exception e) {
+                                    observer.onError(e);
+                                }
+        });
+        bitmapSingle.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(bitmap -> {
+            alertDialog.dismiss();
+            ImageView imageView = new ImageView(RegisteredUserActivity.this);
+            imageView.setImageBitmap(bitmap);
+            new AlertDialog.Builder(RegisteredUserActivity.this)
+                    .setView(imageView)
+                    .setTitle(R.string.scan_to_import)
+                    .setPositiveButton(R.string.done, null)
+                    .create()
+                    .show();
+        }, error -> {
+            alertDialog.dismiss();
+            showExportError();
         });
     }
 
@@ -374,57 +393,5 @@ public class RegisteredUserActivity extends AppCompatActivity implements LoaderM
                 .show();
     }
 
-    @Override
-    public Loader onCreateLoader(int id, Bundle args) {
-        if (id == LOADER_ID_REGISTRATION_IMPORT) {
-            tempDialog = new AlertDialog.Builder(this)
-                    .setTitle(R.string.downloading)
-                    .setView(new ProgressBar(this))
-                    .create();
-            tempDialog.show();
-            String url = args.getString(Intent.EXTRA_TEXT);
-            return new RegistrationImportLoader(this, url, ((SampleApplication)getApplication()).getRegistrationDownload());
-        }
-        return null;
-    }
-
-    @Override
-    public void onLoadFinished(Loader loader, Object data) {
-        if (loader.getId() == LOADER_ID_REGISTRATION_IMPORT) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (tempDialog != null) {
-                        tempDialog.dismiss();
-                        tempDialog = null;
-                    }
-                }
-            });
-            if (data != null && data instanceof Bundle) {
-                final Bundle extras = (Bundle) data;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Intent intent = new Intent(RegisteredUserActivity.this, RegistrationImportActivity.class);
-                        intent.putExtras(extras);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                        startActivity(intent);
-                    }
-                });
-            } else {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        showImportError();
-                    }
-                });
-            }
-        }
-    }
-
-    @Override
-    public void onLoaderReset(Loader loader) {
-
-    }
     //endregion
 }

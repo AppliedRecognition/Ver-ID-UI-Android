@@ -4,13 +4,13 @@ import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.VerID;
@@ -23,6 +23,14 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+
+import io.reactivex.Completable;
+import io.reactivex.Maybe;
+import io.reactivex.MaybeOnSubscribe;
+import io.reactivex.Single;
+import io.reactivex.SingleOnSubscribe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * Activity that displays downloaded profile picture and registers downloaded face templates
@@ -62,101 +70,81 @@ public class RegistrationImportActivity extends AppCompatActivity {
             faceTemplatesPath = null;
         }
         final CheckBox checkBox = findViewById(R.id.checkBox);
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String[] users = verID.getUserManagement().getUsers();
-                    if (users.length == 0) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                checkBox.setVisibility(View.GONE);
-                            }
-                        });
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        Single.create((SingleOnSubscribe<Boolean>) emitter -> {
+            try {
+                String[] users = verID.getUserManagement().getUsers();
+                emitter.onSuccess(users.length == 0);
+            } catch (Exception e) {
+                emitter.onError(e);
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(usersEmpty -> {
+            if (usersEmpty) {
+                checkBox.setVisibility(View.GONE);
             }
         });
-        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        findViewById(R.id.button).setOnClickListener(v -> {
                 boolean overwrite = checkBox.getVisibility() == View.VISIBLE && checkBox.isChecked();
                 importRegistration(faceTemplatesPath, overwrite);
-            }
-        });
+            });
     }
 
     /// Begins the import of the downloaded templates
     private void importRegistration(final String faceTemplatesPath, final boolean overwrite) {
+        Completable completable;
         if (overwrite) {
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            amendRegistration(faceTemplatesPath);
-                        }
-                    });
+            completable = Completable.create(emitter -> {
+                try {
+                    verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
+                    emitter.onComplete();
+                } catch (Exception e) {
+                    emitter.onError(e);
                 }
             });
         } else {
-            amendRegistration(faceTemplatesPath);
+            completable = Completable.complete();
         }
+        completable
+                .andThen(amendRegistration(faceTemplatesPath))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() -> {
+                    finish();
+                }, error -> {
+                    onFailure();
+                });
     }
 
     /// Amends registration with the supplied face templates
-    private void amendRegistration(final String faceTemplatesPath) {
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Gson gson = new Gson();
-                    File faceTemplatesFile = new File(faceTemplatesPath);
-                    InputStream inputStream = new FileInputStream(faceTemplatesFile);
-                    JsonReader reader = new JsonReader(new InputStreamReader(inputStream));
-                    ArrayList<FaceTemplate> templates = new ArrayList<>();
-                    reader.beginArray();
-                    while (reader.hasNext()) {
-                        FaceTemplate template = gson.fromJson(reader, FaceTemplate.class);
-                        templates.add(template);
-                    }
-                    reader.endArray();
-                    reader.close();
-                    FaceTemplate[] faceTemplates = new FaceTemplate[templates.size()];
-                    templates.toArray(faceTemplates);
-
-                    verID.getUserManagement().assignFacesToUser(faceTemplates, VerIDUser.DEFAULT_USER_ID);
-                    faceTemplatesFile.delete();
-                    Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
-                    if (imageUri != null) {
-                        profilePhotoHelper.setProfilePhotoUri(imageUri, null);
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            finish();
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            onFailure();
-                        }
-                    });
+    private Completable amendRegistration(String faceTemplatesPath) {
+        return Maybe.create((MaybeOnSubscribe<Uri>) emitter -> {
+            try {
+                Gson gson = new Gson();
+                File faceTemplatesFile = new File(faceTemplatesPath);
+                InputStream inputStream = new FileInputStream(faceTemplatesFile);
+                JsonReader reader = new JsonReader(new InputStreamReader(inputStream));
+                ArrayList<FaceTemplate> templates = new ArrayList<>();
+                reader.beginArray();
+                while (reader.hasNext()) {
+                    FaceTemplate template = gson.fromJson(reader, FaceTemplate.class);
+                    templates.add(template);
                 }
+                reader.endArray();
+                reader.close();
+                FaceTemplate[] faceTemplates = new FaceTemplate[templates.size()];
+                templates.toArray(faceTemplates);
+
+                verID.getUserManagement().assignFacesToUser(faceTemplates, VerIDUser.DEFAULT_USER_ID);
+                faceTemplatesFile.delete();
+                Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
+                if (imageUri != null) {
+                    emitter.onSuccess(imageUri);
+                } else {
+                    emitter.onComplete();
+                }
+            } catch (Exception e) {
+                emitter.onError(e);
             }
-        });
+        }).flatMapCompletable(imageUri -> profilePhotoHelper.setProfilePhotoFromUri(imageUri, null));
     }
 
     private void onFailure() {

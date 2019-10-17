@@ -2,18 +2,24 @@ package com.appliedrec.verid.sample;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.preference.PreferenceManager;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Lifecycle;
+import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.UserManagementFactory;
 import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDFactory;
 import com.appliedrec.verid.core.VerIDFactoryDelegate;
-import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
+import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
+import com.trello.rxlifecycle3.LifecycleProvider;
+
+import io.reactivex.Maybe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 
 public class MainActivity extends AppCompatActivity implements VerIDFactoryDelegate {
@@ -21,6 +27,8 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     private static final int REQUEST_CODE_ONERROR = 0;
 
     private int veridInstanceId = -1;
+
+    private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,35 +120,27 @@ public class MainActivity extends AppCompatActivity implements VerIDFactoryDeleg
     }
 
     private void loadRegisteredUsers(final VerID verID) {
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final String[] users = verID.getUserManagement().getUsers();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Intent intent;
-                            if (users.length > 0) {
-                                intent = new Intent(MainActivity.this, RegisteredUserActivity.class);
-                            } else {
-                                intent = new Intent(MainActivity.this, IntroActivity.class);
-                            }
-                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                            startActivity(intent);
-                            finish();
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            showError("Failed to retrieve registered users");
-                        }
-                    });
+        Maybe.create(emitter -> {
+            try {
+                final String[] users = verID.getUserManagement().getUsers();
+                if (users.length > 0) {
+                    emitter.onSuccess(users[0]);
+                } else {
+                    emitter.onComplete();
                 }
+            } catch (Exception e) {
+                emitter.onError(e);
             }
+        }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(userId -> {
+            Intent intent = new Intent(MainActivity.this, RegisteredUserActivity.class);
+            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+            startActivity(intent);
+            finish();
+        }, error -> showError("Failed to retrieve registered users"), () -> {
+            Intent intent = new Intent(MainActivity.this, IntroActivity.class);
+            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+            startActivity(intent);
+            finish();
         });
     }
 

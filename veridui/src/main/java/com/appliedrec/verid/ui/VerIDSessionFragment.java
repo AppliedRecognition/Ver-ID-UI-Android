@@ -14,11 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
-import android.support.media.ExifInterface;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -28,6 +23,12 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.exifinterface.media.ExifInterface;
+import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
@@ -42,6 +43,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -65,7 +67,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private int previewFormat;
     private int exifOrientation = ExifInterface.ORIENTATION_NORMAL;
     private Camera camera;
-    private VerIDImage currentImage;
 
     protected TextView instructionTextView;
     protected View instructionView;
@@ -73,6 +74,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private static final int IMAGE_FORMAT_CERIDIAN_NV12 = 0x103;
     private int backgroundColour = 0x80000000;
     private boolean isCameraStartRequested = false;
+    private SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
 
     //region Fragment lifecycle
 
@@ -473,6 +475,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     //region Ver-ID session fragment interface
 
     @UiThread
+    @Override
     public void startCamera() {
         addCameraView();
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
@@ -587,6 +590,25 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0-offsetAngleFromBearing.getPitch()) * 2;
         }
         detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+//        // Uncomment to render landmarks on the face
+//        if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null) {
+//            float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
+//            int i = 0;
+//            for (PointF landmark : faceDetectionResult.getFace().getLandmarks()) {
+//                landmarks[i++] = landmark.x;
+//                landmarks[i++] = landmark.y;
+//            }
+//            matrix.mapPoints(landmarks);
+//            ArrayList<PointF> landmarkPointList = new ArrayList<>();
+//            for (i=0; i<landmarks.length; i+=2) {
+//                landmarkPointList.add(new PointF(landmarks[i], landmarks[i+1]));
+//            }
+//            PointF[] landmarkPoints = new PointF[landmarkPointList.size()];
+//            landmarkPointList.toArray(landmarkPoints);
+//            detectedFaceView.setFaceLandmarks(landmarkPoints);
+//        } else {
+//            detectedFaceView.setFaceLandmarks(null);
+//        }
     }
 
     @Override
@@ -651,18 +673,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public VerIDImage dequeueImage() throws Exception {
-        synchronized (this) {
-            while (currentImage == null) {
-                this.wait();
-            }
-            VerIDImage image = currentImage;
-            currentImage = null;
-            return image;
-        }
+        return imageQueue.take();
     }
 
     @Override
-    public void onPreviewFrame(byte[] data, Camera camera) {
+    public void onPreviewFrame(final byte[] data, Camera camera) {
         if (camera == null) {
             return;
         }
@@ -670,16 +685,21 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             camera.addCallbackBuffer(new byte[getPreviewBufferLength()]);
             return;
         }
-        synchronized (this) {
-            if (currentImage == null) {
-                YuvImage image = new YuvImage(data, previewFormat, previewSize.width, previewSize.height, null);
-                currentImage = new VerIDImage(image, exifOrientation);
-                camera.addCallbackBuffer(data);
-                notify();
-            } else {
-                camera.addCallbackBuffer(data);
-            }
+        if (previewProcessingExecutor != null && !previewProcessingExecutor.isShutdown() && previewProcessingExecutor.getActiveCount() == 0 && previewProcessingExecutor.getQueue().isEmpty()) {
+            previewProcessingExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    byte[] imageData = new byte[data.length];
+                    System.arraycopy(data, 0, imageData, 0, data.length);
+                    YuvImage image = new YuvImage(imageData, previewFormat, previewSize.width, previewSize.height, null);
+                    try {
+                        imageQueue.put(new VerIDImage(image, exifOrientation));
+                    } catch (Exception e) {
+                    }
+                }
+            });
         }
+        camera.addCallbackBuffer(data);
     }
 
     private String getTranslatedString(String original, Object ...args) {

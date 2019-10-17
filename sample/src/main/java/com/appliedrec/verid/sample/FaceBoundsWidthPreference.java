@@ -2,9 +2,7 @@ package com.appliedrec.verid.sample;
 
 import android.content.Context;
 import android.graphics.RectF;
-import android.support.constraint.ConstraintLayout;
 import android.util.AttributeSet;
-import android.view.LayoutInflater;
 
 import com.appliedrec.verid.core.VerIDSessionSettings;
 

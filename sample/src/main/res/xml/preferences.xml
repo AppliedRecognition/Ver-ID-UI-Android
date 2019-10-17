@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <android.support.v7.preference.PreferenceCategory android:title="@string/security">
-        <android.support.v7.preference.ListPreference
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.preference.PreferenceCategory android:title="@string/security">
+        <androidx.preference.ListPreference
             android:defaultValue="1"
             android:entries="@array/pose_counts"
             android:entryValues="@array/pose_count_values"
@@ -29,37 +29,37 @@
         <com.appliedrec.verid.sample.FaceBoundsHeightPreference
             android:key="@string/pref_key_face_bounds_height"
             android:title="@string/face_bounds_height" />
-        <android.support.v7.preference.ListPreference
+        <androidx.preference.ListPreference
             android:key="@string/pref_key_number_of_faces_to_register"
             android:title="@string/number_of_faces_to_register"
             android:entries="@array/registration_face_counts"
             android:entryValues="@array/registration_face_count_values"
             android:summary="%s" />
-        <android.support.v7.preference.CheckBoxPreference
+        <androidx.preference.CheckBoxPreference
             android:key="@string/pref_key_disable_encryption"
             android:title="@string/pref_disable_encryption"/>
-    </android.support.v7.preference.PreferenceCategory>
-    <android.support.v7.preference.PreferenceCategory android:title="@string/input">
-        <android.support.v7.preference.CheckBoxPreference
+    </androidx.preference.PreferenceCategory>
+    <androidx.preference.PreferenceCategory android:title="@string/input">
+        <androidx.preference.CheckBoxPreference
             android:enabled="false"
             android:key="@string/pref_key_use_back_camera"
             android:title="@string/use_back_camera" />
-    </android.support.v7.preference.PreferenceCategory>
-    <android.support.v7.preference.PreferenceCategory android:title="@string/about">
-        <android.support.v7.preference.Preference
+    </androidx.preference.PreferenceCategory>
+    <androidx.preference.PreferenceCategory android:title="@string/about">
+        <androidx.preference.Preference
             android:key="@string/pref_key_version"
             android:title="@string/version" />
-        <android.support.v7.preference.Preference
+        <androidx.preference.Preference
             android:key="@string/pref_key_version_code"
             android:title="@string/version_code" />
-        <android.support.v7.preference.Preference
+        <androidx.preference.Preference
             android:key="@string/pref_key_package_name"
             android:title="@string/package_name" />
-        <android.support.v7.preference.Preference
+        <androidx.preference.Preference
             android:key="@string/pref_key_first_installed"
             android:title="@string/first_installed" />
-        <android.support.v7.preference.Preference
+        <androidx.preference.Preference
             android:key="@string/pref_key_last_updated"
             android:title="@string/last_updated" />
-    </android.support.v7.preference.PreferenceCategory>
-</android.support.v7.preference.PreferenceScreen>
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>
