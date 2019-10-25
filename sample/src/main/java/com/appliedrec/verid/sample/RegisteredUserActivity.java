@@ -5,6 +5,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,7 +34,10 @@ import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -106,6 +111,17 @@ public class RegisteredUserActivity extends AppCompatActivity {
                 Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
                 if (faceUriIterator.hasNext()) {
                     Map.Entry<Face,Uri> entry = faceUriIterator.next();
+                    Rect faceRect = new Rect();
+                    entry.getKey().getBounds().round(faceRect);
+                    try {
+                        InputStream inputStream = getContentResolver().openInputStream(entry.getValue());
+                        Bitmap fullImage = BitmapFactory.decodeStream(inputStream);
+                        if (fullImage != null) {
+                            Bitmap croppedImage = Bitmap.createBitmap(fullImage, faceRect.left, faceRect.top, faceRect.width(), faceRect.height());
+                        }
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
                     profilePhotoHelper.setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds())
                             .compose(lifecycleProvider.bindToLifecycle())
                             .subscribeOn(Schedulers.io())
