@@ -2,6 +2,7 @@ package com.appliedrec.verid.ui;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.RectF;
 import android.os.Build;
@@ -110,6 +111,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(getContentViewId());
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         Intent intent = getIntent();
         if (intent == null) {
             return;
@@ -368,24 +370,21 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      */
     @Override
     public void onComplete(final SessionTask sessionTask, final VerIDSessionResult sessionResult) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (sessionFragment != null) {
-                    sessionFragment.clearCameraPreview();
-                }
-                if (executor == null || executor.isShutdown()) {
-                    return;
-                }
-                if (sessionSettings.getShowResult()) {
-                    shutDownExecutor();
-                    clearCameraOverlays();
-                    Fragment resultFragment = makeResultFragment(sessionResult);
-                    sessionFragment = null;
-                    addResultFragment(resultFragment);
-                } else {
-                    finishWithResult(sessionResult);
-                }
+        runOnUiThread(() -> {
+            if (sessionFragment != null) {
+                sessionFragment.clearCameraPreview();
+            }
+            if (executor == null || executor.isShutdown()) {
+                return;
+            }
+            if (sessionSettings.getShowResult()) {
+                shutDownExecutor();
+                clearCameraOverlays();
+                Fragment resultFragment = makeResultFragment(sessionResult);
+                sessionFragment = null;
+                addResultFragment(resultFragment);
+            } else {
+                finishWithResult(sessionResult);
             }
         });
     }

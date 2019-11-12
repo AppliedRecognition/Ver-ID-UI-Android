@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.util.TypedValue;
@@ -30,21 +31,20 @@ import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
-public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
+public class VerIDRegistrationSessionFragment extends VerIDSessionFragmentCamera2 {
 
     LinearLayout detectedFacesView;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = super.onCreateView(inflater, container, savedInstanceState);
-        inflater.inflate(R.layout.detected_faces_view, getViewOverlays(), true);
-        detectedFacesView = getViewOverlays().findViewById(R.id.detectedFacesLayout);
-        RelativeLayout.LayoutParams facesViewLayoutParams = new RelativeLayout.LayoutParams(detectedFacesView.getLayoutParams());
-        facesViewLayoutParams.width = RelativeLayout.LayoutParams.MATCH_PARENT;
-        facesViewLayoutParams.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
-        facesViewLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        facesViewLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        ViewGroup view = (ViewGroup) super.onCreateView(inflater, container, savedInstanceState);
+        inflater.inflate(R.layout.detected_faces_view, view, true);
+        detectedFacesView = view.findViewById(R.id.detectedFacesLayout);
+        ConstraintLayout.LayoutParams facesViewLayoutParams = new ConstraintLayout.LayoutParams(detectedFacesView.getLayoutParams());
+        facesViewLayoutParams.width = ConstraintLayout.LayoutParams.MATCH_PARENT;
+        facesViewLayoutParams.height = ConstraintLayout.LayoutParams.WRAP_CONTENT;
+        facesViewLayoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
         detectedFacesView.setLayoutParams(facesViewLayoutParams);
         facesViewLayoutParams.bottomMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32, getResources().getDisplayMetrics());
         return view;
@@ -132,16 +132,13 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                                     bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
                                 }
                                 final RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
-                                runOnUIThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        if (isAdded() && !isRemoving()) {
-                                            int cornerRadius = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
-                                            drawable.setCornerRadius(cornerRadius);
-                                            imageView.setImageDrawable(drawable);
-                                            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                                            imageView.setAlpha(1.0f);
-                                        }
+                                runOnUIThread(() -> {
+                                    if (isAdded() && !isRemoving()) {
+                                        int cornerRadius = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
+                                        drawable.setCornerRadius(cornerRadius);
+                                        imageView.setImageDrawable(drawable);
+                                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                                        imageView.setAlpha(1.0f);
                                     }
                                 });
                             }
@@ -159,13 +156,16 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
     @Override
     public void clearCameraOverlay() {
         super.clearCameraOverlay();
-        runOnUIThread(new Runnable() {
-            @Override
-            public void run() {
-                if (isAdded() && !isRemoving()) {
-                    detectedFacesView.removeAllViews();
-                }
+        runOnUIThread(() -> {
+            if (isAdded() && !isRemoving()) {
+                detectedFacesView.removeAllViews();
             }
         });
+    }
+
+    private void runOnUIThread(Runnable runnable) {
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(runnable);
+        }
     }
 }

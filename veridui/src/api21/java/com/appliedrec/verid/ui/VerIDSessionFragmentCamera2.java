@@ -3,6 +3,7 @@ package com.appliedrec.verid.ui;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
@@ -23,6 +24,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
@@ -140,7 +142,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
     private int backgroundColour = 0x80000000;
 
     // region Fragment lifecycle
-
 
     @Nullable
     @Override
@@ -269,7 +270,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         }
     }
 
-    private VerIDSessionFragmentDelegate getDelegate() {
+    protected VerIDSessionFragmentDelegate getDelegate() {
         return delegate;
     }
 
@@ -359,12 +360,13 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        textureView.setVisibility(View.INVISIBLE);
         openCamera(width, height);
     }
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        configureTransform(width, height);
+//        configureTransform(width, height);
     }
 
     @Override
@@ -689,6 +691,8 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         height = (int)((float)height * scale);
         textureView.getLayoutParams().width = width;
         textureView.getLayoutParams().height = height;
+        textureView.setVisibility(View.VISIBLE);
+
         Matrix matrix = new Matrix();
         float centerX = (float)width / 2f;
         float centerY = (float)height / 2f;
