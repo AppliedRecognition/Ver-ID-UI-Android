@@ -105,17 +105,4 @@ class ProfilePhotoHelper {
             }
         });
     }
-
-//    Uri getProfilePhotoUri() {
-//        synchronized (profilePhotoLock) {
-//            while (isSettingProfilePhoto) {
-//                try {
-//                    profilePhotoLock.wait();
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//            return profilePhotoUri;
-//        }
-//    }
 }

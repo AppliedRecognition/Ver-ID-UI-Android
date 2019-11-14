@@ -13,8 +13,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.appliedrec.verid.core.FaceTemplate;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
@@ -22,13 +20,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 
 import io.reactivex.Completable;
-import io.reactivex.Maybe;
-import io.reactivex.MaybeOnSubscribe;
-import io.reactivex.Single;
-import io.reactivex.SingleOnSubscribe;
+import io.reactivex.MaybeSource;
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
@@ -40,21 +35,12 @@ public class RegistrationImportActivity extends AppCompatActivity {
     public static final String EXTRA_IMAGE_URI = "com.appliedrec.EXTRA_IMAGE_URI";
     public static final String EXTRA_FACE_TEMPLATES_PATH = "com.appliedred.EXTRA_FACE_TEMPLATES_PATH";
 
-    private VerID verID;
     private ProfilePhotoHelper profilePhotoHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration_import);
-        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
-        if (veridInstanceId != -1) {
-            try {
-                verID = VerID.getInstance(veridInstanceId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         profilePhotoHelper = new ProfilePhotoHelper(this);
         final String faceTemplatesPath;
         if (getIntent() != null) {
@@ -70,18 +56,17 @@ public class RegistrationImportActivity extends AppCompatActivity {
             faceTemplatesPath = null;
         }
         final CheckBox checkBox = findViewById(R.id.checkBox);
-        Single.create((SingleOnSubscribe<Boolean>) emitter -> {
-            try {
-                String[] users = verID.getUserManagement().getUsers();
-                emitter.onSuccess(users.length == 0);
-            } catch (Exception e) {
-                emitter.onError(e);
-            }
-        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(usersEmpty -> {
-            if (usersEmpty) {
-                checkBox.setVisibility(View.GONE);
-            }
-        });
+        checkBox.setVisibility(View.GONE);
+        RxVerIDInstance.get()
+                .getUsers()
+                .firstElement()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        user -> checkBox.setVisibility(View.VISIBLE),
+                        error -> {},
+                        () -> checkBox.setVisibility(View.GONE)
+                );
         findViewById(R.id.button).setOnClickListener(v -> {
                 boolean overwrite = checkBox.getVisibility() == View.VISIBLE && checkBox.isChecked();
                 importRegistration(faceTemplatesPath, overwrite);
@@ -92,14 +77,7 @@ public class RegistrationImportActivity extends AppCompatActivity {
     private void importRegistration(final String faceTemplatesPath, final boolean overwrite) {
         Completable completable;
         if (overwrite) {
-            completable = Completable.create(emitter -> {
-                try {
-                    verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
-                    emitter.onComplete();
-                } catch (Exception e) {
-                    emitter.onError(e);
-                }
-            });
+            completable = RxVerIDInstance.get().deleteUser(VerIDUser.DEFAULT_USER_ID);
         } else {
             completable = Completable.complete();
         }
@@ -116,35 +94,35 @@ public class RegistrationImportActivity extends AppCompatActivity {
 
     /// Amends registration with the supplied face templates
     private Completable amendRegistration(String faceTemplatesPath) {
-        return Maybe.create((MaybeOnSubscribe<Uri>) emitter -> {
+        Observable<FaceTemplate> templateObservable = Observable.create(emitter -> {
             try {
                 Gson gson = new Gson();
                 File faceTemplatesFile = new File(faceTemplatesPath);
                 InputStream inputStream = new FileInputStream(faceTemplatesFile);
                 JsonReader reader = new JsonReader(new InputStreamReader(inputStream));
-                ArrayList<FaceTemplate> templates = new ArrayList<>();
                 reader.beginArray();
                 while (reader.hasNext()) {
                     FaceTemplate template = gson.fromJson(reader, FaceTemplate.class);
-                    templates.add(template);
+                    emitter.onNext(template);
                 }
                 reader.endArray();
                 reader.close();
-                FaceTemplate[] faceTemplates = new FaceTemplate[templates.size()];
-                templates.toArray(faceTemplates);
-
-                verID.getUserManagement().assignFacesToUser(faceTemplates, VerIDUser.DEFAULT_USER_ID);
                 faceTemplatesFile.delete();
-                Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
-                if (imageUri != null) {
-                    emitter.onSuccess(imageUri);
-                } else {
-                    emitter.onComplete();
-                }
+                emitter.onComplete();
             } catch (Exception e) {
                 emitter.onError(e);
             }
-        }).flatMapCompletable(imageUri -> profilePhotoHelper.setProfilePhotoFromUri(imageUri, null));
+        });
+        return templateObservable
+                .flatMapCompletable(faceTemplate -> RxVerIDInstance.get().assignFaceToUser(faceTemplate, VerIDUser.DEFAULT_USER_ID))
+                .andThen((MaybeSource<Uri>) emitter -> {
+                    Uri imageUri = getIntent().getParcelableExtra(EXTRA_IMAGE_URI);
+                    if (imageUri != null) {
+                        emitter.onSuccess(imageUri);
+                    } else {
+                        emitter.onComplete();
+                    }
+                }).flatMapCompletable(imageUri -> profilePhotoHelper.setProfilePhotoFromUri(imageUri, null));
     }
 
     private void onFailure() {

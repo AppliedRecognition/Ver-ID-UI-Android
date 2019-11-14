@@ -19,13 +19,12 @@ import android.widget.ProgressBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Lifecycle;
 
+import com.appliedrec.rxverid.RxVerID;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceTemplate;
-import com.appliedrec.verid.core.IRecognizable;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
@@ -36,9 +35,6 @@ import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
 
-import io.reactivex.Completable;
-import io.reactivex.Observable;
-import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
@@ -50,7 +46,6 @@ public class RegisteredUserActivity extends AppCompatActivity {
     private static final int QR_CODE_SCAN_REQUEST_CODE = 2;
 
     private AlertDialog tempDialog;
-    private VerID verID;
     private ProfilePhotoHelper profilePhotoHelper;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
 
@@ -58,42 +53,14 @@ public class RegisteredUserActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registered_user);
-        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
-        if (veridInstanceId != -1) {
-            try {
-                verID = VerID.getInstance(veridInstanceId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         profilePhotoHelper = new ProfilePhotoHelper(this);
         loadProfilePicture();
-        findViewById(R.id.removeButton).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                unregisterUser();
-            }
-        });
-        findViewById(R.id.authenticate).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                authenticate();
-            }
-        });
-        findViewById(R.id.register).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                registerMoreFaces();
-            }
-        });
+        findViewById(R.id.removeButton).setOnClickListener(v -> unregisterUser());
+        findViewById(R.id.authenticate).setOnClickListener(v -> authenticate());
+        findViewById(R.id.register).setOnClickListener(v -> registerMoreFaces());
         // Show the registration import button if the app handles registration downloads
         findViewById(R.id.import_registration).setVisibility(((SampleApplication)getApplication()).getRegistrationDownload() != null ? View.VISIBLE : View.GONE);
-        findViewById(R.id.import_registration).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                importRegistration();
-            }
-        });
+        findViewById(R.id.import_registration).setOnClickListener(v -> importRegistration());
     }
 
     @Override
@@ -123,7 +90,12 @@ public class RegisteredUserActivity extends AppCompatActivity {
                     .setView(new ProgressBar(this))
                     .create();
             tempDialog.show();
+            RxVerID rxVerID = RxVerIDInstance.get();
             RegistrationImport.importRegistration(data.getStringExtra(Intent.EXTRA_TEXT), ((SampleApplication)getApplication()).getRegistrationDownload())
+                    .flatMap(bundle -> rxVerID.getVerID().map(verID -> {
+                        bundle.putInt(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                        return bundle;
+                    }))
                 .compose(lifecycleProvider.bindToLifecycle())
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -134,7 +106,6 @@ public class RegisteredUserActivity extends AppCompatActivity {
                     }
                     Intent intent = new Intent(RegisteredUserActivity.this, RegistrationImportActivity.class);
                     intent.putExtras(bundle);
-                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
                     startActivity(intent);
                 }, error -> {
                     if (tempDialog != null) {
@@ -197,10 +168,19 @@ public class RegisteredUserActivity extends AppCompatActivity {
     }
 
     private void showIntro() {
-        Intent intent = new Intent(this, IntroActivity.class);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-        intent.putExtra(IntroActivity.EXTRA_SHOW_REGISTRATION, false);
-        startActivity(intent);
+        RxVerIDInstance.get().getVerID()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribe(verID -> {
+                    Intent intent = new Intent(this, IntroActivity.class);
+                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                    intent.putExtra(IntroActivity.EXTRA_SHOW_REGISTRATION, false);
+                    startActivity(intent);
+                }, error -> {
+                    // Failed to load Ver-ID
+                });
+
     }
 
     private void showSettings() {
@@ -210,61 +190,76 @@ public class RegisteredUserActivity extends AppCompatActivity {
     //region Authentication
 
     private void authenticate() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setItems(new String[]{
-                        "English", "Français"
-                }, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
-                        // The higher the count the more confident we can be of a live face at the expense of usability
-                        // Note that 1 is added to the setting to include the initial mandatory straight pose
-                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_required_pose_count), "1")) + 1);
-                        PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
-                        settings.setYawThreshold(preferenceHelper.getYawThreshold());
-                        settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
-                        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
-                        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
-                        settings.setShowResult(true);
-                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                        }
-                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                        if (i == 1) {
-                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
-                        }
-                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
-                    }
-                })
-                .setTitle("Select language")
-                .create()
-                .show();
+        RxVerIDInstance.get().getVerID()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribe(
+                        verID -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                                    .setItems(new String[]{
+                                            "English", "Français"
+                                    }, (DialogInterface dialogInterface, int i) -> {
+                                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                                        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+                                        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
+                                        // The higher the count the more confident we can be of a live face at the expense of usability
+                                        // Note that 1 is added to the setting to include the initial mandatory straight pose
+                                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_required_pose_count), "1")) + 1);
+                                        PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
+                                        settings.setYawThreshold(preferenceHelper.getYawThreshold());
+                                        settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
+                                        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
+                                        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
+                                        settings.setShowResult(true);
+                                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                                        }
+                                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
+                                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
+                                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                                        if (i == 1) {
+                                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
+                                        }
+                                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
+                                    })
+                                    .setTitle("Select language")
+                                    .create()
+                                    .show(),
+                        error -> {
+
+                        });
     }
     //endregion
 
     //region Registration
 
     private void registerMoreFaces() {
-        RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
-        settings.setShowResult(true);
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
-        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-        }
-        Intent intent = new Intent(this, VerIDSessionActivity.class);
-        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-        startActivityForResult(intent, REGISTRATION_REQUEST_CODE);
+        RxVerIDInstance.get().getVerID()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribe(
+                        verID -> {
+                            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+                            // Setting showResult to false will prevent the activity from displaying a result at the end of the session
+                            settings.setShowResult(true);
+                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
+                            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                            }
+                            Intent intent = new Intent(this, VerIDSessionActivity.class);
+                            intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
+                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                            startActivityForResult(intent, REGISTRATION_REQUEST_CODE);
+                        },
+                        error -> {
+
+                        });
     }
 
     private void unregisterUser() {
@@ -274,19 +269,21 @@ public class RegisteredUserActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.unregister, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        Completable.create(emitter -> {
-                            try {
-                                verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
-                                emitter.onComplete();
-                            } catch (Exception e) {
-                                emitter.onError(e);
-                            }
-                        }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
-                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
-                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                            startActivity(intent);
-                            finish();
-                        });
+                        RxVerIDInstance.get().deleteUser(VerIDUser.DEFAULT_USER_ID)
+                                .andThen(RxVerIDInstance.get().getVerID())
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(
+                                        verID -> {
+                                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
+                                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                                            startActivity(intent);
+                                            finish();
+                                        },
+                                        error -> {
+
+                                        }
+                                );
                     }
                 })
                 .create()
@@ -325,54 +322,51 @@ public class RegisteredUserActivity extends AppCompatActivity {
                 .create();
         alertDialog.show();
         final SampleApplication app = (SampleApplication)getApplication();
-        Observable<FaceTemplate> faceTemplateObservable = Observable.create(emitter -> {
-            try {
-                IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
-                for (IRecognizable face : faces) {
-                    emitter.onNext(new FaceTemplate(face.getRecognitionData(), face.getVersion(), VerIDUser.DEFAULT_USER_ID));
-                }
-                emitter.onComplete();
-            } catch (Exception e) {
-                emitter.onError(e);
-            }
-        });
-        Single<Bitmap> bitmapSingle = faceTemplateObservable
+        RxVerIDInstance.get().getFacesOfUser(VerIDUser.DEFAULT_USER_ID)
+                .map(recognizable -> new FaceTemplate(recognizable.getRecognitionData(), recognizable.getVersion(), VerIDUser.DEFAULT_USER_ID))
                 .toList()
                 .flatMap(faceTemplates -> profilePhotoHelper.getProfilePhotoBitmap()
-                            .flatMap(bitmap -> (SingleSource<URL>) observer -> {
-                                try {
-                                    RegistrationData registrationData = new RegistrationData();
-                                    registrationData.setProfilePicture(bitmap);
-                                    FaceTemplate[] templatesArray = new FaceTemplate[faceTemplates.size()];
-                                    faceTemplates.toArray(templatesArray);
-                                    registrationData.setFaceTemplates(templatesArray);
-                                    URL exportURL = app.getRegistrationUpload().uploadRegistration(registrationData);
-                                    observer.onSuccess(exportURL);
-                                } catch (Exception e) {
-                                    observer.onError(e);
-                                }
-                            })).flatMap(url -> observer -> {
-                                try {
-                                    Bitmap bitmap = app.getQRCodeGenerator().generateQRCode(url.toString());
-                                    observer.onSuccess(bitmap);
-                                } catch (Exception e) {
-                                    observer.onError(e);
-                                }
-        });
-        bitmapSingle.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(bitmap -> {
-            alertDialog.dismiss();
-            ImageView imageView = new ImageView(RegisteredUserActivity.this);
-            imageView.setImageBitmap(bitmap);
-            new AlertDialog.Builder(RegisteredUserActivity.this)
-                    .setView(imageView)
-                    .setTitle(R.string.scan_to_import)
-                    .setPositiveButton(R.string.done, null)
-                    .create()
-                    .show();
-        }, error -> {
-            alertDialog.dismiss();
-            showExportError();
-        });
+                        .flatMap(bitmap -> (SingleSource<URL>) observer -> {
+                            try {
+                                RegistrationData registrationData = new RegistrationData();
+                                registrationData.setProfilePicture(bitmap);
+                                FaceTemplate[] templatesArray = new FaceTemplate[faceTemplates.size()];
+                                faceTemplates.toArray(templatesArray);
+                                registrationData.setFaceTemplates(templatesArray);
+                                URL exportURL = app.getRegistrationUpload().uploadRegistration(registrationData);
+                                observer.onSuccess(exportURL);
+                            } catch (Exception e) {
+                                observer.onError(e);
+                            }
+                        }))
+                .flatMap(url -> observer -> {
+                    try {
+                        Bitmap bitmap = app.getQRCodeGenerator().generateQRCode(url.toString());
+                        observer.onSuccess(bitmap);
+                    } catch (Exception e) {
+                        observer.onError(e);
+                    }
+                })
+                .cast(Bitmap.class)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribe(
+                        bitmap -> {
+                            alertDialog.dismiss();
+                            ImageView imageView = new ImageView(RegisteredUserActivity.this);
+                            imageView.setImageBitmap(bitmap);
+                            new AlertDialog.Builder(RegisteredUserActivity.this)
+                                    .setView(imageView)
+                                    .setTitle(R.string.scan_to_import)
+                                    .setPositiveButton(R.string.done, null)
+                                    .create()
+                                    .show();
+                        },
+                        error -> {
+                            alertDialog.dismiss();
+                            showExportError();
+                        });
     }
 
     private void showExportError() {

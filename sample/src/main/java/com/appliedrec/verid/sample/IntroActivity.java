@@ -3,7 +3,6 @@ package com.appliedrec.verid.sample;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
@@ -18,53 +17,32 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
 
 import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.PageViewActivity;
-import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.appliedrec.verid.ui.VerIDSessionIntent;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
-import java.util.Iterator;
-import java.util.Map;
-
-import io.reactivex.Completable;
-import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
-public class IntroActivity extends PageViewActivity implements LoaderManager.LoaderCallbacks {
+public class IntroActivity extends PageViewActivity {
 
     private static final int REQUEST_CODE_REGISTER = 0;
     public static final String EXTRA_SHOW_REGISTRATION = "showRegistration";
     private static final int QR_CODE_SCAN_REQUEST_CODE = 1;
-    private static final int LOADER_ID_IMPORT_REGISTRATION = 0;
     private static final int REQUEST_CODE_IMPORT = 2;
     boolean showRegistration = true;
     private AlertDialog tempDialog;
-    private VerID verID;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showRegistration = getIntent().getBooleanExtra(EXTRA_SHOW_REGISTRATION, true);
-        int veridInstanceId = getIntent().getIntExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, -1);
-        if (veridInstanceId != -1) {
-            try {
-                verID = VerID.getInstance(veridInstanceId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     @Override
@@ -119,79 +97,97 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
-            VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-            if (result != null && result.getError() == null) {
-                Iterator<Map.Entry<Face,Uri>> faceUriIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
-                if (faceUriIterator.hasNext()) {
-                    Map.Entry<Face,Uri> entry = faceUriIterator.next();
-                    new ProfilePhotoHelper(this).setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds()).subscribeOn(Schedulers.io()).subscribe();
-                }
-                Intent intent = new Intent(this, RegisteredUserActivity.class);
-                intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                startActivity(intent);
-                finish();
-            }
+            RxVerIDInstance.get()
+                    .getSessionResultFromIntent(data)
+                    .flatMapObservable(result -> RxVerIDInstance.get().getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
+                    .firstOrError()
+                    .flatMapCompletable(detectedFace -> new ProfilePhotoHelper(IntroActivity.this).setProfilePhotoFromUri(detectedFace.getImageUri(), detectedFace.getFace().getBounds()))
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .compose(lifecycleProvider.bindToLifecycle())
+                    .subscribe(
+                            () -> {
+                                Intent intent = new Intent(this, RegisteredUserActivity.class);
+                                startActivity(intent);
+                                finish();
+                            },
+                            error -> {
+
+                            }
+                    );
         } else if (requestCode == QR_CODE_SCAN_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.hasExtra(Intent.EXTRA_TEXT)) {
-            LoaderManager.getInstance(this).restartLoader(LOADER_ID_IMPORT_REGISTRATION, data.getExtras(), this).forceLoad();
+            tempDialog = new AlertDialog.Builder(this)
+                    .setTitle(R.string.downloading)
+                    .setView(new ProgressBar(this))
+                    .create();
+            tempDialog.show();
+            RegistrationDownload.downloadRegistrations(data.getStringExtra(Intent.EXTRA_TEXT), ((SampleApplication)getApplication()).getRegistrationDownload())
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .compose(lifecycleProvider.bindToLifecycle())
+                    .subscribe(
+                            bundle -> {
+                                if (tempDialog != null) {
+                                    tempDialog.dismiss();
+                                    tempDialog = null;
+                                }
+                                Intent intent = new Intent(IntroActivity.this, RegistrationImportActivity.class);
+                                intent.putExtras(bundle);
+                                startActivityForResult(intent, REQUEST_CODE_IMPORT);
+                            },
+                            error -> {
+                                if (tempDialog != null) {
+                                    tempDialog.dismiss();
+                                    tempDialog = null;
+                                }
+                                showImportError();
+                            }
+                    );
         } else if (requestCode == REQUEST_CODE_IMPORT) {
-            Completable.create(emitter -> {
-                try {
-                    final String[] users = verID.getUserManagement().getUsers();
-                    if (users.length > 0) {
-                        emitter.onComplete();
-                    } else {
-                        throw new Exception("No users registered");
-                    }
-                } catch (Exception e) {
-                    emitter.onError(e);
-                }
-            }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
-                Intent intent = new Intent(IntroActivity.this, RegisteredUserActivity.class);
-                intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                startActivity(intent);
-                finish();
-            });
+            RxVerIDInstance.get()
+                    .getUsers()
+                    .firstOrError()
+                    .ignoreElement()
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .compose(lifecycleProvider.bindToLifecycle())
+                    .subscribe(
+                            () -> {
+                                Intent intent = new Intent(IntroActivity.this, RegisteredUserActivity.class);
+                                startActivity(intent);
+                                finish();
+                            },
+                            error -> {}
+                    );
         }
     }
 
     private void register() {
-        Observable.create(emitter -> {
-            try {
-                String[] users = verID.getUserManagement().getUsers();
-                for (String user : users) {
-                    emitter.onNext(user);
-                }
-                emitter.onComplete();
-                if (users.length > 0) {
-                    verID.getUserManagement().deleteUsers(users);
-                }
-            } catch (Exception e) {
-                emitter.onError(e);
-            }
-        }).toList().flatMapCompletable(users -> observer -> {
-            try {
-                if (!users.isEmpty()) {
-                    String[] userArray = new String[users.size()];
-                    users.toArray(userArray);
-                    verID.getUserManagement().deleteUsers(userArray);
-                }
-                observer.onComplete();
-            } catch (Exception e) {
-                observer.onError(e);
-            }
-        }).compose(lifecycleProvider.bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(() -> {
-            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-            settings.setShowResult(true);
-            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
-            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-            }
-            Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
-            startActivityForResult(intent, REQUEST_CODE_REGISTER);
-        });
+        RxVerIDInstance.get()
+                .getUsers()
+                .flatMapCompletable(RxVerIDInstance.get()::deleteUser)
+                .andThen(RxVerIDInstance.get().getVerID())
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        verID -> {
+                            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+                            settings.setShowResult(true);
+                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
+                            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                            }
+                            Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
+                            startActivityForResult(intent, REQUEST_CODE_REGISTER);
+                        },
+                        error -> {
+
+                        }
+                );
     }
 
     @Override
@@ -251,61 +247,6 @@ public class IntroActivity extends PageViewActivity implements LoaderManager.Loa
             int index = args.getInt("index", 0);
             return IntroFragment.createView(inflater, container, index);
         }
-    }
-
-    //region Registration import
-
-    @Override
-    public Loader onCreateLoader(int id, Bundle args) {
-        if (id == LOADER_ID_IMPORT_REGISTRATION && args != null && args.containsKey(Intent.EXTRA_TEXT)) {
-            tempDialog = new AlertDialog.Builder(this)
-                    .setTitle(R.string.downloading)
-                    .setView(new ProgressBar(this))
-                    .create();
-            tempDialog.show();
-            String url = args.getString(Intent.EXTRA_TEXT);
-            return new RegistrationImportLoader(this, url, ((SampleApplication)getApplication()).getRegistrationDownload());
-        }
-        return null;
-    }
-
-    @Override
-    public void onLoadFinished(Loader loader, Object data) {
-        if (loader.getId() == LOADER_ID_IMPORT_REGISTRATION) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (tempDialog != null) {
-                        tempDialog.dismiss();
-                        tempDialog = null;
-                    }
-                }
-            });
-            if (data != null && data instanceof Bundle) {
-                final Bundle extras = (Bundle) data;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Intent intent = new Intent(IntroActivity.this, RegistrationImportActivity.class);
-                        intent.putExtras(extras);
-                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                        startActivityForResult(intent, REQUEST_CODE_IMPORT);
-                    }
-                });
-            } else {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        showImportError();
-                    }
-                });
-            }
-        }
-    }
-
-    @Override
-    public void onLoaderReset(Loader loader) {
-
     }
 
     private void showImportError() {
