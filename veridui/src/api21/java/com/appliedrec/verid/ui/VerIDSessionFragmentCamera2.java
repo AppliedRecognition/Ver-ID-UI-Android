@@ -139,6 +139,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
     private ThreadPoolExecutor imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
+    private Matrix faceBoundsMatrix = new Matrix();
     private int backgroundColour = 0x80000000;
 
     // region Fragment lifecycle
@@ -244,10 +245,10 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             }
         }
         try {
-            Matrix matrix = imageScaleTransformAtImageSize(faceDetectionResult.getImageSize());
-            matrix.mapRect(ovalBounds);
+//            Matrix matrix = imageScaleTransformAtImageSize(faceDetectionResult.getImageSize());
+            faceBoundsMatrix.mapRect(ovalBounds);
             if (cutoutBounds != null) {
-                matrix.mapRect(cutoutBounds);
+                faceBoundsMatrix.mapRect(cutoutBounds);
             }
             int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
             int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
@@ -376,7 +377,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        long now = System.currentTimeMillis()/1000;
         if (imageProcessingExecutor != null && imageProcessingExecutor.getActiveCount() == 0 && imageProcessingExecutor.getQueue().isEmpty()) {
             int rotation = textureView.getDisplay().getRotation();
             int surfaceRotationDegrees;
@@ -422,14 +422,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
      * @since 1.0.0
      */
     public Matrix imageScaleTransformAtImageSize(com.appliedrec.verid.core.Size size) throws Exception {
-        if (detectedFaceView == null) {
-            throw new Exception("View not loaded");
-        }
-        float width = (float)detectedFaceView.getWidth();
-        float scale = width / (float)size.width;
-        Matrix matrix = new Matrix();
-        matrix.postScale(scale, scale);
-        return matrix;
+        return faceBoundsMatrix;
     }
 
     @SuppressLint("MissingPermission")
@@ -465,26 +458,8 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 throw new RuntimeException("Cannot get video sizes");
             }
             videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                    width, height, videoSize);
-
-            float viewAspectRatio = (float)width / (float)height;
-            float cameraAspectRatio;
-            if (sensorOrientation % 180 == 0) {
-                cameraAspectRatio = (float)previewSize.getWidth() / (float)previewSize.getHeight();
-            } else {
-                cameraAspectRatio = (float)previewSize.getHeight() / (float)previewSize.getWidth();
-            }
-            int w;
-            int h;
-            if (cameraAspectRatio > viewAspectRatio) {
-                w = (int)((float)height * cameraAspectRatio);
-                h = height;
-            } else {
-                w = width;
-                h = (int)((float)width / cameraAspectRatio);
-            }
-            configureTransform(w, h);
+            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, videoSize);
+            configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
             Toast.makeText(activity, "Cannot access camera", Toast.LENGTH_SHORT).show();
@@ -679,54 +654,57 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 rotationDegrees = 270;
 
         }
-        float viewAspectRatio = (float)view.getWidth()/(float)view.getHeight();
-        float textureAspectRatio = rotationDegrees % 180 == 0 ? (float)width/(float)height : (float)height/(float)width;
-        float scale;
-        if (textureAspectRatio > viewAspectRatio) {
-            scale = rotationDegrees % 180 == 0 ? (float)view.getHeight() / (float)height : (float)view.getHeight() / (float)width;
-        } else {
-            scale = rotationDegrees % 180 == 0 ? (float)view.getWidth() / (float)width : (float)view.getWidth() / (float)height;
-        }
-        width = (int)((float)width * scale);
-        height = (int)((float)height * scale);
-        textureView.getLayoutParams().width = width;
-        textureView.getLayoutParams().height = height;
         textureView.setVisibility(View.VISIBLE);
 
+
+        RectF imageRect = new RectF();
+        if ((rotationDegrees - sensorOrientation) % 180 == 0) {
+            imageRect.right = width;
+            imageRect.bottom = height;
+        } else {
+            imageRect.right = height;
+            imageRect.bottom = width;
+        }
+
+        if (sensorOrientation % 180 != 0) {
+            int w = width;
+            width = height;
+            height = w;
+        }
+
+        RectF textureRect = new RectF(0, 0, textureView.getWidth(), textureView.getHeight());
+        RectF previewRect = new RectF(0, 0, width, height);
+
+        float centerX = textureRect.centerX();
+        float centerY = textureRect.centerY();
+
         Matrix matrix = new Matrix();
-        float centerX = (float)width / 2f;
-        float centerY = (float)height / 2f;
+        previewRect.offset(centerX - previewRect.centerX(), centerY - previewRect.centerY());
+        matrix.setRectToRect(textureRect, previewRect, Matrix.ScaleToFit.FILL);
+        float scale = Math.max(textureRect.width() / (float)width, textureRect.height() / (float)height);
+        matrix.postScale(scale, scale, centerX, centerY);
 
         if (rotationDegrees != 0) {
             matrix.postRotate(0 - rotationDegrees, centerX, centerY);
         }
         textureView.setTransform(matrix);
-//        if (previewSize != null) {
-//            float viewAspectRatio = (float)width/(float)height;
-//            Size adjustedPreviewSize;
-//            if (viewAspectRatio > 1) {
-//                adjustedPreviewSize = new Size(previewSize.getWidth(), previewSize.getHeight());
-//            } else {
-//                adjustedPreviewSize = new Size(previewSize.getHeight(), previewSize.getWidth());
-//            }
-//            float previewAspectRatio = (float)adjustedPreviewSize.getWidth()/(float)adjustedPreviewSize.getHeight();
-//            float scale;
-//            if (previewAspectRatio > viewAspectRatio) {
-//                scale = (float)height / (float)adjustedPreviewSize.getHeight();
-//            } else {
-//                scale = (float)width / (float)adjustedPreviewSize.getWidth();
-//            }
-//            float previewWidth = (float)adjustedPreviewSize.getWidth()*scale;
-//            float previewHeight = (float)adjustedPreviewSize.getHeight()*scale;
-//            int x = (int)((float)width/2f - previewWidth/2f);
-//            int y = (int)((float)height/2f - previewHeight/2f);
-//            textureView.setTranslationX(x);
-//            textureView.setTranslationY(y);
-//            detectedFaceView.getLayoutParams().width = width;
-//            detectedFaceView.getLayoutParams().height = height;
-//            detectedFaceView.setTranslationX(x);
-//            detectedFaceView.setTranslationY(y);
-//        }
+
+        // Configure transform for displaying faces
+        RectF detectedFaceViewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
+        RectF targetRect = new RectF();
+        float viewAspectRatio = detectedFaceViewRect.width() / detectedFaceViewRect.height();
+        float cameraAspectRatio = imageRect.width() / imageRect.height();
+        if (cameraAspectRatio > viewAspectRatio) {
+            targetRect.right = detectedFaceViewRect.height() * cameraAspectRatio;
+            targetRect.bottom = detectedFaceViewRect.height();
+        } else {
+            targetRect.right = detectedFaceViewRect.width();
+            targetRect.bottom = detectedFaceViewRect.width() / cameraAspectRatio;
+        }
+        targetRect.offset(detectedFaceViewRect.centerX()-targetRect.centerX(), detectedFaceViewRect.centerY()-targetRect.centerY());
+
+        faceBoundsMatrix.reset();
+        faceBoundsMatrix.setRectToRect(imageRect, targetRect, Matrix.ScaleToFit.CENTER);
     }
 
     /**

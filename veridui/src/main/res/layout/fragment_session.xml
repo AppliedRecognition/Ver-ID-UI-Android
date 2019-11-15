@@ -5,13 +5,6 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-<!--    <Space-->
-<!--        android:id="@+id/spacer"-->
-<!--        android:layout_width="100dp"-->
-<!--        android:layout_height="100dp"-->
-<!--        app:layout_constraintRight_toLeftOf="parent"-->
-<!--        app:layout_constraintBottom_toTopOf="parent"/>-->
-
     <TextureView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
@@ -20,17 +13,15 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-<!--        app:layout_constraintLeft_toLeftOf="@id/spacer"-->
-<!--        app:layout_constraintTop_toTopOf="@id/spacer"/>-->
 
     <com.appliedrec.verid.ui.DetectedFaceView
         android:id="@+id/detectedFaceView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintLeft_toLeftOf="@id/view_finder"
-        app:layout_constraintRight_toRightOf="@id/view_finder"
-        app:layout_constraintTop_toTopOf="@id/view_finder"
-        app:layout_constraintBottom_toBottomOf="@id/view_finder" />
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/instruction_textview"
