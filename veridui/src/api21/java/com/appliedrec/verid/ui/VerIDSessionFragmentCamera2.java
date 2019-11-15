@@ -7,6 +7,8 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ShapeDrawable;
@@ -58,6 +60,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntFunction;
+import java.util.function.IntUnaryOperator;
+import java.util.function.UnaryOperator;
 
 public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
 
@@ -101,7 +106,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
     private Size previewSize;
     private Size videoSize;
     private CameraDevice cameraDevice;
-    private TextureView textureView;
+    private AutoFitTextureView textureView;
     private TextView instructionTextView;
     private DetectedFaceView detectedFaceView;
     private CameraCaptureSession captureSession;
@@ -245,7 +250,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             }
         }
         try {
-//            Matrix matrix = imageScaleTransformAtImageSize(faceDetectionResult.getImageSize());
             faceBoundsMatrix.mapRect(ovalBounds);
             if (cutoutBounds != null) {
                 faceBoundsMatrix.mapRect(cutoutBounds);
@@ -266,6 +270,18 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
             }
             detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
+                int i=0;
+                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
+                    landmarks[i++] = pt.x;
+                    landmarks[i++] = pt.y;
+                }
+                faceBoundsMatrix.mapPoints(landmarks);
+                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
+                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
+                detectedFaceView.setFaceLandmarks(pointLandmarks);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -459,6 +475,11 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             }
             videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
             previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, videoSize);
+//            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+//                textureView.setAspectRatio(previewSize.getWidth(), previewSize.getHeight());
+//            } else {
+//                textureView.setAspectRatio(previewSize.getHeight(), previewSize.getWidth());
+//            }
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
@@ -638,6 +659,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         if (textureView.getDisplay() == null) {
             return;
         }
+        RectF viewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
         int rotation = textureView.getDisplay().getRotation();
         float rotationDegrees = 0;
         switch (rotation) {
@@ -654,9 +676,43 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 rotationDegrees = 270;
 
         }
+        float w;
+        float h;
+        if (sensorOrientation % 180 == 0) {
+            w = width;
+            h = height;
+        } else {
+            w = height;
+            h = width;
+        }
+        float viewAspectRatio = viewRect.width()/viewRect.height();
+        float imageAspectRatio = rotationDegrees % 180 == 0 ? w/h : h/w;
+        float scale = 1f;
+        if (viewAspectRatio > imageAspectRatio) {
+            scale = viewRect.width()/(rotationDegrees % 180 == 0 ? height : width);
+        } else {
+            scale = viewRect.height()/(rotationDegrees % 180 == 0 ? width : height);
+        }
+        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(textureView.getLayoutParams());
+        layoutParams.width = (int)(scale * w);
+        layoutParams.height = (int)(scale * h);
+        layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+        textureView.setLayoutParams(layoutParams);
         textureView.setVisibility(View.VISIBLE);
 
+        Matrix matrix = new Matrix();
+        RectF textureRect = new RectF(0, 0, layoutParams.width, layoutParams.height);
+        float centerX = textureRect.centerX();
+        float centerY = textureRect.centerY();
+        if (rotationDegrees != 0) {
+            matrix.postRotate(0 - rotationDegrees, centerX, centerY);
+        }
+        textureView.setTransform(matrix);
 
+        // Configure transform for displaying faces
         RectF imageRect = new RectF();
         if ((rotationDegrees - sensorOrientation) % 180 == 0) {
             imageRect.right = width;
@@ -665,46 +721,19 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             imageRect.right = height;
             imageRect.bottom = width;
         }
-
-        if (sensorOrientation % 180 != 0) {
-            int w = width;
-            width = height;
-            height = w;
-        }
-
-        RectF textureRect = new RectF(0, 0, textureView.getWidth(), textureView.getHeight());
-        RectF previewRect = new RectF(0, 0, width, height);
-
-        float centerX = textureRect.centerX();
-        float centerY = textureRect.centerY();
-
-        Matrix matrix = new Matrix();
-        previewRect.offset(centerX - previewRect.centerX(), centerY - previewRect.centerY());
-        matrix.setRectToRect(textureRect, previewRect, Matrix.ScaleToFit.FILL);
-        float scale = Math.max(textureRect.width() / (float)width, textureRect.height() / (float)height);
-        matrix.postScale(scale, scale, centerX, centerY);
-
-        if (rotationDegrees != 0) {
-            matrix.postRotate(0 - rotationDegrees, centerX, centerY);
-        }
-        textureView.setTransform(matrix);
-
-        // Configure transform for displaying faces
-        RectF detectedFaceViewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
         RectF targetRect = new RectF();
-        float viewAspectRatio = detectedFaceViewRect.width() / detectedFaceViewRect.height();
         float cameraAspectRatio = imageRect.width() / imageRect.height();
         if (cameraAspectRatio > viewAspectRatio) {
-            targetRect.right = detectedFaceViewRect.height() * cameraAspectRatio;
-            targetRect.bottom = detectedFaceViewRect.height();
+            targetRect.right = viewRect.height() * cameraAspectRatio;
+            targetRect.bottom = viewRect.height();
         } else {
-            targetRect.right = detectedFaceViewRect.width();
-            targetRect.bottom = detectedFaceViewRect.width() / cameraAspectRatio;
+            targetRect.right = viewRect.width();
+            targetRect.bottom = viewRect.width() / cameraAspectRatio;
         }
-        targetRect.offset(detectedFaceViewRect.centerX()-targetRect.centerX(), detectedFaceViewRect.centerY()-targetRect.centerY());
+        targetRect.offset(viewRect.centerX()-targetRect.centerX(), viewRect.centerY()-targetRect.centerY());
 
         faceBoundsMatrix.reset();
-        faceBoundsMatrix.setRectToRect(imageRect, targetRect, Matrix.ScaleToFit.CENTER);
+        faceBoundsMatrix.setRectToRect(imageRect, targetRect, Matrix.ScaleToFit.FILL);
     }
 
     /**
