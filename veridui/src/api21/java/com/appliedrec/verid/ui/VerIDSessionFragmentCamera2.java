@@ -106,7 +106,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
     private Size previewSize;
     private Size videoSize;
     private CameraDevice cameraDevice;
-    private AutoFitTextureView textureView;
+    private TextureView textureView;
     private TextView instructionTextView;
     private DetectedFaceView detectedFaceView;
     private CameraCaptureSession captureSession;
@@ -694,8 +694,14 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             scale = viewRect.height()/(rotationDegrees % 180 == 0 ? width : height);
         }
         ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(textureView.getLayoutParams());
-        layoutParams.width = (int)(scale * w);
-        layoutParams.height = (int)(scale * h);
+        Matrix matrix = new Matrix();
+        if (rotationDegrees % 180 == 0) {
+            layoutParams.width = (int) (scale * w);
+            layoutParams.height = (int) (scale * h);
+        } else {
+            layoutParams.width = (int) (scale * width);
+            layoutParams.height = (int) (scale * height);
+        }
         layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -703,11 +709,13 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         textureView.setLayoutParams(layoutParams);
         textureView.setVisibility(View.VISIBLE);
 
-        Matrix matrix = new Matrix();
         RectF textureRect = new RectF(0, 0, layoutParams.width, layoutParams.height);
         float centerX = textureRect.centerX();
         float centerY = textureRect.centerY();
         if (rotationDegrees != 0) {
+            if (rotationDegrees % 180 != 0) {
+                matrix.setScale((float) height / (float) width, (float) width / (float) height, centerX, centerY);
+            }
             matrix.postRotate(0 - rotationDegrees, centerX, centerY);
         }
         textureView.setTransform(matrix);
