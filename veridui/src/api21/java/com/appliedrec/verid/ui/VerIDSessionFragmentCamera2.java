@@ -267,18 +267,19 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
             }
             detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
-            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
-                int i=0;
-                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
-                    landmarks[i++] = pt.x;
-                    landmarks[i++] = pt.y;
-                }
-                faceBoundsMatrix.mapPoints(landmarks);
-                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
-                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
-                detectedFaceView.setFaceLandmarks(pointLandmarks);
-            }
+//            // Uncomment to plot face landmarks for debugging purposes
+//            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
+//                int i=0;
+//                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
+//                    landmarks[i++] = pt.x;
+//                    landmarks[i++] = pt.y;
+//                }
+//                faceBoundsMatrix.mapPoints(landmarks);
+//                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
+//                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
+//                detectedFaceView.setFaceLandmarks(pointLandmarks);
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -472,11 +473,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             }
             videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
             previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, videoSize);
-//            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//                textureView.setAspectRatio(previewSize.getWidth(), previewSize.getHeight());
-//            } else {
-//                textureView.setAspectRatio(previewSize.getHeight(), previewSize.getWidth());
-//            }
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
