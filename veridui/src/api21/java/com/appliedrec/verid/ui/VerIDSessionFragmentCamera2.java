@@ -117,9 +117,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             VerIDSessionFragmentCamera2.this.cameraDevice = cameraDevice;
             startPreview();
             cameraOpenCloseLock.release();
-//            if (null != textureView) {
-//                configureTransform(textureView.getWidth(), textureView.getHeight());
-//            }
         }
 
         @Override
