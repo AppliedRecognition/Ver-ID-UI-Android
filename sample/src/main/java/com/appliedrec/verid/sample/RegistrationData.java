@@ -3,13 +3,14 @@ package com.appliedrec.verid.sample;
 import android.graphics.Bitmap;
 
 import com.appliedrec.verid.core.FaceTemplate;
+import com.appliedrec.verid.core.RecognizableSubject;
 
 public class RegistrationData {
 
-    private FaceTemplate[] faceTemplates;
+    private RecognizableSubject[] faceTemplates;
     private Bitmap profilePicture;
 
-    public FaceTemplate[] getFaceTemplates() {
+    public RecognizableSubject[] getFaceTemplates() {
         return faceTemplates;
     }
 
@@ -17,7 +18,7 @@ public class RegistrationData {
         return profilePicture;
     }
 
-    public void setFaceTemplates(FaceTemplate[] faceTemplates) {
+    public void setFaceTemplates(RecognizableSubject[] faceTemplates) {
         this.faceTemplates = faceTemplates;
     }
 

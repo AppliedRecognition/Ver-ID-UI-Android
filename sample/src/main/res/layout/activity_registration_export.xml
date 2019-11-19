@@ -4,10 +4,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RegistrationImportActivity">
+    tools:context=".RegistrationExportActivity">
+
+    <ImageView
+        android:id="@+id/qrCodeImageView"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:srcCompat="@tools:sample/avatars[0]" />
 
     <ProgressBar
-        android:id="@+id/progressBar3"
+        android:id="@+id/progressBar"
         style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

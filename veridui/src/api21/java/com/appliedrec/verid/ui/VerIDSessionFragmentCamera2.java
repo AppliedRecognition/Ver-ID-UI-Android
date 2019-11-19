@@ -37,6 +37,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -104,7 +105,6 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
     private Semaphore cameraOpenCloseLock = new Semaphore(1);
     private Integer sensorOrientation;
     private Size previewSize;
-    private Size videoSize;
     private CameraDevice cameraDevice;
     private TextureView textureView;
     private TextView instructionTextView;
@@ -471,8 +471,16 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             if (map == null) {
                 throw new RuntimeException("Cannot get video sizes");
             }
-            videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, videoSize);
+            int w, h;
+            if ((sensorOrientation - getDisplayRotation()) % 180 == 0) {
+                w = width;
+                h = height;
+            } else {
+                w = height;
+                h = width;
+            }
+
+            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), w, h, new Size(width, height));
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
@@ -505,62 +513,18 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         int w = aspectRatio.getWidth();
         int h = aspectRatio.getHeight();
         for (Size option : choices) {
-            if (option.getHeight() == option.getWidth() * h / w &&
-                    option.getWidth() >= width && option.getHeight() >= height) {
+            if (option.getWidth() >= width && option.getHeight() >= height) {
                 bigEnough.add(option);
             }
         }
 
         // Pick the smallest of those, assuming we found any
         if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
+            return Collections.min(bigEnough, (lhs, rhs) -> Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight()));
         } else {
             return choices[0];
         }
     }
-
-    /**
-     * Compares two {@code Size}s based on their areas.
-     */
-    static class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
-
-    }
-
-    private static Comparator<Size> videoSizeComparator = new Comparator<Size>() {
-
-        private boolean is4x3(Size size) {
-            return size.getWidth() == size.getHeight() * 4 / 3;
-        }
-        @Override
-        public int compare(Size s1, Size s2) {
-            if (is4x3(s1) != is4x3(s2)) {
-                return is4x3(s1) ? -1 : 1;
-            }
-            return Math.abs(s1.getWidth()-640) < Math.abs(s2.getWidth()-640) ? -1 : 1;
-        }
-    };
-
-    private static Size chooseVideoSize(Size[] choices) {
-        ArrayList<Size> sizes = new ArrayList<>();
-        for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
-                sizes.add(size);
-            }
-        }
-        if (sizes.isEmpty()) {
-            return choices[choices.length-1];
-        }
-        Collections.sort(sizes, videoSizeComparator);
-        return sizes.get(0);
-    }
-
 
 
     /**
@@ -636,6 +600,25 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
     }
 
+    @MainThread
+    protected int getDisplayRotation() throws Exception {
+        if (getView() == null) {
+            throw new Exception("View not loaded");
+        }
+        switch (getView().getDisplay().getRotation()) {
+            case Surface.ROTATION_0:
+                return 0;
+            case Surface.ROTATION_90:
+                return  90;
+            case Surface.ROTATION_180:
+                return  180;
+            case Surface.ROTATION_270:
+                return 270;
+            default:
+                return 0;
+        }
+    }
+
     /**
      * Configures the necessary {@link android.graphics.Matrix} transformation to `textureView`.
      * This method should not to be called until the camera preview size is determined in
@@ -644,7 +627,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
      * @param width  The width of `textureView`
      * @param height The height of `textureView`
      */
-    private void configureTransform(int width, int height) {
+    protected void configureTransform(int width, int height) {
         View view = getView();
         if (view == null) {
             return;
@@ -653,20 +636,10 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
             return;
         }
         RectF viewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
-        int rotation = textureView.getDisplay().getRotation();
         float rotationDegrees = 0;
-        switch (rotation) {
-            case Surface.ROTATION_0:
-                rotationDegrees = 0;
-                break;
-            case Surface.ROTATION_90:
-                rotationDegrees = 90;
-                break;
-            case Surface.ROTATION_180:
-                rotationDegrees = 180;
-                break;
-            case Surface.ROTATION_270:
-                rotationDegrees = 270;
+        try {
+            rotationDegrees = (float)getDisplayRotation();
+        } catch (Exception e) {
 
         }
         float w;

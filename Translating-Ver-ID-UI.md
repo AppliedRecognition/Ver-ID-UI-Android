@@ -98,7 +98,11 @@ Turn your head in the direction of the arrow
 If you can, take off your glasses.
 ~~~
 
-## Running a Ver-ID session with your translation
+## Using the system locale when choosing your translation
+
+The Ver-ID translation system gives you the flexibility to start Ver-ID sessions with different languages without having to change the system locale. However, if you want Ver-ID to use the system locale, simply include the translated strings in your app bundle's **assets** folder.
+
+## Running a Ver-ID session with a specific translation
 
 To use a translation saved as **es.xml** in your app's assets add the following extra in the Ver-ID session intent:
 
@@ -118,23 +122,3 @@ LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings
 Intent intent = new VerIDSessionIntent<>(this, verID, settings);
 intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH, translation.getPath());
 ~~~
-
-## Using the system locale when choosing your translation
-
-The Ver-ID translation system gives you the flexibility to start Ver-ID sessions with different languages without having to change the system locale. However, if you wish Ver-ID to use the system locale, you will need to map your translations to the system locales. For example, say you translated Ver-ID to French and Spanish and you put the translations in your app's **assets** folder as **fr.xml** and **es.xml** respectively:
-
-~~~java
-Intent intent; // Ver-ID session intent
-// Map locale languages to your translations
-HashMap<String,String> translationMap = new HashMap<>();
-translationMap.put(new Locale("fr").getLanguage(), "fr.xml");
-translationMap.put(new Locale("es").getLanguage(), "es.xml");
-// Use the translation if available
-if (translationMap.containsKey(currentLocale.getLanguage())) {
-    intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, translationMap.get(currentLocale.getLanguage()));
-}
-~~~
-
-If the system locale is set to another language the session will default to English.
-
-You can build more elaborate language resolution system if you need to take into account regional language variations.
