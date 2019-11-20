@@ -225,123 +225,117 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
             return;
         }
-        previewProcessingExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (camera == null) {
+        previewProcessingExecutor.execute(() -> {
+            if (camera == null || !isAdded()) {
+                return;
+            }
+            final Camera.Parameters params = camera.getParameters();
+
+            deviceOrientation = 0;
+            int rotationDegrees = 0;
+            switch (rotation) {
+                case Surface.ROTATION_0:
+                    rotationDegrees = 0;
+                    break;
+                case Surface.ROTATION_90:
+                    rotationDegrees = 90;
+                    break;
+                case Surface.ROTATION_180:
+                    rotationDegrees = 180;
+                    break;
+                case Surface.ROTATION_270:
+                    rotationDegrees = 270;
+                    break;
+            }
+
+            // From Android sample code
+            int orientation = (rotationDegrees + 45) / 90 * 90;
+            int cameraRotation;
+
+            int orientationDegrees;
+            if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
+                deviceOrientation = (cameraOrientation - rotationDegrees + 360) % 360;
+                orientationDegrees = (cameraOrientation - rotationDegrees + 360) % 360;
+                cameraRotation = (cameraOrientation + orientation) % 360;
+            } else {
+                deviceOrientation = (cameraOrientation + rotationDegrees) % 360;
+                deviceOrientation = (360 - deviceOrientation) % 360;
+                orientationDegrees = (cameraOrientation + rotationDegrees) % 360;
+                cameraRotation = (cameraOrientation - orientation + 360) % 360;
+            }
+
+            switch (orientationDegrees) {
+                case 90:
+                    exifOrientation = ExifInterface.ORIENTATION_ROTATE_90;
+                    break;
+                case 180:
+                    exifOrientation = ExifInterface.ORIENTATION_ROTATE_180;
+                    break;
+                case 270:
+                    exifOrientation = ExifInterface.ORIENTATION_ROTATE_270;
+                    break;
+                default:
+                    exifOrientation = ExifInterface.ORIENTATION_NORMAL;
+            }
+
+
+            final Point adjustedDisplaySize;
+            if (cameraRotation % 180 > 0) {
+                adjustedDisplaySize = new Point(displaySize.y, displaySize.x);
+            } else {
+                adjustedDisplaySize = new Point(displaySize);
+            }
+            float screenDensity = getResources().getDisplayMetrics().density;
+            adjustedDisplaySize.x /= screenDensity;
+            adjustedDisplaySize.y /= screenDensity;
+            previewSize = getOptimalCameraSizeForDimensions(params.getSupportedPreviewSizes(), adjustedDisplaySize.x, adjustedDisplaySize.y);
+            String previewFormats = params.get("preview-format-values");
+            if (previewFormats!=null && previewFormats.contains("fslNV21isNV12")) {
+                previewFormat = IMAGE_FORMAT_CERIDIAN_NV12;
+            } else {
+                previewFormat = params.getPreviewFormat();
+            }
+
+            final Camera.Size scaledSize;
+            if (deviceOrientation % 180 > 0) {
+                scaledSize = camera.new Size(previewSize.height, previewSize.width);
+            } else {
+                scaledSize = camera.new Size(previewSize.width, previewSize.height);
+            }
+            List<String> supportedFocusModes = params.getSupportedFocusModes();
+            if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+                params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+            } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
+                params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+            } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+                params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            }
+            params.setPreviewSize(previewSize.width, previewSize.height);
+            // Some camera drivers write the rotation to exif but some apply it to the raw jpeg data.
+            // If the camera rotation is set to 0 then we can use the exif orientation to right the image reliably.
+            params.setRotation(0);
+            updateCameraParams(params);
+            Log.d("CameraFocus", "setFocusMode "+params.getFocusMode());
+            camera.setParameters(params);
+            camera.setDisplayOrientation(deviceOrientation);
+
+            setPreviewCallbackWithBuffer();
+
+            float scale;
+            if ((float)displaySize.x / (float)displaySize.y > (float)scaledSize.width / (float)scaledSize.height) {
+                scale = (float)displaySize.x / (float)scaledSize.width;
+            } else {
+                scale = (float)displaySize.y / (float)scaledSize.height;
+            }
+            scaledSize.width *= scale;
+            scaledSize.height *= scale;
+            runOnUIThread(() -> {
+                if (camera == null || cameraSurfaceView == null) {
                     return;
                 }
-                final Camera.Parameters params = camera.getParameters();
-
-                deviceOrientation = 0;
-                int rotationDegrees = 0;
-                switch (rotation) {
-                    case Surface.ROTATION_0:
-                        rotationDegrees = 0;
-                        break;
-                    case Surface.ROTATION_90:
-                        rotationDegrees = 90;
-                        break;
-                    case Surface.ROTATION_180:
-                        rotationDegrees = 180;
-                        break;
-                    case Surface.ROTATION_270:
-                        rotationDegrees = 270;
-                        break;
-                }
-
-                // From Android sample code
-                int orientation = (rotationDegrees + 45) / 90 * 90;
-                int cameraRotation;
-
-                int orientationDegrees;
-                if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
-                    deviceOrientation = (cameraOrientation - rotationDegrees + 360) % 360;
-                    orientationDegrees = (cameraOrientation - rotationDegrees + 360) % 360;
-                    cameraRotation = (cameraOrientation + orientation) % 360;
-                } else {
-                    deviceOrientation = (cameraOrientation + rotationDegrees) % 360;
-                    deviceOrientation = (360 - deviceOrientation) % 360;
-                    orientationDegrees = (cameraOrientation + rotationDegrees) % 360;
-                    cameraRotation = (cameraOrientation - orientation + 360) % 360;
-                }
-
-                switch (orientationDegrees) {
-                    case 90:
-                        exifOrientation = ExifInterface.ORIENTATION_ROTATE_90;
-                        break;
-                    case 180:
-                        exifOrientation = ExifInterface.ORIENTATION_ROTATE_180;
-                        break;
-                    case 270:
-                        exifOrientation = ExifInterface.ORIENTATION_ROTATE_270;
-                        break;
-                    default:
-                        exifOrientation = ExifInterface.ORIENTATION_NORMAL;
-                }
-
-
-                final Point adjustedDisplaySize;
-                if (cameraRotation % 180 > 0) {
-                    adjustedDisplaySize = new Point(displaySize.y, displaySize.x);
-                } else {
-                    adjustedDisplaySize = new Point(displaySize);
-                }
-                float screenDensity = getResources().getDisplayMetrics().density;
-                adjustedDisplaySize.x /= screenDensity;
-                adjustedDisplaySize.y /= screenDensity;
-                previewSize = getOptimalCameraSizeForDimensions(params.getSupportedPreviewSizes(), adjustedDisplaySize.x, adjustedDisplaySize.y);
-                String previewFormats = params.get("preview-format-values");
-                if (previewFormats!=null && previewFormats.contains("fslNV21isNV12")) {
-                    previewFormat = IMAGE_FORMAT_CERIDIAN_NV12;
-                } else {
-                    previewFormat = params.getPreviewFormat();
-                }
-
-                final Camera.Size scaledSize;
-                if (deviceOrientation % 180 > 0) {
-                    scaledSize = camera.new Size(previewSize.height, previewSize.width);
-                } else {
-                    scaledSize = camera.new Size(previewSize.width, previewSize.height);
-                }
-                List<String> supportedFocusModes = params.getSupportedFocusModes();
-                if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
-                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-                } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
-                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-                } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-                }
-                params.setPreviewSize(previewSize.width, previewSize.height);
-                // Some camera drivers write the rotation to exif but some apply it to the raw jpeg data.
-                // If the camera rotation is set to 0 then we can use the exif orientation to right the image reliably.
-                params.setRotation(0);
-                updateCameraParams(params);
-                Log.d("CameraFocus", "setFocusMode "+params.getFocusMode());
-                camera.setParameters(params);
-                camera.setDisplayOrientation(deviceOrientation);
-
-                setPreviewCallbackWithBuffer();
-
-                float scale;
-                if ((float)displaySize.x / (float)displaySize.y > (float)scaledSize.width / (float)scaledSize.height) {
-                    scale = (float)displaySize.x / (float)scaledSize.width;
-                } else {
-                    scale = (float)displaySize.y / (float)scaledSize.height;
-                }
-                scaledSize.width *= scale;
-                scaledSize.height *= scale;
-                runOnUIThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (camera == null || cameraSurfaceView == null) {
-                            return;
-                        }
-                        cameraSurfaceView.setCamera(camera);
-                        cameraSurfaceView.setFixedSize(scaledSize.width, scaledSize.height);
-                    }
-                });
-            }
+                cameraSurfaceView.setCamera(camera);
+                cameraSurfaceView.setFixedSize(scaledSize.width, scaledSize.height);
+            });
         });
     }
 
@@ -382,30 +376,27 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         final float desiredSizeAspectRatio = (float)desiredWidth/(float)desiredHeight;
         final boolean desiredSizeIsLandscape = desiredSizeAspectRatio > 1;
 
-        Comparator<Camera.Size> comparator = new Comparator<Camera.Size>() {
-            @Override
-            public int compare(Camera.Size size1, Camera.Size size2) {
-                float size1AspectRatio = (float)size1.width/(float)size1.height;
-                float size2AspectRatio = (float)size2.width/(float)size2.height;
-                boolean size1IsLandscape = size1AspectRatio > 1;
-                boolean size2IsLandscape = size2AspectRatio > 1;
-                if (size1IsLandscape == size2IsLandscape) {
-                    int size1Area = size1.width * size1.height;
-                    int size2Area = size2.width * size2.height;
-                    float size1AreaDiff = Math.abs(size1Area - desiredSizeArea);
-                    float size2AreaDiff = Math.abs(size2Area - desiredSizeArea);
-                    if (size1AreaDiff == size2AreaDiff) {
-                        float size1AspectRatioDiff = Math.abs(size1AspectRatio - desiredSizeAspectRatio);
-                        float size2AspectRatioDiff = Math.abs(size2AspectRatio - desiredSizeAspectRatio);
-                        if (size2AspectRatioDiff == size2AspectRatioDiff) {
-                            return 0;
-                        }
-                        return size1AspectRatioDiff < size2AspectRatioDiff ? -1 : 1;
+        Comparator<Camera.Size> comparator = (size1, size2) -> {
+            float size1AspectRatio = (float)size1.width/(float)size1.height;
+            float size2AspectRatio = (float)size2.width/(float)size2.height;
+            boolean size1IsLandscape = size1AspectRatio > 1;
+            boolean size2IsLandscape = size2AspectRatio > 1;
+            if (size1IsLandscape == size2IsLandscape) {
+                int size1Area = size1.width * size1.height;
+                int size2Area = size2.width * size2.height;
+                float size1AreaDiff = Math.abs(size1Area - desiredSizeArea);
+                float size2AreaDiff = Math.abs(size2Area - desiredSizeArea);
+                if (size1AreaDiff == size2AreaDiff) {
+                    float size1AspectRatioDiff = Math.abs(size1AspectRatio - desiredSizeAspectRatio);
+                    float size2AspectRatioDiff = Math.abs(size2AspectRatio - desiredSizeAspectRatio);
+                    if (size2AspectRatioDiff == size2AspectRatioDiff) {
+                        return 0;
                     }
-                    return size1AreaDiff < size2AreaDiff ? -1 : 1;
-                } else {
-                    return size1IsLandscape == desiredSizeIsLandscape ? -1 : 1;
+                    return size1AspectRatioDiff < size2AspectRatioDiff ? -1 : 1;
                 }
+                return size1AreaDiff < size2AreaDiff ? -1 : 1;
+            } else {
+                return size1IsLandscape == desiredSizeIsLandscape ? -1 : 1;
             }
         };
 
@@ -481,33 +472,22 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
             previewProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
         }
-        previewProcessingExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    cameraOrientation = getOrientationOfCamera();
-                    if (camera == null) {
-                        camera = openCamera();
-                    }
-                    if (camera == null) {
-                        throw new Exception("Unable to access camera");
-                    }
-                    runOnUIThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            setupCamera();
-                        }
-                    });
-                } catch (final Exception e) {
-                    runOnUIThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (delegate != null) {
-                                delegate.veridSessionFragmentDidFailWithError(VerIDSessionFragment.this, e);
-                            }
-                        }
-                    });
+        previewProcessingExecutor.execute(() -> {
+            try {
+                cameraOrientation = getOrientationOfCamera();
+                if (camera == null) {
+                    camera = openCamera();
                 }
+                if (camera == null) {
+                    throw new Exception("Unable to access camera");
+                }
+                runOnUIThread(VerIDSessionFragment.this::setupCamera);
+            } catch (final Exception e) {
+                runOnUIThread(() -> {
+                    if (delegate != null) {
+                        delegate.veridSessionFragmentDidFailWithError(VerIDSessionFragment.this, e);
+                    }
+                });
             }
         });
     }
@@ -686,16 +666,13 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             return;
         }
         if (previewProcessingExecutor != null && !previewProcessingExecutor.isShutdown() && previewProcessingExecutor.getActiveCount() == 0 && previewProcessingExecutor.getQueue().isEmpty()) {
-            previewProcessingExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    byte[] imageData = new byte[data.length];
-                    System.arraycopy(data, 0, imageData, 0, data.length);
-                    YuvImage image = new YuvImage(imageData, previewFormat, previewSize.width, previewSize.height, null);
-                    try {
-                        imageQueue.put(new VerIDImage(image, exifOrientation));
-                    } catch (Exception e) {
-                    }
+            previewProcessingExecutor.execute(() -> {
+                byte[] imageData = new byte[data.length];
+                System.arraycopy(data, 0, imageData, 0, data.length);
+                YuvImage image = new YuvImage(imageData, previewFormat, previewSize.width, previewSize.height, null);
+                try {
+                    imageQueue.put(new VerIDImage(image, exifOrientation));
+                } catch (Exception e) {
                 }
             });
         }

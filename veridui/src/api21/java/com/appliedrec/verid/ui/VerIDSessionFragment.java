@@ -65,7 +65,7 @@ import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
 import java.util.function.UnaryOperator;
 
-public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
+public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
 
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
     private static final int SENSOR_ORIENTATION_INVERSE_DEGREES = 270;
@@ -114,7 +114,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
 
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
-            VerIDSessionFragmentCamera2.this.cameraDevice = cameraDevice;
+            VerIDSessionFragment.this.cameraDevice = cameraDevice;
             startPreview();
             cameraOpenCloseLock.release();
         }
@@ -123,14 +123,14 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
             cameraOpenCloseLock.release();
             cameraDevice.close();
-            VerIDSessionFragmentCamera2.this.cameraDevice = null;
+            VerIDSessionFragment.this.cameraDevice = null;
         }
 
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int error) {
             cameraOpenCloseLock.release();
             cameraDevice.close();
-            VerIDSessionFragmentCamera2.this.cameraDevice = null;
+            VerIDSessionFragment.this.cameraDevice = null;
         }
 
     };
@@ -480,7 +480,7 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
                 h = width;
             }
 
-            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), w, h, new Size(width, height));
+            previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), w, h);
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (CameraAccessException e) {
@@ -504,14 +504,11 @@ public class VerIDSessionFragmentCamera2 extends Fragment implements IVerIDSessi
      * @param choices     The list of sizes that the camera supports for the intended output class
      * @param width       The minimum desired width
      * @param height      The minimum desired height
-     * @param aspectRatio The aspect ratio
      * @return The optimal {@code Size}, or an arbitrary one if none were big enough
      */
-    private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
+    private static Size chooseOptimalSize(Size[] choices, int width, int height) {
         // Collect the supported resolutions that are at least as big as the preview Surface
         List<Size> bigEnough = new ArrayList<>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
         for (Size option : choices) {
             if (option.getWidth() >= width && option.getHeight() >= height) {
                 bigEnough.add(option);

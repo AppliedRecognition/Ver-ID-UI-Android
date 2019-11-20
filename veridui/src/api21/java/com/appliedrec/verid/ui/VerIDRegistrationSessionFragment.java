@@ -31,7 +31,7 @@ import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
-public class VerIDRegistrationSessionFragment extends VerIDSessionFragmentCamera2 {
+public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 
     LinearLayout detectedFacesView;
 

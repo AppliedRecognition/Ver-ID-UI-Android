@@ -562,8 +562,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected U makeVerIDSessionFragment() {
         if (sessionSettings instanceof RegistrationSessionSettings) {
             return (U) new VerIDRegistrationSessionFragment();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return (U)new VerIDSessionFragmentCamera2();
         } else {
             return (U)new VerIDSessionFragment();
         }
