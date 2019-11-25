@@ -67,41 +67,6 @@ import java.util.function.UnaryOperator;
 
 public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
 
-    private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
-    private static final int SENSOR_ORIENTATION_INVERSE_DEGREES = 270;
-    private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
-    private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
-    private static final SparseIntArray DEFAULT_EXIF_ORIENTATIONS = new SparseIntArray();
-    private static final SparseIntArray INVERSE_EXIF_ORIENTATIONS = new SparseIntArray();
-
-    static {
-        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_0, 90);
-        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
-        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_180, 270);
-        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
-    }
-
-    static {
-        INVERSE_ORIENTATIONS.append(Surface.ROTATION_0, 270);
-        INVERSE_ORIENTATIONS.append(Surface.ROTATION_90, 180);
-        INVERSE_ORIENTATIONS.append(Surface.ROTATION_180, 90);
-        INVERSE_ORIENTATIONS.append(Surface.ROTATION_270, 0);
-    }
-
-    static {
-        DEFAULT_EXIF_ORIENTATIONS.append(Surface.ROTATION_0, ExifInterface.ORIENTATION_ROTATE_90);
-        DEFAULT_EXIF_ORIENTATIONS.append(Surface.ROTATION_90, ExifInterface.ORIENTATION_NORMAL);
-        DEFAULT_EXIF_ORIENTATIONS.append(Surface.ROTATION_180, ExifInterface.ORIENTATION_ROTATE_270);
-        DEFAULT_EXIF_ORIENTATIONS.append(Surface.ROTATION_270, ExifInterface.ORIENTATION_ROTATE_180);
-    }
-
-    static {
-        INVERSE_EXIF_ORIENTATIONS.append(Surface.ROTATION_0, ExifInterface.ORIENTATION_ROTATE_270);
-        INVERSE_EXIF_ORIENTATIONS.append(Surface.ROTATION_90, ExifInterface.ORIENTATION_ROTATE_180);
-        INVERSE_EXIF_ORIENTATIONS.append(Surface.ROTATION_180, ExifInterface.ORIENTATION_ROTATE_90);
-        INVERSE_EXIF_ORIENTATIONS.append(Surface.ROTATION_270, ExifInterface.ORIENTATION_NORMAL);
-    }
-
     private Semaphore cameraOpenCloseLock = new Semaphore(1);
     private Integer sensorOrientation;
     private Size previewSize;
@@ -124,6 +89,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             cameraOpenCloseLock.release();
             cameraDevice.close();
             VerIDSessionFragment.this.cameraDevice = null;
+            cameraId = null;
         }
 
         @Override
@@ -131,6 +97,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             cameraOpenCloseLock.release();
             cameraDevice.close();
             VerIDSessionFragment.this.cameraDevice = null;
+            cameraId = null;
         }
 
     };
@@ -143,6 +110,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private IStringTranslator stringTranslator;
     private Matrix faceBoundsMatrix = new Matrix();
     private int backgroundColour = 0x80000000;
+    private String cameraId;
 
     // region Fragment lifecycle
 
@@ -154,13 +122,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         instructionTextView = view.findViewById(R.id.instruction_textview);
         detectedFaceView = view.findViewById(R.id.detectedFaceView);
         return view;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        startBackgroundThread();
-        textureView.setSurfaceTextureListener(this);
     }
 
     @Override
@@ -194,7 +155,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void startCamera() {
-
+        startBackgroundThread();
+        textureView.setSurfaceTextureListener(this);
+        if (textureView.isAvailable()) {
+            openCamera(textureView.getWidth(), textureView.getHeight());
+        }
     }
 
     @Override
@@ -375,7 +340,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        textureView.setVisibility(View.INVISIBLE);
         openCamera(width, height);
     }
 
@@ -413,7 +377,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             Bitmap bitmap = textureView.getBitmap(previewSize.getHeight(), previewSize.getWidth());
             imageProcessingExecutor.execute(() -> {
                 Matrix matrix = new Matrix();
-                matrix.setScale(-1, 1);
+                if (getDelegate().getSessionSettings().getFacingOfCameraLens() != VerIDSessionSettings.LensFacing.BACK) {
+                    matrix.setScale(-1, 1);
+                }
                 matrix.postRotate(surfaceRotationDegrees);
                 Bitmap flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
                 bitmap.recycle();
@@ -441,20 +407,27 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @SuppressLint("MissingPermission")
     private void openCamera(int width, int height) {
+        if (cameraId != null) {
+            return;
+        }
         final Activity activity = getActivity();
         if (null == activity || activity.isFinishing()) {
             return;
         }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
-            if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+            if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Time out waiting to acquire camera lock.");
             }
             String[] cameras = manager.getCameraIdList();
-            String cameraId = null;
+            cameraId = null;
+            int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
+            if (getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
+                requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
+            }
             for (String camId : cameras) {
                 Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
-                if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+                if (lensFacing != null && lensFacing == requestedLensFacing) {
                     cameraId = camId;
                     break;
                 }
@@ -670,7 +643,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
         textureView.setLayoutParams(layoutParams);
-        textureView.setVisibility(View.VISIBLE);
 
         RectF textureRect = new RectF(0, 0, layoutParams.width, layoutParams.height);
         float centerX = textureRect.centerX();
@@ -720,6 +692,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
      * Stops the background thread and its {@link Handler}.
      */
     private void stopBackgroundThread() {
+        if (backgroundThread == null) {
+            return;
+        }
         backgroundThread.quitSafely();
         try {
             backgroundThread.join();
