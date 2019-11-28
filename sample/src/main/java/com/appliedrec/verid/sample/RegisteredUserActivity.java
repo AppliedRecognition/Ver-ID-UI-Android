@@ -5,7 +5,6 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -14,7 +13,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Lifecycle;
@@ -22,16 +20,12 @@ import androidx.lifecycle.Lifecycle;
 import com.appliedrec.rxverid.RxVerID;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
-import java.net.URL;
-
-import io.reactivex.SingleSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
@@ -119,7 +113,8 @@ public class RegisteredUserActivity extends AppCompatActivity {
     }
 
     private void loadProfilePicture() {
-        final ImageView profileImageView = findViewById(R.id.profileImage);
+        ImageView profileImageView = findViewById(R.id.profileImage);
+        refreshProfilePictureInView(profileImageView);
         profileImageView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
@@ -128,17 +123,24 @@ public class RegisteredUserActivity extends AppCompatActivity {
                 } else {
                     profileImageView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
                 }
-                final int width = profileImageView.getWidth();
-                profilePhotoHelper.getProfilePhotoDrawable(width)
-                        .compose(lifecycleProvider.bindToLifecycle())
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                profileImageView::setImageDrawable,
-                                error -> {}
-                        );
+                refreshProfilePictureInView(profileImageView);
             }
         });
+    }
+
+    private void refreshProfilePictureInView(ImageView profileImageView) {
+        int width = profileImageView.getWidth();
+        if (width == 0) {
+            return;
+        }
+        profilePhotoHelper.getProfilePhotoDrawable(width)
+                .compose(lifecycleProvider.bindToLifecycle())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        profileImageView::setImageDrawable,
+                        error -> {}
+                );
     }
 
     private void showIntro() {

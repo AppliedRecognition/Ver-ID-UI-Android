@@ -3,11 +3,12 @@ package com.appliedrec.verid.sample;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
-import androidx.preference.DialogPreference;
-import androidx.preference.PreferenceDialogFragmentCompat;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.SeekBar;
+
+import androidx.preference.DialogPreference;
+import androidx.preference.PreferenceDialogFragmentCompat;
 
 import com.appliedrec.verid.ui.DetectedFaceView;
 

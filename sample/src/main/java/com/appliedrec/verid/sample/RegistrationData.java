@@ -2,7 +2,6 @@ package com.appliedrec.verid.sample;
 
 import android.graphics.Bitmap;
 
-import com.appliedrec.verid.core.FaceTemplate;
 import com.appliedrec.verid.core.RecognizableSubject;
 
 public class RegistrationData {

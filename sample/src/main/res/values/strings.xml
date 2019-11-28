@@ -120,4 +120,6 @@
     <string name="done">Done</string>
     <string name="pref_disable_encryption">Disable face template encryption</string>
     <string name="app_will_restart">The app will restart</string>
+    <string name="success">Success</string>
+    <string name="registration_imported">Registration imported</string>
 </resources>

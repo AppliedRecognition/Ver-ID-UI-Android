@@ -3,8 +3,9 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.RectF;
-import androidx.preference.DialogPreference;
 import android.util.AttributeSet;
+
+import androidx.preference.DialogPreference;
 
 public abstract class FaceGuidePreference extends DialogPreference {
 

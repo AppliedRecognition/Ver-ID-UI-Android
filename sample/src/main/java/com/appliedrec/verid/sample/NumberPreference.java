@@ -2,8 +2,9 @@ package com.appliedrec.verid.sample;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import androidx.preference.DialogPreference;
 import android.util.AttributeSet;
+
+import androidx.preference.DialogPreference;
 
 public class NumberPreference extends DialogPreference {
 

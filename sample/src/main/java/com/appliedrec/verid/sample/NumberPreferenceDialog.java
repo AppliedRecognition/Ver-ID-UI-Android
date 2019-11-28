@@ -1,10 +1,11 @@
 package com.appliedrec.verid.sample;
 
 import android.os.Bundle;
-import androidx.preference.DialogPreference;
-import androidx.preference.PreferenceDialogFragmentCompat;
 import android.view.View;
 import android.widget.NumberPicker;
+
+import androidx.preference.DialogPreference;
+import androidx.preference.PreferenceDialogFragmentCompat;
 
 public class NumberPreferenceDialog extends PreferenceDialogFragmentCompat {
 
