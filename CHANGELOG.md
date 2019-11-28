@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 1.14.3
+- Using Android `camera2` API in Ver-ID session fragment.
+
 ## Version 1.14.0
 - Migrated to AndroidX. If your app uses Android support libraries please [migrate to AndroidX](https://developer.android.com/jetpack/androidx/migrate) to use Ver-ID 1.14.0.
 - Removed dependency on RenderScript. You can still [enable RenderScript](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.FaceDetectionRecognitionSettings.html#setEnableRenderScript(boolean)) in `com.appliedrec.verid:ui:1.14.0` but `com.appliedrec.verid:ui-api14:1.14.0` will ignore the setting.
