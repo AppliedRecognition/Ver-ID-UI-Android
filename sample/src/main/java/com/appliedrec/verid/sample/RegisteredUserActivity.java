@@ -35,7 +35,6 @@ public class RegisteredUserActivity extends AppCompatActivity {
     private static final int REGISTRATION_REQUEST_CODE = 1;
     private static final int IMPORT_REQUEST_CODE = 2;
 
-    private AlertDialog tempDialog;
     private ProfilePhotoHelper profilePhotoHelper;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
     private SampleApplication application;
