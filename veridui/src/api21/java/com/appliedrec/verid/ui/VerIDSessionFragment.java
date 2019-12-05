@@ -1,8 +1,9 @@
 package com.appliedrec.verid.ui;
 
-import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -28,12 +29,12 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.fragment.app.Fragment;
 
@@ -53,6 +54,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
 
@@ -94,12 +96,15 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
     private SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
+    private Thread imageQueueThread;
+    private Object imageQueueThreadLock = new Object();
     private ThreadPoolExecutor imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
     private Matrix faceBoundsMatrix = new Matrix();
     private int backgroundColour = 0x80000000;
     private String cameraId;
+    private Exception sessionException;
 
     // region Fragment lifecycle
 
@@ -138,12 +143,14 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         super.onDetach();
         delegate = null;
         stringTranslator = null;
+        sessionException = null;
     }
 
     // endregion
 
     @Override
     public void startCamera() {
+        sessionException = null;
         startBackgroundThread();
         textureView.setSurfaceTextureListener(this);
         if (textureView.isAvailable()) {
@@ -251,6 +258,14 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         }
     }
 
+    private void interruptImageQueueThread() {
+        synchronized (imageQueueThreadLock) {
+            if (imageQueueThread != null) {
+                imageQueueThread.interrupt();
+            }
+        }
+    }
+
     /**
      * Get the colour of the oval drawn around the face and of the background of the instruction text label. The colour should reflect the supplied state of the face detection.
      * @param faceDetectionStatus Face detection status
@@ -317,7 +332,20 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public VerIDImage dequeueImage() throws Exception {
-        return imageQueue.take();
+        synchronized (imageQueueThreadLock) {
+            imageQueueThread = Thread.currentThread();
+        }
+        if (sessionException != null) {
+            throw new Exception(sessionException);
+        }
+        try {
+            return imageQueue.take();
+        } catch (InterruptedException e) {
+            if (sessionException != null) {
+                throw new Exception(sessionException);
+            }
+            throw new InterruptedException();
+        }
     }
 
     @Override
@@ -363,7 +391,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 default:
                     surfaceRotationDegrees = 0;
             }
-            Bitmap bitmap = textureView.getBitmap(previewSize.getHeight(), previewSize.getWidth());
+            Bitmap bitmap;
+            if (sensorOrientation % 180 == 0) {
+                bitmap = textureView.getBitmap(previewSize.getWidth(), previewSize.getHeight());
+            } else {
+                bitmap = textureView.getBitmap(previewSize.getHeight(), previewSize.getWidth());
+            }
             imageProcessingExecutor.execute(() -> {
                 Matrix matrix = new Matrix();
                 if (getDelegate().getSessionSettings().getFacingOfCameraLens() != VerIDSessionSettings.LensFacing.BACK) {
@@ -394,19 +427,22 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         return faceBoundsMatrix;
     }
 
-    @SuppressLint("MissingPermission")
     private void openCamera(int width, int height) {
         if (cameraId != null) {
             return;
         }
         final Activity activity = getActivity();
-        if (null == activity || activity.isFinishing()) {
+        if (null == activity || activity.isFinishing() || !isAdded()) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            sessionException = new Exception("Missing camera permission");
             return;
         }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
             if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Time out waiting to acquire camera lock.");
+                throw new TimeoutException("Time out waiting to acquire camera lock.");
             }
             String[] cameras = manager.getCameraIdList();
             cameraId = null;
@@ -422,7 +458,16 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                 }
             }
             if (cameraId == null) {
-                throw new Exception("Camera not available");
+                for (String camId : cameras) {
+                    Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
+                    if (lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
+                        cameraId = camId;
+                        break;
+                    }
+                }
+                if (cameraId == null) {
+                    throw new Exception("Camera not available");
+                }
             }
 
             // Choose the sizes for camera preview and video recording
@@ -431,7 +476,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             if (map == null) {
-                throw new RuntimeException("Cannot get video sizes");
+                throw new Exception("Cannot get video sizes");
             }
             int w, h;
             if ((sensorOrientation - getDisplayRotation()) % 180 == 0) {
@@ -445,16 +490,17 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), w, h);
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
+        } catch (TimeoutException e) {
+            sessionException = e;
+            interruptImageQueueThread();
         } catch (CameraAccessException e) {
-            Toast.makeText(activity, "Cannot access camera", Toast.LENGTH_SHORT).show();
-            activity.finish();
-        } catch (NullPointerException e) {
-            // Currently an NPE is thrown when the Camera2API is used but not supported on the
-            // device this code runs.
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Opening of camera interrupted");
+            sessionException = e;
+            cameraOpenCloseLock.release();
+            interruptImageQueueThread();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            sessionException = e;
+            cameraOpenCloseLock.release();
+            interruptImageQueueThread();
         }
     }
 
@@ -514,10 +560,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            Activity activity = getActivity();
-                            if (null != activity) {
-                                Toast.makeText(activity, "Failed to start preview", Toast.LENGTH_SHORT).show();
-                            }
+                            sessionException = new Exception("Failed to start preview");
+                            interruptImageQueueThread();
                         }
                     }, backgroundHandler);
         } catch (CameraAccessException e) {
@@ -530,7 +574,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             try {
                 captureSession.stopRepeating();
                 captureSession.abortCaptures();
-            } catch (CameraAccessException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             captureSession.close();
@@ -601,9 +645,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         } catch (Exception e) {
 
         }
-        float w;
-        float h;
-        if (sensorOrientation % 180 == 0) {
+        float w, h;
+        if ((sensorOrientation - rotationDegrees) % 180 == 0) {
             w = width;
             h = height;
         } else {
@@ -611,22 +654,17 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             h = width;
         }
         float viewAspectRatio = viewRect.width()/viewRect.height();
-        float imageAspectRatio = rotationDegrees % 180 == 0 ? w/h : h/w;
+        float imageAspectRatio = w/h;
         float scale = 1f;
         if (viewAspectRatio > imageAspectRatio) {
-            scale = viewRect.width()/(rotationDegrees % 180 == 0 ? height : width);
+            scale = viewRect.width()/w;
         } else {
-            scale = viewRect.height()/(rotationDegrees % 180 == 0 ? width : height);
+            scale = viewRect.height()/h;
         }
         ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(textureView.getLayoutParams());
         Matrix matrix = new Matrix();
-        if (rotationDegrees % 180 == 0) {
-            layoutParams.width = (int) (scale * w);
-            layoutParams.height = (int) (scale * h);
-        } else {
-            layoutParams.width = (int) (scale * width);
-            layoutParams.height = (int) (scale * height);
-        }
+        layoutParams.width = (int) (scale * w);
+        layoutParams.height = (int) (scale * h);
         layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -646,13 +684,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
         // Configure transform for displaying faces
         RectF imageRect = new RectF();
-        if ((rotationDegrees - sensorOrientation) % 180 == 0) {
-            imageRect.right = width;
-            imageRect.bottom = height;
-        } else {
-            imageRect.right = height;
-            imageRect.bottom = width;
-        }
+        imageRect.right = w;
+        imageRect.bottom = h;
         RectF targetRect = new RectF();
         float cameraAspectRatio = imageRect.width() / imageRect.height();
         if (cameraAspectRatio > viewAspectRatio) {
