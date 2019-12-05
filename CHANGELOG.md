@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 1.14.4
+- Fixes in preview orientation and scaling on devices with non-standard camera sensor orientation.
+
 ## Version 1.14.3
 - Using Android `camera2` API in Ver-ID session fragment.
 
