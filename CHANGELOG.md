@@ -1,5 +1,8 @@
 # Change Log
 
+## Version 1.15.0
+- Made `chooseOptimalSize(Size[] choices, int width, int height)` in *VerIDSessionFragment* a protected instance method.
+
 ## Version 1.14.4
 - Fixes in preview orientation and scaling on devices with non-standard camera sensor orientation.
 

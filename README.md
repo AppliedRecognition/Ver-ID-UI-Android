@@ -54,7 +54,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.14.4'
+		    implementation 'com.appliedrec.verid:ui:1.15.0'
 	    }
 		~~~
 
@@ -64,7 +64,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui-api14:1.14.4'
+		    implementation 'com.appliedrec.verid:ui-api14:1.15.0'
 	    }
 		~~~
 

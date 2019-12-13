@@ -514,7 +514,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
      * @param height      The minimum desired height
      * @return The optimal {@code Size}, or an arbitrary one if none were big enough
      */
-    private static Size chooseOptimalSize(Size[] choices, int width, int height) {
+    protected Size chooseOptimalSize(Size[] choices, int width, int height) {
         // Collect the supported resolutions that are at least as big as the preview Surface
         List<Size> bigEnough = new ArrayList<>();
         for (Size option : choices) {
