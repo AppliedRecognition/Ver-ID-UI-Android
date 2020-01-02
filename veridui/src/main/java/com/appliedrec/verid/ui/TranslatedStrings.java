@@ -114,6 +114,10 @@ public class TranslatedStrings implements IStringTranslator {
                             }
                         }
                     }
+                    if (assetFile == null && "en".equalsIgnoreCase(locale.getLanguage())) {
+                        // If the current language is English stop looking for a translation
+                        break;
+                    }
                     if (assetFile != null) {
                         final String asset = assetFile;
                         AsyncTask.execute(new Runnable() {
