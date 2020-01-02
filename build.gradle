@@ -16,8 +16,8 @@ buildscript {
 
 ext {
     versionMajor = 1
-    versionMinor = 14
-    versionPatch = 4
+    versionMinor = 15
+    versionPatch = 1
     versionClassifier = null
     versionClassifierVersion = 0
     minSdkVersion = 21
