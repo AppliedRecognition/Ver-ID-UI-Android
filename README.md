@@ -48,6 +48,16 @@ To build this project and to run the sample app you will need a computer with th
         </application>
     </manifest>
 	~~~	
+1. Add the following statement in your app's **gradle.build** file:
+
+    ~~~groovy
+    android {
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_1_8
+            targetCompatibility JavaVersion.VERSION_1_8
+        }
+    }
+    ~~~
 1. If you are targeting Android API level 21 or later
 	
 	- Add the following dependency to your **gradle.build** file:
