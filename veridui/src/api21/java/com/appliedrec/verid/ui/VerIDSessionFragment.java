@@ -128,6 +128,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+        closePreviewSession();
+    }
+
+    @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof VerIDSessionFragmentDelegate) {
