@@ -48,6 +48,6 @@ dependencies {
     implementation 'com.trello.rxlifecycle3:rxlifecycle-components:3.1.0'
     implementation 'com.trello.rxlifecycle3:rxlifecycle-components-preference:3.1.0'
     implementation 'com.trello.rxlifecycle3:rxlifecycle-android-lifecycle:3.1.0'
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
 }

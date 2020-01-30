@@ -24,7 +24,27 @@ To build this project and to run the sample app you will need a computer with th
 
 ## Adding Ver-ID to your own project
 
-1. [Request API secret](https://dev.ver-id.com/admin/register) for your app. We will need your app's package name.
+1. [Register your app](https://dev.ver-id.com/licensing/). You will need your app's package name.
+2. Registering your app will generate an evaluation licence for your app. The licence is valid for 30 days. If you need a production licence please [contact Applied Recognition](mailto:sales@appliedrec.com).
+2. When you finish the registration you'll receive a file called **Ver-ID identity.p12** and a password. Copy the password to a secure location.
+3. Copy the **Ver-ID identity.p12** into your app's assets folder. A common location is **your\_app_module/src/main/assets**.
+8. Ver-ID will need the password you received at registration.    
+    - You can either specify the password when you create an instance of `VerIDFactory`:
+
+        ~~~java
+        VerIDFactory veridFactory = new VerIDFactory(this, "your password goes here");
+        ~~~
+    - Or you can add the password in your app's **AndroidManifest.xml**:
+
+        ~~~xml
+        <manifest>
+            <application>
+                <meta-data
+                    android:name="com.appliedrec.verid.password"
+                    android:value="your password goes here" />
+            </application>
+        </manifest>
+        ~~~
 
 1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
     
@@ -37,17 +57,6 @@ To build this project and to run the sample app you will need a computer with th
     ~~~
 1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~ <br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
 
-1. Add the API secret in your app's manifest XML:
-
-	~~~xml
-    <manifest>
-        <application>
-            <meta-data
-                android:name="com.appliedrec.verid.apiSecret"
-                android:value="yourApiSecret" />
-        </application>
-    </manifest>
-	~~~	
 1. Add the following statement in your app's **gradle.build** file:
 
     ~~~groovy
@@ -64,7 +73,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.15.2'
+		    implementation 'com.appliedrec.verid:ui:1.16.0'
 	    }
 		~~~
 
@@ -74,7 +83,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui-api14:1.15.2'
+		    implementation 'com.appliedrec.verid:ui-api14:1.16.0'
 	    }
 		~~~
 

@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 1.16.0
+- Added new licensing system
+- Added new constructors in *VerIDFactory*
+
 ## Version 1.15.0
 - Made `chooseOptimalSize(Size[] choices, int width, int height)` in *VerIDSessionFragment* a protected instance method.
 
