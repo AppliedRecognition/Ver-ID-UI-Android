@@ -45,18 +45,8 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
             screenDensity = ScreenDensity.MEDIUM;
         }
         final MediaPlayer mediaPlayer = MediaPlayer.create(activity, getVideoResourceId(screenDensity, faceDetectionResult));
-        mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-            @Override
-            public boolean onError(MediaPlayer mp, int what, int extra) {
-                return false;
-            }
-        });
-        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mp) {
-                mediaPlayer.start();
-            }
-        });
+        mediaPlayer.setOnErrorListener((mp, what, extra) -> false);
+        mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.start());
         mediaPlayer.setLooping(true);
         if (Build.VERSION.SDK_INT >= 16) {
             mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
@@ -100,28 +90,19 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         AlertDialog dialog = new AlertDialog.Builder(activity).
                 setMessage(message).
                 setView(frameLayout).
-                setNegativeButton(cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (listener != null) {
-                            listener.onCancel();
-                        }
+                setNegativeButton(cancel, (dialog1, which) -> {
+                    if (listener != null) {
+                        listener.onCancel();
                     }
                 }).
-                setNeutralButton(tips, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (listener != null) {
-                            listener.onShowTips();
-                        }
+                setNeutralButton(tips, (dialog12, which) -> {
+                    if (listener != null) {
+                        listener.onShowTips();
                     }
                 }).
-                setPositiveButton(tryAgain, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (listener != null) {
-                            listener.onRetry();
-                        }
+                setPositiveButton(tryAgain, (dialog13, which) -> {
+                    if (listener != null) {
+                        listener.onRetry();
                     }
                 }).
                 setCancelable(false).
@@ -130,7 +111,7 @@ public class SessionFailureDialogFactory implements ISessionFailureDialogFactory
         return dialog;
     }
 
-    int getVideoResourceId(ScreenDensity screenDensity, FaceDetectionResult faceDetectionResult) {
+    private int getVideoResourceId(ScreenDensity screenDensity, FaceDetectionResult faceDetectionResult) {
         switch (screenDensity) {
             case MEDIUM:
                 switch (faceDetectionResult.getRequestedBearing()) {

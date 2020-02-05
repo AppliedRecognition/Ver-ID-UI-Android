@@ -5,7 +5,6 @@ import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.Menu;
@@ -14,10 +13,10 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Lifecycle;
 
 import com.appliedrec.rxverid.RxVerID;
+import com.appliedrec.uielements.RxVerIDActivity;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
@@ -26,10 +25,12 @@ import com.appliedrec.verid.ui.VerIDSessionActivity;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
+import java.util.Objects;
+
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
-public class RegisteredUserActivity extends AppCompatActivity {
+public class RegisteredUserActivity extends RxVerIDActivity {
 
     private static final int AUTHENTICATION_REQUEST_CODE = 0;
     private static final int REGISTRATION_REQUEST_CODE = 1;
@@ -62,7 +63,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
         // To inspect the result of the session:
         RxVerID rxVerID = application.getRxVerID();
         if (resultCode == RESULT_OK && requestCode == REGISTRATION_REQUEST_CODE) {
-            rxVerID
+            addDisposable(rxVerID
                     .getSessionResultFromIntent(data)
                     .flatMapObservable(result -> rxVerID.getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
                     .firstOrError()
@@ -73,7 +74,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
                     .subscribe(
                             RegisteredUserActivity.this::loadProfilePicture,
                             error -> {}
-                    );
+                    ));
             // See documentation at
             // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
         } else if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_REQUEST_CODE && data.hasExtra(Intent.EXTRA_TEXT)) {
@@ -117,11 +118,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
         profileImageView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    profileImageView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                } else {
-                    profileImageView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                }
+                profileImageView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 refreshProfilePictureInView(profileImageView);
             }
         });
@@ -132,14 +129,14 @@ public class RegisteredUserActivity extends AppCompatActivity {
         if (width == 0) {
             return;
         }
-        profilePhotoHelper.getProfilePhotoDrawable(width)
+        addDisposable(profilePhotoHelper.getProfilePhotoDrawable(width)
                 .compose(lifecycleProvider.bindToLifecycle())
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         profileImageView::setImageDrawable,
                         error -> {}
-                );
+                ));
     }
 
     private void showIntro() {
@@ -155,7 +152,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
     //region Authentication
 
     private void authenticate() {
-        application.getRxVerID().getVerID()
+        addDisposable(application.getRxVerID().getVerID()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
@@ -169,7 +166,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
                                         // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
                                         // The higher the count the more confident we can be of a live face at the expense of usability
                                         // Note that 1 is added to the setting to include the initial mandatory straight pose
-                                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_required_pose_count), "1")) + 1);
+                                        settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_required_pose_count), "1"))) + 1);
                                         PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
                                         settings.setYawThreshold(preferenceHelper.getYawThreshold());
                                         settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
@@ -194,14 +191,14 @@ public class RegisteredUserActivity extends AppCompatActivity {
                                     .show(),
                         error -> {
 
-                        });
+                        }));
     }
     //endregion
 
     //region Registration
 
     private void registerMoreFaces() {
-        application.getRxVerID().getVerID()
+        addDisposable(application.getRxVerID().getVerID()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
@@ -211,7 +208,7 @@ public class RegisteredUserActivity extends AppCompatActivity {
                             // Setting showResult to false will prevent the activity from displaying a result at the end of the session
                             settings.setShowResult(true);
                             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
+                            settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
                             settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                             settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                             if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
@@ -224,34 +221,29 @@ public class RegisteredUserActivity extends AppCompatActivity {
                         },
                         error -> {
 
-                        });
+                        }));
     }
 
     private void unregisterUser() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_unregister)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.unregister, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        application.getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
-                                .andThen(application.getRxVerID().getVerID())
-                                .compose(lifecycleProvider.bindToLifecycle())
-                                .subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe(
-                                        verID -> {
-                                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
-                                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                                            startActivity(intent);
-                                            finish();
-                                        },
-                                        error -> {
+                .setPositiveButton(R.string.unregister, (dialog, which) -> addDisposable(application.getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
+                        .andThen(application.getRxVerID().getVerID())
+                        .compose(lifecycleProvider.bindToLifecycle())
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                verID -> {
+                                    Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
+                                    intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+                                    startActivity(intent);
+                                    finish();
+                                },
+                                error -> {
 
-                                        }
-                                );
-                    }
-                })
+                                }
+                        )))
                 .create()
                 .show();
     }

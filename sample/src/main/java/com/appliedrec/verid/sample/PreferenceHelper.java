@@ -5,8 +5,8 @@ import android.content.SharedPreferences;
 
 class PreferenceHelper {
 
-    SharedPreferences preferences;
-    Context context;
+    private final SharedPreferences preferences;
+    private final Context context;
 
     PreferenceHelper(Context context, SharedPreferences preferences) {
         this.context = context;
@@ -14,13 +14,11 @@ class PreferenceHelper {
     }
 
     float getYawThreshold() {
-        float val = (float) preferences.getInt(context.getString(R.string.pref_key_yaw_threshold), 15);
-        return val;
+        return (float) preferences.getInt(context.getString(R.string.pref_key_yaw_threshold), 15);
     }
 
     float getPitchThreshold() {
-        float val = (float) preferences.getInt(context.getString(R.string.pref_key_pitch_threshold), 12);
-        return val;
+        return (float) preferences.getInt(context.getString(R.string.pref_key_pitch_threshold), 12);
     }
 
     float getAuthenticationThreshold() {

@@ -2,7 +2,6 @@ package com.appliedrec.verid.ui;
 
 import android.Manifest;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.RectF;
 import android.os.Build;
@@ -89,7 +88,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
 
     //region Other constants
     static final int REQUEST_CAMERA_PERMISSION = 1;
-    private static final int REQUEST_CODE_TIPS = 0;
     private static final String FRAGMENT_DIALOG = "fragmentDialog";
     private static final String FRAGMENT_VERID = "verid";
     //endregion
@@ -134,7 +132,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             }
         } catch (Exception e) {
             finishWithError(e);
-            return;
         }
     }
 
@@ -243,7 +240,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(getSessionSettings());
             SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
             if (executor == null || executor.isShutdown()) {
-                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
             }
             sessionTask.executeOnExecutor(executor, this);
         } catch (Exception e) {
@@ -258,7 +255,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * <p>If the result contains an error this method will call {@link #finishWithError(Exception)}.</p>
      * <p>Otherwise this method sets the activity result and finishes the activity.</p>
      * <p>Override this method if wish to handle the result in this activity instead of passing it to the parent activity.</p>
-     * @param sessionResult
+     * @param sessionResult Session result
      * @since 1.0.0
      */
     protected void finishWithResult(VerIDSessionResult sessionResult) {
@@ -279,7 +276,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      *
      * <p>This method sets the activity result and finishes the activity.</p>
      * <p>Override this method if you wish to handle the error in this activity instead of passing it to the parent activity.</p>
-     * @param error
+     * @param error Error
      * @since 1.0.0
      */
     protected void finishWithError(Exception error) {
@@ -414,8 +411,8 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
 
     /**
      * Shows a dialog when the Ver-ID session fails due to the user not failing liveness detection and the user tried fewer than the {@link VerIDSessionSettings#getMaxRetryCount() maximum number of tries} set in the session settings.
-     * @param faceDetectionResult
-     * @param sessionResult
+     * @param faceDetectionResult Face detection result
+     * @param sessionResult Session result
      * @return {@literal true} if the dialog was shown
      * @since 1.0.0
      */

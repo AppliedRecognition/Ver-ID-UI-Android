@@ -1,7 +1,6 @@
 package com.appliedrec.verid.sample;
 
 import android.graphics.RectF;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -11,6 +10,8 @@ import androidx.preference.DialogPreference;
 import androidx.preference.PreferenceDialogFragmentCompat;
 
 import com.appliedrec.verid.ui.DetectedFaceView;
+
+import java.util.Objects;
 
 public class FaceGuidePreferenceFragment extends PreferenceDialogFragmentCompat implements SeekBar.OnSeekBarChangeListener, ViewTreeObserver.OnGlobalLayoutListener {
 
@@ -38,11 +39,7 @@ public class FaceGuidePreferenceFragment extends PreferenceDialogFragmentCompat 
     @Override
     public void onDialogClosed(boolean positiveResult) {
         if (detectedFaceView != null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                detectedFaceView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-            } else {
-                detectedFaceView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-            }
+            detectedFaceView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
         }
         if (!positiveResult) {
             return;
@@ -65,7 +62,7 @@ public class FaceGuidePreferenceFragment extends PreferenceDialogFragmentCompat 
         }
         float progress = (float)seekBar.getProgress()/ (float)seekBar.getMax();
         RectF faceRect = ((FaceGuidePreference) getPreference()).createFaceRect(progress, detectedFaceView.getWidth(), detectedFaceView.getHeight());
-        detectedFaceView.setFaceRect(faceRect, null, getContext().getResources().getColor(R.color.verid_green), 0x80000000, null, null);
+        detectedFaceView.setFaceRect(faceRect, null, Objects.requireNonNull(getContext()).getResources().getColor(R.color.verid_green), 0x80000000, null, null);
     }
 
     @Override

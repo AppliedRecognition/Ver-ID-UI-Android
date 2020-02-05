@@ -12,7 +12,7 @@ public class NumberPreference extends DialogPreference {
     private int minValue = 0;
     private int maxValue = 100;
 
-    public NumberPreference(Context context, AttributeSet attrs, int defStyleAttr) {
+    private NumberPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         setPositiveButtonText(android.R.string.ok);
         setNegativeButtonText(android.R.string.cancel);

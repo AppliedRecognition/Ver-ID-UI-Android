@@ -2,6 +2,8 @@ package com.appliedrec.verid.ui;
 
 import android.content.Context;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
@@ -16,7 +18,7 @@ import android.widget.TextView;
  */
 public class TipFragment extends Fragment {
 
-    IStringTranslator translator;
+    private IStringTranslator translator;
 
     public static TipFragment newInstance(int tipIndex) {
         Bundle args = new Bundle();
@@ -59,7 +61,7 @@ public class TipFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             return getView();
         }
@@ -73,7 +75,7 @@ public class TipFragment extends Fragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof IStringTranslator) {
             translator = (IStringTranslator) context;

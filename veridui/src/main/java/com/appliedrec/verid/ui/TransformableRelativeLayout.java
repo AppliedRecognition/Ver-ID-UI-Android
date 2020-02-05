@@ -11,7 +11,7 @@ import android.widget.RelativeLayout;
 public class TransformableRelativeLayout extends RelativeLayout {
 
     private Matrix transformationMatrix = new Matrix();
-    private ArraySet<View> transformableViews = new ArraySet<>();
+    private final ArraySet<View> transformableViews = new ArraySet<>();
 
     public TransformableRelativeLayout(Context context) {
         super(context);

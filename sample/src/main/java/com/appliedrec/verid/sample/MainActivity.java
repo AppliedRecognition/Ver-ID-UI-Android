@@ -4,10 +4,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Lifecycle;
 import androidx.preference.PreferenceManager;
 
+import com.appliedrec.uielements.RxVerIDActivity;
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
@@ -16,7 +16,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends RxVerIDActivity {
 
     private static final int REQUEST_CODE_ONERROR = 0;
 
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createVerID() {
-        application.getRxVerID().getUsers()
+        addDisposable(application.getRxVerID().getUsers()
                 .firstElement()
                 .compose(lifecycleProvider.bindToLifecycle())
                 .subscribeOn(Schedulers.io())
@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
                             startActivity(intent);
                             finish();
                         }
-                );
+                ));
     }
 
     @Override
@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void registerPreferences() {
-        application.getRxVerID()
+        addDisposable(application.getRxVerID()
                 .getVerID()
                 .compose(lifecycleProvider.bindToLifecycle())
                 .subscribeOn(Schedulers.io())
@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
                         },
                         error -> {
 
-                        });
+                        }));
     }
 
     private void showError(String message) {

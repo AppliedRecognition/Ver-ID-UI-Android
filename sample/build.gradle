@@ -38,7 +38,10 @@ dependencies {
     debugApi project(':veridui')
     debugImplementation "com.appliedrec.verid:core:${rootProject.generateVersionName()}"
     releaseImplementation "com.appliedrec.verid:ui:${rootProject.generateVersionName()}"
-    implementation "com.appliedrec.verid:rx:[1.6,2.0["
+    //noinspection GradleDependency
+    implementation 'com.appliedrec.verid:ui-elements:[1.0,2.0['
+    //noinspection GradleDependency
+    implementation "com.appliedrec.verid:rx:[1.7,2.0["
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.preference:preference:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'

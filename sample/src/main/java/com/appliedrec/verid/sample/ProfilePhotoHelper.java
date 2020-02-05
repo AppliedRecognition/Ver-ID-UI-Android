@@ -20,9 +20,9 @@ import io.reactivex.Single;
 
 class ProfilePhotoHelper {
 
-    private Uri profilePhotoUri;
-    private Context context;
-    private Semaphore photoSemaphore = new Semaphore(1);
+    private final Uri profilePhotoUri;
+    private final Context context;
+    private final Semaphore photoSemaphore = new Semaphore(1);
 
     ProfilePhotoHelper(Context context) {
         this.context = context.getApplicationContext();
@@ -72,7 +72,7 @@ class ProfilePhotoHelper {
                 });
     }
 
-    Single<Bitmap> getProfilePhotoBitmap(int width) {
+    private Single<Bitmap> getProfilePhotoBitmap(int width) {
         return getProfilePhotoBitmap()
                 .flatMap(bitmap -> observer -> {
                     int size = Math.min(bitmap.getWidth(), bitmap.getHeight());
@@ -93,13 +93,12 @@ class ProfilePhotoHelper {
                 });
     }
 
-    Single<Uri> getProfilePhotoUri() {
+    private Single<Uri> getProfilePhotoUri() {
         return Single.create(emitter -> {
             try {
                 photoSemaphore.acquire();
-                Uri uri = profilePhotoUri;
                 photoSemaphore.release();
-                emitter.onSuccess(uri);
+                emitter.onSuccess(profilePhotoUri);
             } catch (InterruptedException e) {
                 emitter.onError(e);
             }

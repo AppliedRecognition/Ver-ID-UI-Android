@@ -7,9 +7,11 @@ import android.widget.NumberPicker;
 import androidx.preference.DialogPreference;
 import androidx.preference.PreferenceDialogFragmentCompat;
 
+import java.util.Objects;
+
 public class NumberPreferenceDialog extends PreferenceDialogFragmentCompat {
 
-    NumberPicker numberPicker;
+    private NumberPicker numberPicker;
 
     public static NumberPreferenceDialog newInstance(String key, int minValue, int maxValue) {
         Bundle args = new Bundle();
@@ -28,7 +30,7 @@ public class NumberPreferenceDialog extends PreferenceDialogFragmentCompat {
         DialogPreference preference = getPreference();
         if (preference instanceof NumberPreference) {
             int value = ((NumberPreference) preference).getValue();
-            numberPicker.setMinValue(getArguments().getInt("minValue"));
+            numberPicker.setMinValue(Objects.requireNonNull(getArguments()).getInt("minValue"));
             numberPicker.setMaxValue(getArguments().getInt("maxValue"));
             numberPicker.setValue(value);
         }

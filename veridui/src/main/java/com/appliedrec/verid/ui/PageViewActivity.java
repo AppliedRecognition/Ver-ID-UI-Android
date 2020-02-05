@@ -1,6 +1,9 @@
 package com.appliedrec.verid.ui;
 
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,11 +14,11 @@ import java.lang.ref.WeakReference;
 
 public abstract class PageViewActivity extends AppCompatActivity implements ViewPager.OnPageChangeListener {
 
-    public static class PageViewAdapter extends PagerAdapter {
+    static class PageViewAdapter extends PagerAdapter {
 
-        private WeakReference<PageViewActivity> activityWeakReference;
+        private final WeakReference<PageViewActivity> activityWeakReference;
 
-        public PageViewAdapter(PageViewActivity activity) {
+        PageViewAdapter(PageViewActivity activity) {
             super();
             activityWeakReference = new WeakReference<>(activity);
         }
@@ -31,7 +34,8 @@ public abstract class PageViewActivity extends AppCompatActivity implements View
         }
 
         @Override
-        public Object instantiateItem(ViewGroup container, int position) {
+        @Nullable
+        public Object instantiateItem(@NonNull ViewGroup container, int position) {
             PageViewActivity activity = activityWeakReference.get();
             if (activity != null) {
                 View view = activity.createViewForPage(container, position);
@@ -43,12 +47,12 @@ public abstract class PageViewActivity extends AppCompatActivity implements View
         }
 
         @Override
-        public void destroyItem(ViewGroup container, int position, Object object) {
+        public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
             container.removeView((View)object);
         }
 
         @Override
-        public boolean isViewFromObject(View view, Object object) {
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
             return view == object;
         }
     }

@@ -58,12 +58,9 @@ public class ResultFragment extends Fragment implements IResultFragment {
         imageView.setLayoutParams(layoutParams);
         Button doneButton = view.findViewById(R.id.buttonRight);
         doneButton.setText(getTranslatedString("Done"));
-        doneButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (resultFragmentListener != null) {
-                    resultFragmentListener.onResultFragmentDismissed(ResultFragment.this);
-                }
+        doneButton.setOnClickListener(v -> {
+            if (resultFragmentListener != null) {
+                resultFragmentListener.onResultFragmentDismissed(ResultFragment.this);
             }
         });
         Bundle args = getArguments();
@@ -86,13 +83,10 @@ public class ResultFragment extends Fragment implements IResultFragment {
                 imageView.setImageResource(R.mipmap.face_failure);
                 tipsButton.setText(getTranslatedString("Tips"));
                 tipsButton.setVisibility(View.VISIBLE);
-                tipsButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Intent tipsIntent = new Intent(getContext(), TipsActivity.class);
-                        tipsIntent.putExtras(getActivity().getIntent());
-                        startActivity(tipsIntent);
-                    }
+                tipsButton.setOnClickListener(v -> {
+                    Intent tipsIntent = new Intent(getContext(), TipsActivity.class);
+                    tipsIntent.putExtras(getActivity().getIntent());
+                    startActivity(tipsIntent);
                 });
             }
         }
@@ -100,7 +94,7 @@ public class ResultFragment extends Fragment implements IResultFragment {
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof ResultFragmentListener) {
             resultFragmentListener = (ResultFragmentListener)context;

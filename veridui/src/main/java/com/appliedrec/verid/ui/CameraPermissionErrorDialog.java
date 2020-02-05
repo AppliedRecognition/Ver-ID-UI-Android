@@ -5,6 +5,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
 import androidx.appcompat.app.AlertDialog;
 
@@ -13,10 +16,10 @@ import androidx.appcompat.app.AlertDialog;
  */
 public class CameraPermissionErrorDialog extends DialogFragment {
 
-    IStringTranslator translator;
+    private IStringTranslator translator;
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof IStringTranslator) {
             translator = (IStringTranslator) context;
@@ -30,6 +33,7 @@ public class CameraPermissionErrorDialog extends DialogFragment {
     }
 
     @Override
+    @Nullable
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         final Activity activity = getActivity();
         if (activity == null) {
@@ -40,12 +44,7 @@ public class CameraPermissionErrorDialog extends DialogFragment {
         }
         return new AlertDialog.Builder(activity)
                 .setMessage(translator.getTranslatedString("Camera permission is required"))
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        activity.finish();
-                    }
-                })
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> activity.finish())
                 .create();
     }
 

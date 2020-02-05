@@ -4,7 +4,7 @@ import android.graphics.Bitmap;
 
 import com.appliedrec.verid.core.RecognizableSubject;
 
-public class RegistrationData {
+class RegistrationData {
 
     private RecognizableSubject[] faceTemplates;
     private Bitmap profilePicture;

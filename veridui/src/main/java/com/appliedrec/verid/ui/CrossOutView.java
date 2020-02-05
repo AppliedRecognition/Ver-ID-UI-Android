@@ -14,7 +14,7 @@ import android.view.View;
 
 public class CrossOutView extends View {
 
-    Paint linePaint;
+    private Paint linePaint;
 
     public CrossOutView(Context context) {
         super(context);

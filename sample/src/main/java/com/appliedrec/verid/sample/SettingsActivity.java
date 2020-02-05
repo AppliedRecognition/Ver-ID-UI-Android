@@ -3,7 +3,6 @@ package com.appliedrec.verid.sample;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -22,18 +21,19 @@ import androidx.preference.PreferenceFragmentCompat;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    public static class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+    static class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
 
-        static String ARG_VERSION_NAME = "versionName";
-        static String ARG_VERSION_CODE = "versionCode";
-        static String ARG_PACKAGE_NAME = "packageName";
-        static String ARG_LAST_UPDATE_TIME = "lastUpdateTime";
-        static String ARG_FIRST_INSTALL_TIME = "firstInstallTime";
+        static final String ARG_VERSION_NAME = "versionName";
+        static final String ARG_VERSION_CODE = "versionCode";
+        static final String ARG_PACKAGE_NAME = "packageName";
+        static final String ARG_LAST_UPDATE_TIME = "lastUpdateTime";
+        static final String ARG_FIRST_INSTALL_TIME = "firstInstallTime";
 
-        public static SettingsFragment newInstance(PackageInfo packageInfo) {
+        static SettingsFragment newInstance(PackageInfo packageInfo) {
             SettingsFragment fragment = new SettingsFragment();
             Bundle args = new Bundle();
             args.putString(ARG_VERSION_NAME, packageInfo.versionName);
@@ -48,8 +48,8 @@ public class SettingsActivity extends AppCompatActivity {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             addPreferencesFromResource(R.xml.preferences);
-            CheckBoxPreference useBackCameraPreference = (CheckBoxPreference) findPreference(getString(R.string.pref_key_use_back_camera));
-            useBackCameraPreference.setDefaultValue(false);
+            CheckBoxPreference useBackCameraPreference = findPreference(getString(R.string.pref_key_use_back_camera));
+            Objects.requireNonNull(useBackCameraPreference).setDefaultValue(false);
             int camCount = Camera.getNumberOfCameras();
             for (int i=0; i<camCount; i++) {
                 Camera.CameraInfo info = new Camera.CameraInfo();
@@ -59,17 +59,17 @@ public class SettingsActivity extends AppCompatActivity {
                     break;
                 }
             }
-            CheckBoxPreference disableEncryptionPreference = (CheckBoxPreference) findPreference(getString(R.string.pref_key_disable_encryption));
-            disableEncryptionPreference.setDefaultValue(false);
+            CheckBoxPreference disableEncryptionPreference = findPreference(getString(R.string.pref_key_disable_encryption));
+            Objects.requireNonNull(disableEncryptionPreference).setDefaultValue(false);
             Bundle args = getArguments();
             if (args != null) {
                 String version = args.getString(ARG_VERSION_NAME);
-                findPreference(getString(R.string.pref_key_version)).setSummary(version);
-                findPreference(getString(R.string.pref_key_version_code)).setSummary(Integer.toString(args.getInt(ARG_VERSION_CODE)));
-                findPreference(getString(R.string.pref_key_package_name)).setSummary(args.getString(ARG_PACKAGE_NAME));
+                ((Preference)Objects.requireNonNull(findPreference(getString(R.string.pref_key_version)))).setSummary(version);
+                ((Preference)Objects.requireNonNull(findPreference(getString(R.string.pref_key_version_code)))).setSummary(Integer.toString(args.getInt(ARG_VERSION_CODE)));
+                ((Preference)Objects.requireNonNull(findPreference(getString(R.string.pref_key_package_name)))).setSummary(args.getString(ARG_PACKAGE_NAME));
                 DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.MEDIUM, SimpleDateFormat.MEDIUM);
-                findPreference(getString(R.string.pref_key_first_installed)).setSummary(dateFormat.format(new Date(args.getLong(ARG_FIRST_INSTALL_TIME))));
-                findPreference(getString(R.string.pref_key_last_updated)).setSummary(dateFormat.format(new Date(args.getLong(ARG_LAST_UPDATE_TIME))));
+                ((Preference)Objects.requireNonNull(findPreference(getString(R.string.pref_key_first_installed)))).setSummary(dateFormat.format(new Date(args.getLong(ARG_FIRST_INSTALL_TIME))));
+                ((Preference)Objects.requireNonNull(findPreference(getString(R.string.pref_key_last_updated)))).setSummary(dateFormat.format(new Date(args.getLong(ARG_LAST_UPDATE_TIME))));
             }
         }
 
@@ -78,15 +78,15 @@ public class SettingsActivity extends AppCompatActivity {
             if (preference instanceof NumberPreference) {
                 NumberPreferenceDialog dialogFragment = NumberPreferenceDialog.newInstance(preference.getKey(), ((NumberPreference) preference).getMinValue(), ((NumberPreference) preference).getMaxValue());
                 dialogFragment.setTargetFragment(this, 0);
-                dialogFragment.show(getFragmentManager(), null);
+                dialogFragment.show(Objects.requireNonNull(getFragmentManager()), null);
             } else if (preference instanceof FaceGuidePreference) {
                 FaceGuidePreferenceFragment dialogFragment = FaceGuidePreferenceFragment.newInstance(preference.getKey());
                 dialogFragment.setTargetFragment(this, 1);
-                dialogFragment.show(getFragmentManager(), null);
+                dialogFragment.show(Objects.requireNonNull(getFragmentManager()), null);
             } else if (preference instanceof ListPreference) {
                 ListPreferenceDialogFragmentCompat dialogFragment = ListPreferenceDialogFragmentCompat.newInstance(preference.getKey());
                 dialogFragment.setTargetFragment(this, 2);
-                dialogFragment.show(getFragmentManager(), null);
+                dialogFragment.show(Objects.requireNonNull(getFragmentManager()), null);
             }
         }
 
@@ -114,12 +114,9 @@ public class SettingsActivity extends AppCompatActivity {
                 final AlarmManager alarmManager = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
                 new AlertDialog.Builder(getActivity())
                         .setTitle(R.string.app_will_restart)
-                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                alarmManager.set(AlarmManager.RTC, System.currentTimeMillis()+100, pendingIntent);
-                                Runtime.getRuntime().exit(0);
-                            }
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                            alarmManager.set(AlarmManager.RTC, System.currentTimeMillis()+100, pendingIntent);
+                            Runtime.getRuntime().exit(0);
                         })
                         .create()
                         .show();

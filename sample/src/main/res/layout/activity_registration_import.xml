@@ -7,7 +7,6 @@
     tools:context=".RegistrationImportActivity">
 
     <ProgressBar
-        android:id="@+id/progressBar3"
         style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

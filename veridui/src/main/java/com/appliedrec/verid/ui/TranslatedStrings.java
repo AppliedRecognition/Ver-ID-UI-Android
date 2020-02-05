@@ -19,6 +19,7 @@ import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH;
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH;
@@ -33,32 +34,22 @@ public class TranslatedStrings implements IStringTranslator {
             final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
             final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
             if (translationFilePath != null) {
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            loadTranslatedStrings(translationFilePath);
-                        } catch (XmlPullParserException e) {
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                AsyncTask.execute(() -> {
+                    try {
+                        loadTranslatedStrings(translationFilePath);
+                    } catch (XmlPullParserException | IOException e) {
+                        e.printStackTrace();
                     }
                 });
                 return;
             }
             if (translationAssetPath != null) {
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            InputStream inputStream = context.getAssets().open(translationAssetPath);
-                            loadTranslatedStrings(inputStream);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (XmlPullParserException e) {
-                            e.printStackTrace();
-                        }
+                AsyncTask.execute(() -> {
+                    try {
+                        InputStream inputStream = context.getAssets().open(translationAssetPath);
+                        loadTranslatedStrings(inputStream);
+                    } catch (IOException | XmlPullParserException e) {
+                        e.printStackTrace();
                     }
                 });
                 return;
@@ -77,7 +68,7 @@ public class TranslatedStrings implements IStringTranslator {
             for (Locale locale : locales) {
                 try {
                     String assetFile = null;
-                    String[] assets = context.getAssets().list("");
+                    String[] assets = Objects.requireNonNull(context.getAssets().list(""));
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         // Check if there is an asset whose name matches exactly the language tag
                         for (String asset : assets) {
@@ -120,17 +111,12 @@ public class TranslatedStrings implements IStringTranslator {
                     }
                     if (assetFile != null) {
                         final String asset = assetFile;
-                        AsyncTask.execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    InputStream inputStream = context.getAssets().open(asset);
-                                    loadTranslatedStrings(inputStream);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                } catch (XmlPullParserException e) {
-                                    e.printStackTrace();
-                                }
+                        AsyncTask.execute(() -> {
+                            try {
+                                InputStream inputStream = context.getAssets().open(asset);
+                                loadTranslatedStrings(inputStream);
+                            } catch (IOException | XmlPullParserException e) {
+                                e.printStackTrace();
                             }
                         });
                         return;
@@ -207,7 +193,7 @@ public class TranslatedStrings implements IStringTranslator {
             }
         }
         if (strings.containsKey(original)) {
-            return String.format(strings.get(original), args);
+            return String.format(Objects.requireNonNull(strings.get(original)), args);
         } else {
             return String.format(original, args);
         }
@@ -233,7 +219,7 @@ public class TranslatedStrings implements IStringTranslator {
             }
         }
         if (original != null && translation != null) {
-            return new AbstractMap.SimpleEntry<String, String>(original, translation);
+            return new AbstractMap.SimpleEntry<>(original, translation);
         }
         throw new XmlPullParserException("Invalid string entry");
     }

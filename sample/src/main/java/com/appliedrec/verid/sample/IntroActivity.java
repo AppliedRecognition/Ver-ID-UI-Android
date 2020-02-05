@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
@@ -25,7 +26,12 @@ import com.appliedrec.verid.ui.VerIDSessionIntent;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Objects;
+
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 public class IntroActivity extends PageViewActivity {
@@ -33,9 +39,10 @@ public class IntroActivity extends PageViewActivity {
     private static final int REQUEST_CODE_REGISTER = 0;
     public static final String EXTRA_SHOW_REGISTRATION = "showRegistration";
     private static final int REQUEST_CODE_IMPORT = 2;
-    boolean showRegistration = true;
+    private boolean showRegistration = true;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
     private SampleApplication application;
+    private final HashSet<Disposable> disposables = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +55,16 @@ public class IntroActivity extends PageViewActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.intro, menu);
         return true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Iterator<Disposable> iterator = disposables.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().dispose();
+            iterator.remove();
+        }
     }
 
     @Override
@@ -98,7 +115,7 @@ public class IntroActivity extends PageViewActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
-            application.getRxVerID()
+            disposables.add(application.getRxVerID()
                     .getSessionResultFromIntent(data)
                     .flatMapObservable(result -> application.getRxVerID().getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
                     .firstOrError()
@@ -113,9 +130,9 @@ public class IntroActivity extends PageViewActivity {
                                 finish();
                             },
                             this::showError
-                    );
+                    ));
         } else if (requestCode == REQUEST_CODE_IMPORT) {
-            application.getRxVerID()
+            disposables.add(application.getRxVerID()
                     .getUsers()
                     .firstOrError()
                     .ignoreElement()
@@ -129,12 +146,12 @@ public class IntroActivity extends PageViewActivity {
                                 finish();
                             },
                             error -> showError(getString(R.string.failed_to_import_registration))
-                    );
+                    ));
         }
     }
 
     private void register() {
-        application.getRxVerID()
+        disposables.add(application.getRxVerID()
                 .getUsers()
                 .flatMapCompletable(application.getRxVerID()::deleteUser)
                 .andThen(application.getRxVerID().getVerID())
@@ -146,7 +163,7 @@ public class IntroActivity extends PageViewActivity {
                             RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
                             settings.setShowResult(true);
                             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1")));
+                            settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
                             settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                             settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                             if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
@@ -156,7 +173,7 @@ public class IntroActivity extends PageViewActivity {
                             startActivityForResult(intent, REQUEST_CODE_REGISTER);
                         },
                         this::showError
-                );
+                ));
     }
 
     @Override
@@ -177,17 +194,17 @@ public class IntroActivity extends PageViewActivity {
 
     public static class IntroFragment extends Fragment {
 
-        static int[] imageResourceIds = new int[]{
+        static final int[] imageResourceIds = new int[]{
                 R.mipmap.guide_head_straight,
                 R.mipmap.multiple_heads,
                 R.mipmap.authentication
         };
-        static int[] titleResourceIds = new int[]{
+        static final int[] titleResourceIds = new int[]{
                 R.string.verid_person_sdk,
                 R.string.one_registration,
                 R.string.two_authentication
         };
-        static int[] textResourceIds = new int[]{
+        static final int[] textResourceIds = new int[]{
                 R.string.verid_person_sdk_text,
                 R.string.one_registration_text,
                 R.string.two_authentication_text
@@ -211,9 +228,9 @@ public class IntroActivity extends PageViewActivity {
 
         @Nullable
         @Override
-        public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
             Bundle args = getArguments();
-            int index = args.getInt("index", 0);
+            int index = Objects.requireNonNull(args).getInt("index", 0);
             return IntroFragment.createView(inflater, container, index);
         }
     }

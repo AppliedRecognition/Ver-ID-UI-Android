@@ -7,21 +7,21 @@ import android.util.AttributeSet;
 
 import androidx.preference.DialogPreference;
 
-public abstract class FaceGuidePreference extends DialogPreference {
+abstract class FaceGuidePreference extends DialogPreference {
 
     private int value;
 
-    public FaceGuidePreference(Context context, AttributeSet attrs, int defStyleAttr) {
+    FaceGuidePreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         setPositiveButtonText(android.R.string.ok);
         setNegativeButtonText(android.R.string.cancel);
     }
 
-    public FaceGuidePreference(Context context, AttributeSet attrs) {
+    FaceGuidePreference(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public FaceGuidePreference(Context context) {
+    FaceGuidePreference(Context context) {
         this(context, null, 0);
     }
 

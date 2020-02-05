@@ -18,20 +18,20 @@ import android.view.View;
 public class
 DetectedFaceView extends View {
 
-    Paint strokePaint;
-    Paint faceTemplatePaint;
-    Paint landmarkPaint;
-    RectF faceRect;
-    RectF templateRect;
-    RectF viewRect;
-    Double angle;
-    Double distance;
-    PointF[] landmarks;
-    float landmarkRadius;
-    private Path landmarkPath = new Path();
-    private Path path = new Path();
-    private Path arrowPath = new Path();
-    private Path templatePath = new Path();
+    private Paint strokePaint;
+    private Paint faceTemplatePaint;
+    private Paint landmarkPaint;
+    private RectF faceRect;
+    private RectF templateRect;
+    private RectF viewRect = new RectF();
+    private Double angle;
+    private Double distance;
+    private PointF[] landmarks;
+    private float landmarkRadius;
+    private final Path landmarkPath = new Path();
+    private final Path path = new Path();
+    private final Path arrowPath = new Path();
+    private final Path templatePath = new Path();
 
     public DetectedFaceView(Context context) {
         super(context);
@@ -70,7 +70,8 @@ DetectedFaceView extends View {
         templatePath.rewind();
         landmarkPath.rewind();
         if (templateRect != null) {
-            viewRect = new RectF(0, 0, getWidth(), getHeight());
+            viewRect.right = getWidth();
+            viewRect.top = getHeight();
             templatePath.addRect(viewRect, Path.Direction.CCW);
             templatePath.addOval(templateRect, Path.Direction.CW);
             canvas.drawPath(templatePath, faceTemplatePaint);
