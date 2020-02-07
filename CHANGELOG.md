@@ -1,4 +1,9 @@
 # Change Log
+## Version 1.16.2
+- Fixed a bug which caused a crash when camera was started before the session fragment view was loaded
+
+## Version 1.16.1
+- Lint cleanup and code optimization
 
 ## Version 1.16.0
 - Added new licensing system
