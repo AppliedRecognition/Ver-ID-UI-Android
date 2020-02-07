@@ -104,6 +104,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private final Matrix faceBoundsMatrix = new Matrix();
     private String cameraId;
     private Exception sessionException;
+    private boolean cameraStartRequested = false;
 
     // region Fragment lifecycle
 
@@ -118,8 +119,17 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        if (cameraStartRequested) {
+            startCamera();
+        }
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
+        cameraStartRequested = false;
         stopBackgroundThread();
         if (textureView != null) {
             textureView.setSurfaceTextureListener(null);
@@ -155,6 +165,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void startCamera() {
+        if (textureView == null) {
+            cameraStartRequested = true;
+            return;
+        }
+        cameraStartRequested = false;
         sessionException = null;
         startBackgroundThread();
         textureView.setSurfaceTextureListener(this);
