@@ -90,6 +90,8 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final String FRAGMENT_DIALOG = "fragmentDialog";
     private static final String FRAGMENT_VERID = "verid";
+    private static final String FRAGMENT_RESULT = "sessionResult";
+    private static final String STATE_SESSION_RESULT = "sessionResult";
     //endregion
 
     //region Private fields
@@ -101,6 +103,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     private ThreadPoolExecutor executor;
     private int retryCount = 0;
     private TranslatedStrings translatedStrings;
+    private VerIDSessionResult sessionResult;
     //endregion
 
     //region Activity lifecycle
@@ -128,10 +131,21 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 sessionFragment = makeVerIDSessionFragment();
                 addVerIDSessionFragment();
             } else {
-                sessionFragment = getVerIDSessionFragment();
+                sessionResult = savedInstanceState.getParcelable(STATE_SESSION_RESULT);
+                if (sessionResult == null) {
+                    sessionFragment = getVerIDSessionFragment();
+                }
             }
         } catch (Exception e) {
             finishWithError(e);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (sessionResult != null) {
+            outState.putParcelable(STATE_SESSION_RESULT, sessionResult);
         }
     }
 
@@ -379,6 +393,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 clearCameraOverlays();
                 Fragment resultFragment = makeResultFragment(sessionResult);
                 sessionFragment = null;
+                this.sessionResult = sessionResult;
                 addResultFragment(resultFragment);
             } else {
                 finishWithResult(sessionResult);
@@ -610,7 +625,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     }
 
     protected void addVerIDSessionFragment() {
-        getSupportFragmentManager().beginTransaction().add(R.id.container, sessionFragment, FRAGMENT_VERID).commit();
+        getSupportFragmentManager().beginTransaction().add(R.id.container, sessionFragment, FRAGMENT_VERID).commitAllowingStateLoss();
     }
 
     protected U getVerIDSessionFragment() {
@@ -619,7 +634,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     }
 
     protected void addResultFragment(Fragment resultFragment) {
-        getSupportFragmentManager().beginTransaction().replace(R.id.container, resultFragment, FRAGMENT_VERID).commitAllowingStateLoss();
+        getSupportFragmentManager().beginTransaction().replace(R.id.container, resultFragment, FRAGMENT_RESULT).commitAllowingStateLoss();
     }
 
     //endregion
