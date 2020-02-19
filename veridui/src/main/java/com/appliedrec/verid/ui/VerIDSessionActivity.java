@@ -4,17 +4,18 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.RectF;
-import android.os.Build;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.view.WindowManager;
+
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.Fragment;
-import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import android.view.WindowManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.EulerAngle;
@@ -29,8 +30,6 @@ import com.appliedrec.verid.core.IImageProviderServiceFactory;
 import com.appliedrec.verid.core.IImageWriterServiceFactory;
 import com.appliedrec.verid.core.IResultEvaluationService;
 import com.appliedrec.verid.core.IResultEvaluationServiceFactory;
-import com.appliedrec.verid.core.IVideoEncoderService;
-import com.appliedrec.verid.core.IVideoEncoderServiceFactory;
 import com.appliedrec.verid.core.ImageWriterServiceFactory;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.ResultEvaluationServiceFactory;
@@ -40,10 +39,8 @@ import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.core.VerIDImage;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
-import com.appliedrec.verid.core.VideoEncoderService;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -57,7 +54,7 @@ import java.util.concurrent.TimeoutException;
  * @since 1.0.0
  */
 @SuppressWarnings("unchecked")
-public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator, IVideoEncoderServiceFactory {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
 
     //region Public constants
     /**
@@ -252,7 +249,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             startTime = System.currentTimeMillis();
             faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(getSessionSettings());
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(getSessionSettings());
-            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService(), makeVideoEncoderService());
+            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
             if (executor == null || executor.isShutdown()) {
                 executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
             }
@@ -387,6 +384,12 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             }
             if (executor == null || executor.isShutdown()) {
                 return;
+            }
+            if (getSessionSettings().shouldRecordSessionVideo() && sessionFragment instanceof IVideoRecorder) {
+                File videoFile = ((IVideoRecorder) sessionFragment).getVideoFile();
+                if (videoFile != null) {
+                    sessionResult.setVideoUri(Uri.fromFile(videoFile));
+                }
             }
             if (sessionSettings.getShowResult()) {
                 shutDownExecutor();
@@ -572,11 +575,13 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      */
     @SuppressWarnings("unchecked")
     protected U makeVerIDSessionFragment() {
+        U fragment;
         if (sessionSettings instanceof RegistrationSessionSettings) {
-            return (U) new VerIDRegistrationSessionFragment();
+            fragment = (U) new VerIDRegistrationSessionFragment();
         } else {
-            return (U)new VerIDSessionFragment();
+            fragment = (U)new VerIDSessionFragment();
         }
+        return fragment;
     }
 
     /**
@@ -703,19 +708,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     public void onResultFragmentDismissed(IResultFragment resultFragment) {
         finishWithResult(resultFragment.getSessionResult());
-    }
-
-    @Override
-    public IVideoEncoderService makeVideoEncoderService() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && sessionSettings.shouldRecordSessionVideo()) {
-            try {
-                File tempFile = File.createTempFile("video_", ".mp4");
-                return new VideoEncoderService(tempFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
     }
 
     //endregion

@@ -1,4 +1,8 @@
 # Change Log
+## Version 1.17.0
+- Fixed a bug that would prevent video from being recorded in sessions that didn't display the result.
+- Deprecated video encoder service.
+
 ## Version 1.16.2
 - Fixed a bug which caused a crash when camera was started before the session fragment view was loaded
 

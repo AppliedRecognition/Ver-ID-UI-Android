@@ -176,6 +176,8 @@ public class RegisteredUserActivity extends RxVerIDActivity {
                                         if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
                                             settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
                                         }
+                                        settings.setShowResult(false);
+                                        settings.shouldRecordSessionVideo(true);
                                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                                         Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);

@@ -18,6 +18,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -45,10 +46,14 @@ import com.appliedrec.verid.core.VerIDImage;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
@@ -56,7 +61,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener {
+public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener, IVideoRecorder {
 
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
     private Integer sensorOrientation;
@@ -78,6 +83,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         @Override
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
             cameraOpenCloseLock.release();
+            stopRecordingVideo();
             cameraDevice.close();
             VerIDSessionFragment.this.cameraDevice = null;
             cameraId = null;
@@ -86,6 +92,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int error) {
             cameraOpenCloseLock.release();
+            stopRecordingVideo();
             cameraDevice.close();
             VerIDSessionFragment.this.cameraDevice = null;
             cameraId = null;
@@ -105,6 +112,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private String cameraId;
     private Exception sessionException;
     private boolean cameraStartRequested = false;
+    private MediaRecorder mediaRecorder;
+    private final Object mediaRecorderLock = new Object();
+    private boolean isRecordingVideo = false;
+    private File videoFile;
+    private Size videoSize;
 
     // region Fragment lifecycle
 
@@ -140,6 +152,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     public void onDestroy() {
         super.onDestroy();
         closePreviewSession();
+        stopRecordingVideo();
     }
 
     @Override
@@ -147,6 +160,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         super.onAttach(context);
         if (context instanceof VerIDSessionFragmentDelegate) {
             delegate = (VerIDSessionFragmentDelegate) context;
+            if (delegate.getSessionSettings() != null && delegate.getSessionSettings().shouldRecordSessionVideo()) {
+                try {
+                    videoFile = File.createTempFile("verid_video_", ".mp4", context.getApplicationContext().getCacheDir());
+                } catch (Exception ignore) {
+                }
+            }
         }
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
@@ -506,6 +525,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             }
 
             previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), w, h);
+            if (shouldRecordVideo()) {
+                videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+            }
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (TimeoutException e) {
@@ -546,6 +568,34 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
 
+    protected Comparator<Size> videoSizeComparator = new Comparator<Size>() {
+
+        private boolean is4x3(Size size) {
+            return size.getWidth() == size.getHeight() * 4 / 3;
+        }
+        @Override
+        public int compare(Size s1, Size s2) {
+            if (is4x3(s1) != is4x3(s2)) {
+                return is4x3(s1) ? -1 : 1;
+            }
+            return Math.abs(s1.getWidth()-640) < Math.abs(s2.getWidth()-640) ? -1 : 1;
+        }
+    };
+
+    protected Size chooseVideoSize(Size[] choices) {
+        ArrayList<Size> sizes = new ArrayList<>();
+        for (Size size : choices) {
+            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+                sizes.add(size);
+            }
+        }
+        if (sizes.isEmpty()) {
+            return choices[choices.length-1];
+        }
+        Collections.sort(sizes, videoSizeComparator);
+        return sizes.get(0);
+    }
+
     /**
      * Start the camera preview.
      */
@@ -560,16 +610,37 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
             previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
+            ArrayList<Surface> surfaces = new ArrayList<>();
+
             Surface previewSurface = new Surface(texture);
             previewBuilder.addTarget(previewSurface);
+            surfaces.add(previewSurface);
 
-            cameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
+            try {
+                setUpMediaRecorder();
+                synchronized (mediaRecorderLock) {
+                    if (mediaRecorder != null) {
+                        Surface recorderSurface = mediaRecorder.getSurface();
+                        previewBuilder.addTarget(recorderSurface);
+                        surfaces.add(recorderSurface);
+                    }
+                }
+            } catch (Exception ignore) {
+            }
+
+            cameraDevice.createCaptureSession(surfaces,
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
                             captureSession = session;
                             updatePreview();
+                            synchronized (mediaRecorderLock) {
+                                if (shouldRecordVideo() && mediaRecorder != null) {
+                                    isRecordingVideo = true;
+                                    mediaRecorder.start();
+                                }
+                            }
                         }
 
                         @Override
@@ -737,5 +808,54 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private void setUpMediaRecorder() throws IOException {
+        final Activity activity = getActivity();
+        if (null == activity || !shouldRecordVideo() || videoFile == null) {
+            return;
+        }
+        synchronized (mediaRecorderLock) {
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mediaRecorder.setOutputFile(videoFile.getPath());
+            mediaRecorder.setVideoEncodingBitRate(1000000);
+            mediaRecorder.setVideoFrameRate(30);
+            mediaRecorder.setVideoSize(videoSize.getWidth(), videoSize.getHeight());
+            mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            int rotationDegrees = 0;
+            try {
+                rotationDegrees = getDisplayRotation();
+            } catch (Exception ignored) {
+
+            }
+            mediaRecorder.setOrientationHint(sensorOrientation - rotationDegrees);
+            mediaRecorder.prepare();
+        }
+    }
+
+    private boolean shouldRecordVideo() {
+        return delegate != null && delegate.getSessionSettings().shouldRecordSessionVideo();
+    }
+
+    private void stopRecordingVideo() {
+        synchronized (mediaRecorderLock) {
+            if (mediaRecorder != null) {
+                if (isRecordingVideo) {
+                    mediaRecorder.stop();
+                }
+                mediaRecorder.reset();
+                mediaRecorder.release();
+                mediaRecorder = null;
+            }
+            isRecordingVideo = false;
+        }
+    }
+
+    @Override
+    public File getVideoFile() {
+        stopRecordingVideo();
+        return this.videoFile;
     }
 }
