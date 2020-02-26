@@ -28,11 +28,16 @@ To build this project and to run the sample app you will need a computer with th
 2. Registering your app will generate an evaluation licence for your app. The licence is valid for 30 days. If you need a production licence please [contact Applied Recognition](mailto:sales@appliedrec.com).
 2. When you finish the registration you'll receive a file called **Ver-ID identity.p12** and a password. Copy the password to a secure location.
 3. Copy the **Ver-ID identity.p12** into your app's assets folder. A common location is **your\_app_module/src/main/assets**.
-8. Ver-ID will need the password you received at registration.    
-    - You can either specify the password when you create an instance of `VerIDFactory`:
+8. Ver-ID will need the password you received at registration.
+    - You can either specify the password when you create an instance of `VerIDSDKIdentity` that you pass to `VerIDFactory`:
 
         ~~~java
-        VerIDFactory veridFactory = new VerIDFactory(this, "your password goes here");
+        try {
+            VerIDSDKIdentity identity = new VerIDSDKIdentity(this, "your password goes here");
+            VerIDFactory veridFactory = new VerIDFactory(this, identity);
+        } catch (Exception e) {
+            // Failed to create identity with your credentials.
+        }
         ~~~
     - Or you can add the password in your app's **AndroidManifest.xml**:
 
@@ -44,6 +49,16 @@ To build this project and to run the sample app you will need a computer with th
                     android:value="your password goes here" />
             </application>
         </manifest>
+        ~~~
+        and construct your identity without specifying the password:
+        
+        ~~~java
+        try {
+            VerIDSDKIdentity identity = new VerIDSDKIdentity(this);
+            VerIDFactory veridFactory = new VerIDFactory(this, identity);
+        } catch (Exception e) {
+            // Failed to create identity with your credentials.
+        }
         ~~~
 
 1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
@@ -73,7 +88,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.16.0'
+		    implementation 'com.appliedrec.verid:ui:1.19.0'
 	    }
 		~~~
 
@@ -83,7 +98,7 @@ To build this project and to run the sample app you will need a computer with th
 
 		~~~groovy
 	    dependencies {
-		    implementation 'com.appliedrec.verid:ui-api14:1.16.0'
+		    implementation 'com.appliedrec.verid:ui-api14:1.19.0'
 	    }
 		~~~
 
@@ -114,22 +129,27 @@ class MyActivity extends AppCompatActivity {
     static final int REQUEST_CODE_LIVENESS_DETECTION = 0;
 
     void startLivenessDetectionSession() {
-        VerIDFactory veridFactory = new VerIDFactory(this, new VerIDFactoryDelegate() {
-            @Override
-            public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
-                // You can now start a Ver-ID session
-                LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-                settings.setNumberOfResultsToCollect(2);
-                Intent intent = new VerIDSessionIntent(this, verID, settings);
-                startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
-            }
-
-            @Override
-            public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
-                // Failed to create an instance of Ver-ID
-            }
-        });
-        veridFactory.createVerID();
+        try {
+            VerIDSDKIdentity identity = new VerIDSDKIdentity(this);
+            VerIDFactory veridFactory = new VerIDFactory(this, identity, new VerIDFactoryDelegate() {
+                @Override
+                public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
+                    // You can now start a Ver-ID session
+                    LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
+                    settings.setNumberOfResultsToCollect(2);
+                    Intent intent = new VerIDSessionIntent(this, verID, settings);
+                    startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
+                }
+    
+                @Override
+                public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+                    // Failed to create an instance of Ver-ID
+                }
+            });
+            veridFactory.createVerID();
+        } catch (Exception e) {
+            // Failed to create Ver-ID SDK identity
+        }
     }
 
     @Override
