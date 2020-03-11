@@ -1,4 +1,7 @@
 # Change Log
+## Version 1.20.0    
+- Added an option to use legacy Android camera API in Ver-ID sessions, although on most devices the newer camera API performs better. Call `shouldUseLegacyCameraAPI(true)` on `VerIDSessionSettings` to enable the older camera API in session fragments. This feature is only available on targets built for Android API level 21 or newer. Older targets use the legacy API by default.
+
 ## Version 1.19.0
 - Added a new method to pass Ver-ID SDK identity to *VerIDFactory*.
 

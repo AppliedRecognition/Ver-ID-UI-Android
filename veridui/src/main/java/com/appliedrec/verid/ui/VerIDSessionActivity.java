@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.RectF;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.view.WindowManager;
@@ -385,7 +386,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             if (executor == null || executor.isShutdown()) {
                 return;
             }
-            if (getSessionSettings().shouldRecordSessionVideo() && sessionFragment instanceof IVideoRecorder) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && getSessionSettings().shouldRecordSessionVideo() && sessionFragment instanceof IVideoRecorder) {
                 File videoFile = ((IVideoRecorder) sessionFragment).getVideoFile();
                 if (videoFile != null) {
                     sessionResult.setVideoUri(Uri.fromFile(videoFile));
@@ -577,9 +578,15 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected U makeVerIDSessionFragment() {
         U fragment;
         if (sessionSettings instanceof RegistrationSessionSettings) {
-            fragment = (U) new VerIDRegistrationSessionFragment();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && sessionSettings.shouldUseLegacyCameraApi()) {
+                fragment = (U) new LegacyVerIDRegistrationSessionFragment();
+            } else {
+                fragment = (U) new VerIDRegistrationSessionFragment();
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && sessionSettings.shouldUseLegacyCameraApi()) {
+            fragment = (U) new LegacyVerIDSessionFragment();
         } else {
-            fragment = (U)new VerIDSessionFragment();
+            fragment = (U) new VerIDSessionFragment();
         }
         return fragment;
     }

@@ -25,7 +25,7 @@ import java.util.Objects;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    static class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+    public static class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
 
         static final String ARG_VERSION_NAME = "versionName";
         static final String ARG_VERSION_CODE = "versionCode";
@@ -33,7 +33,7 @@ public class SettingsActivity extends AppCompatActivity {
         static final String ARG_LAST_UPDATE_TIME = "lastUpdateTime";
         static final String ARG_FIRST_INSTALL_TIME = "firstInstallTime";
 
-        static SettingsFragment newInstance(PackageInfo packageInfo) {
+        public static SettingsFragment newInstance(PackageInfo packageInfo) {
             SettingsFragment fragment = new SettingsFragment();
             Bundle args = new Bundle();
             args.putString(ARG_VERSION_NAME, packageInfo.versionName);
