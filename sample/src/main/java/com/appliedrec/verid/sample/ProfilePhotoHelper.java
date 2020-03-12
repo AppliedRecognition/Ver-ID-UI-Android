@@ -17,6 +17,8 @@ import java.util.concurrent.Semaphore;
 
 import io.reactivex.Completable;
 import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 class ProfilePhotoHelper {
 
@@ -54,6 +56,20 @@ class ProfilePhotoHelper {
                 emitter.onError(e);
             }
         });
+    }
+
+    Completable setProfilePhoto(Bitmap bitmap) {
+        return Completable.create(emitter -> {
+            photoSemaphore.acquire();
+            try (OutputStream outputStream = context.getContentResolver().openOutputStream(profilePhotoUri)) {
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream);
+                photoSemaphore.release();
+                emitter.onComplete();
+            } catch (Exception e) {
+                photoSemaphore.release();
+                emitter.onError(e);
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
     }
 
     Single<Bitmap> getProfilePhotoBitmap() {

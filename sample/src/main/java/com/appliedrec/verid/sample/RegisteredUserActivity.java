@@ -19,9 +19,13 @@ import com.appliedrec.rxverid.RxVerID;
 import com.appliedrec.uielements.RxVerIDActivity;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.Face;
+import com.appliedrec.verid.core.RecognizableFace;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.ui.VerIDSession;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
+import com.appliedrec.verid.ui.VerIDSessionResult;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
@@ -30,7 +34,7 @@ import java.util.Objects;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
-public class RegisteredUserActivity extends RxVerIDActivity {
+public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSession.Delegate {
 
     private static final int AUTHENTICATION_REQUEST_CODE = 0;
     private static final int REGISTRATION_REQUEST_CODE = 1;
@@ -39,6 +43,7 @@ public class RegisteredUserActivity extends RxVerIDActivity {
     private ProfilePhotoHelper profilePhotoHelper;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
     private SampleApplication application;
+    private VerIDSession<AuthenticationSessionSettings> authenticationSession;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -178,13 +183,18 @@ public class RegisteredUserActivity extends RxVerIDActivity {
                                         }
                                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
-                                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-                                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                                        if (i == 1) {
-                                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
-                                        }
-                                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
+
+                                        authenticationSession = new VerIDSession<>(this, verID, settings);
+                                        authenticationSession.setDelegate(this);
+                                        authenticationSession.start();
+
+//                                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
+//                                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
+//                                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
+//                                        if (i == 1) {
+//                                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
+//                                        }
+//                                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
                                     })
                                     .setTitle("Select language")
                                     .create()
@@ -269,6 +279,25 @@ public class RegisteredUserActivity extends RxVerIDActivity {
                 })
                 .create()
                 .show();
+    }
+
+    //endregion
+
+    //region Ver-ID session delegate
+
+    @Override
+    public void veridSessionDidFinishWithResult(VerIDSession session, VerIDSessionResult result) {
+        if (session.getSettings() instanceof RegistrationSessionSettings) {
+            for (VerIDSessionResult.Capture capture : result.getCaptures(Bearing.STRAIGHT)) {
+                addDisposable(profilePhotoHelper.setProfilePhoto(capture.getFaceImage()).subscribe(this::loadProfilePicture, error -> {}));
+                return;
+            }
+        }
+    }
+
+    @Override
+    public void veridSessionWasCancelled(VerIDSession session) {
+
     }
 
     //endregion
