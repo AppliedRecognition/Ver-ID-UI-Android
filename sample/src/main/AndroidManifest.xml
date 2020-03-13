@@ -21,9 +21,7 @@
         <activity android:name=".ErrorActivity" />
         <activity android:name=".IntroActivity" />
         <activity android:name=".RegisteredUserActivity" />
-        <activity android:name=".RegistrationImportActivity" />
         <activity android:name=".SettingsActivity" />
-        <meta-data android:name="com.appliedrec.verid.apiSecret" android:value="2a5733e3617271e27955ea0818240b76376d84876f3bd8aa04346a28fe0f898b" />
         <meta-data
             android:name="com.appliedrec.verid.password"
             android:value="e422e5ce-7d45-4df6-be56-1c8132c592e4" />

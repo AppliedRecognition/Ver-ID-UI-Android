@@ -16,7 +16,7 @@ import android.widget.ImageView;
 import androidx.lifecycle.Lifecycle;
 
 import com.appliedrec.rxverid.RxVerID;
-import com.appliedrec.uielements.RxVerIDActivity;
+import com.appliedrec.rxverid.RxVerIDActivity;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
@@ -38,13 +38,11 @@ public class RegisteredUserActivity extends RxVerIDActivity {
 
     private ProfilePhotoHelper profilePhotoHelper;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
-    private SampleApplication application;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registered_user);
-        application = (SampleApplication)getApplication();
         profilePhotoHelper = new ProfilePhotoHelper(this);
         loadProfilePicture();
         findViewById(R.id.removeButton).setOnClickListener(v -> unregisterUser());
@@ -61,11 +59,10 @@ public class RegisteredUserActivity extends RxVerIDActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         // To inspect the result of the session:
-        RxVerID rxVerID = application.getRxVerID();
         if (resultCode == RESULT_OK && requestCode == REGISTRATION_REQUEST_CODE) {
-            addDisposable(rxVerID
+            addDisposable(getRxVerID()
                     .getSessionResultFromIntent(data)
-                    .flatMapObservable(result -> rxVerID.getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
+                    .flatMapObservable(result -> getRxVerID().getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
                     .firstOrError()
                     .flatMapCompletable(face -> profilePhotoHelper.setProfilePhotoFromUri(face.getImageUri(), face.getFace().getBounds()))
                     .compose(lifecycleProvider.bindToLifecycle())
@@ -152,7 +149,7 @@ public class RegisteredUserActivity extends RxVerIDActivity {
     //region Authentication
 
     private void authenticate() {
-        addDisposable(application.getRxVerID().getVerID()
+        addDisposable(getRxVerID().getVerID()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
@@ -198,7 +195,7 @@ public class RegisteredUserActivity extends RxVerIDActivity {
     //region Registration
 
     private void registerMoreFaces() {
-        addDisposable(application.getRxVerID().getVerID()
+        addDisposable(getRxVerID().getVerID()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
@@ -228,8 +225,8 @@ public class RegisteredUserActivity extends RxVerIDActivity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_unregister)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.unregister, (dialog, which) -> addDisposable(application.getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
-                        .andThen(application.getRxVerID().getVerID())
+                .setPositiveButton(R.string.unregister, (dialog, which) -> addDisposable(getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
+                        .andThen(getRxVerID().getVerID())
                         .compose(lifecycleProvider.bindToLifecycle())
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())

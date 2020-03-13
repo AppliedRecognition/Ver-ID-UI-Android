@@ -7,7 +7,7 @@ import android.os.Bundle;
 import androidx.lifecycle.Lifecycle;
 import androidx.preference.PreferenceManager;
 
-import com.appliedrec.uielements.RxVerIDActivity;
+import com.appliedrec.rxverid.RxVerIDActivity;
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
