@@ -2,9 +2,8 @@ package com.appliedrec.verid.sample;
 
 import android.content.ComponentName;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,14 +14,16 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Consumer;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 
 import com.appliedrec.verid.core.Bearing;
+import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 import com.appliedrec.verid.ui.PageViewActivity;
-import com.appliedrec.verid.ui.VerIDSessionIntent;
+import com.appliedrec.verid.ui.VerIDSession;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
@@ -30,6 +31,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
 
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
@@ -151,29 +153,50 @@ public class IntroActivity extends PageViewActivity {
     }
 
     private void register() {
+        RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        Consumer<Integer> faceCaptureConsumer = new Consumer<Integer>() {
+            int faceCount = 0;
+            @Override
+            public void accept(Integer integer) {
+                faceCount += integer;
+                Log.d("Ver-ID", String.format("Captured face %d of %d", faceCount, settings.getNumberOfResultsToCollect()));
+            }
+        };
+        ProfilePhotoHelper profilePhotoHelper = new ProfilePhotoHelper(this);
         disposables.add(application.getRxVerID()
                 .getUsers()
                 .flatMapCompletable(application.getRxVerID()::deleteUser)
                 .andThen(application.getRxVerID().getVerID())
-                .compose(lifecycleProvider.bindToLifecycle())
+                .flatMapObservable(verID -> VerIDSession.startSession(new VerIDSession<>(this, verID, settings)))
+                .flatMap(faceCapture -> {
+                    if (faceCapture.getBearing() == Bearing.STRAIGHT) {
+                        return application.getRxVerID().cropImageToFace(faceCapture.getImage(), faceCapture.getFace()).flatMapCompletable(profilePhotoHelper::setProfilePhoto).andThen(Observable.just(faceCapture));
+                    } else {
+                        return Observable.just(faceCapture);
+                    }
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        verID -> {
-                            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                            settings.setShowResult(true);
-                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                            settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
-                            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-                            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                            }
-                            Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
-                            startActivityForResult(intent, REQUEST_CODE_REGISTER);
-                        },
-                        this::showError
+                        faceCapture -> faceCaptureConsumer.accept(1),
+                        this::showError,
+                        () -> {
+                            Log.d("Ver-ID", "Session finished");
+                            Intent intent = new Intent(this, RegisteredUserActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
                 ));
+//                            settings.setShowResult(true);
+//                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+//                            settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
+//                            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+//                            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+//                            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+//                                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+//                            }
+//                            Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
+//                            startActivityForResult(intent, REQUEST_CODE_REGISTER);
     }
 
     @Override

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 
+import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
 public class FaceBoundsWidthPreference extends FaceGuidePreference {
@@ -27,7 +28,7 @@ public class FaceBoundsWidthPreference extends FaceGuidePreference {
 
     @Override
     protected int getDefaultValue() {
-        return (int)(new VerIDSessionSettings().getFaceBoundsFraction().x * 20f);
+        return (int)(new LivenessDetectionSessionSettings().getFaceBoundsFraction().x * 20f);
     }
 
     @Override

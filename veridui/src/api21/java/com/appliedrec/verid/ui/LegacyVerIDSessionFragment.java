@@ -657,6 +657,20 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     }
 
     @Override
+    public void startCollectingImages() {
+
+    }
+
+    @Override
+    public void stopCollectingImages() {
+
+    }
+
+    public void setVerIDSessionSettings(VerIDSessionSettings settings) {
+
+    }
+
+    @Override
     public void onPreviewFrame(final byte[] data, Camera camera) {
         if (camera == null) {
             return;

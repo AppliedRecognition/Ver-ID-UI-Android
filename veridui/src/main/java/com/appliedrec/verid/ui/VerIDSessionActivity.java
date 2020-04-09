@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.EulerAngle;
+import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceAlignmentDetection;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionServiceFactory;
@@ -55,7 +56,7 @@ import java.util.concurrent.TimeoutException;
  * @since 1.0.0
  */
 @SuppressWarnings("unchecked")
-public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
+public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
 
     //region Public constants
     /**
@@ -250,11 +251,11 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             startTime = System.currentTimeMillis();
             faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(getSessionSettings());
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(getSessionSettings());
-            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
-            if (executor == null || executor.isShutdown()) {
-                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
-            }
-            sessionTask.executeOnExecutor(executor, this);
+//            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
+//            if (executor == null || executor.isShutdown()) {
+//                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+//            }
+//            sessionTask.executeOnExecutor(executor, this);
         } catch (Exception e) {
             finishWithError(e);
         }
@@ -278,7 +279,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             result.putExtra(EXTRA_ERROR, sessionResult.getError());
         }
         result.putExtra(EXTRA_RESULT, sessionResult);
-        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
+//        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -297,7 +298,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
         result.putExtra(EXTRA_RESULT, new VerIDSessionResult(error));
-        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
+//        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -344,7 +345,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @param faceDetectionResult Face detection result that was used to generate the session result
      * @since 1.0.0
      */
-    @Override
     @MainThread
     public void onProgress(SessionTask sessionTask, VerIDSessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
         if (isExecutorShutdown()) {
@@ -377,7 +377,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @param sessionResult Result of the task
      * @since 1.0.0
      */
-    @Override
     public void onComplete(final SessionTask sessionTask, final VerIDSessionResult sessionResult) {
         runOnUiThread(() -> {
             if (sessionFragment != null) {
@@ -506,7 +505,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
      * @return Result evaluation service factory
      * @since 1.0.0
      */
-    protected IResultEvaluationServiceFactory<T> makeResultEvaluationServiceFactory() {
+    protected IResultEvaluationServiceFactory<T, Face> makeResultEvaluationServiceFactory() {
         return new ResultEvaluationServiceFactory<>(getEnvironment());
     }
 
@@ -558,11 +557,17 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     }
 
     @Override
-    public int getOrientationOfCamera() {
-        if (sessionFragment != null) {
-            return sessionFragment.getOrientationOfCamera();
-        }
-        return 0;
+    public void startCollectingImages() {
+
+    }
+
+    @Override
+    public void stopCollectingImages() {
+
+    }
+
+    public void setVerIDSessionSettings(VerIDSessionSettings settings) {
+
     }
 
     //endregion

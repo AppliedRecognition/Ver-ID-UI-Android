@@ -12,29 +12,31 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.lifecycle.Lifecycle;
 
-import com.appliedrec.rxverid.RxVerID;
-import com.appliedrec.uielements.RxVerIDActivity;
+import com.appliedrec.rxverid.RxVerIDActivity;
+import com.appliedrec.rxverid.SchedulersTransformer;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.Face;
-import com.appliedrec.verid.core.RecognizableFace;
+import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.ui.TranslatedStrings;
 import com.appliedrec.verid.ui.VerIDSession;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
-import com.appliedrec.verid.ui.VerIDSessionResult;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
+import java.io.InputStream;
 import java.util.Objects;
 
+import io.reactivex.Completable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
-public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSession.Delegate {
+public class RegisteredUserActivity extends RxVerIDActivity {
 
     private static final int AUTHENTICATION_REQUEST_CODE = 0;
     private static final int REGISTRATION_REQUEST_CODE = 1;
@@ -42,14 +44,11 @@ public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSess
 
     private ProfilePhotoHelper profilePhotoHelper;
     private final LifecycleProvider<Lifecycle.Event> lifecycleProvider = AndroidLifecycle.createLifecycleProvider(this);
-    private SampleApplication application;
-    private VerIDSession<AuthenticationSessionSettings> authenticationSession;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registered_user);
-        application = (SampleApplication)getApplication();
         profilePhotoHelper = new ProfilePhotoHelper(this);
         loadProfilePicture();
         findViewById(R.id.removeButton).setOnClickListener(v -> unregisterUser());
@@ -66,11 +65,10 @@ public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSess
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         // To inspect the result of the session:
-        RxVerID rxVerID = application.getRxVerID();
         if (resultCode == RESULT_OK && requestCode == REGISTRATION_REQUEST_CODE) {
-            addDisposable(rxVerID
+            addDisposable(getRxVerID()
                     .getSessionResultFromIntent(data)
-                    .flatMapObservable(result -> rxVerID.getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
+                    .flatMapObservable(result -> getRxVerID().getFacesAndImageUrisFromSessionResult(result, Bearing.STRAIGHT))
                     .firstOrError()
                     .flatMapCompletable(face -> profilePhotoHelper.setProfilePhotoFromUri(face.getImageUri(), face.getFace().getBounds()))
                     .compose(lifecycleProvider.bindToLifecycle())
@@ -157,89 +155,85 @@ public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSess
     //region Authentication
 
     private void authenticate() {
-        addDisposable(application.getRxVerID().getVerID()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .compose(lifecycleProvider.bindToLifecycle())
-                .subscribe(
-                        verID -> new androidx.appcompat.app.AlertDialog.Builder(this)
-                                    .setItems(new String[]{
-                                            "English", "Français"
-                                    }, (DialogInterface dialogInterface, int i) -> {
-                                        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                                        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                                        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
-                                        // The higher the count the more confident we can be of a live face at the expense of usability
-                                        // Note that 1 is added to the setting to include the initial mandatory straight pose
-                                        settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_required_pose_count), "1"))) + 1);
-                                        PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
-                                        settings.setYawThreshold(preferenceHelper.getYawThreshold());
-                                        settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
-                                        verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
-                                        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
-                                        settings.setShowResult(true);
-                                        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                                        }
-                                        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-                                        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-
-                                        authenticationSession = new VerIDSession<>(this, verID, settings);
-                                        authenticationSession.setDelegate(this);
-                                        authenticationSession.start();
-
-//                                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
-//                                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-//                                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-//                                        if (i == 1) {
-//                                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
-//                                        }
-//                                        startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
-                                    })
-                                    .setTitle("Select language")
-                                    .create()
-                                    .show(),
-                        error -> {
-
-                        }));
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setItems(new String[]{
+                        "English", "Français"
+                }, (DialogInterface dialogInterface, int i) -> addDisposable(
+                        getRxVerID()
+                            .getVerID()
+                            .flatMap(verID -> {
+                                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                                AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+                                // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
+                                // The higher the count the more confident we can be of a live face at the expense of usability
+                                // Note that 1 is added to the setting to include the initial mandatory straight pose
+                                settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_required_pose_count), "1"))) + 1);
+                                PreferenceHelper preferenceHelper = new PreferenceHelper(RegisteredUserActivity.this, preferences);
+                                settings.setYawThreshold(preferenceHelper.getYawThreshold());
+                                settings.setPitchThreshold(preferenceHelper.getPitchThreshold());
+                                verID.getFaceRecognition().setAuthenticationThreshold(preferenceHelper.getAuthenticationThreshold());
+                                // Setting showResult to false will prevent the activity from displaying a result at the end of the session
+                                settings.setShowResult(true);
+                                if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+                                    settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                                }
+                                settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+                                settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+                                TranslatedStrings translatedStrings = new TranslatedStrings(this, null);
+                                if (i == 1) {
+                                    try (InputStream inputStream = getAssets().open("fr.xml")) {
+                                        translatedStrings.loadTranslatedStrings(inputStream);
+                                    } catch (Exception ignore) {
+                                    }
+                                }
+                                return VerIDSession.create(this, verID, settings, translatedStrings);
+                            })
+                            .flatMapObservable(VerIDSession::startSession)
+                            .compose(SchedulersTransformer.defaultInstance())
+                            .subscribe(
+                                faceCapture -> {},
+                                error -> {},
+                                () -> {}
+                            )
+                    )
+                )
+                .setTitle("Select language")
+                .create()
+                .show();
     }
     //endregion
 
     //region Registration
 
     private void registerMoreFaces() {
-        addDisposable(application.getRxVerID().getVerID()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .compose(lifecycleProvider.bindToLifecycle())
-                .subscribe(
-                        verID -> {
-                            RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                            // Setting showResult to false will prevent the activity from displaying a result at the end of the session
-                            settings.setShowResult(true);
-                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                            settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
-                            settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 0.05f;
-                            settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                            if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
-                                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                            }
-                            Intent intent = new Intent(this, VerIDSessionActivity.class);
-                            intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                            startActivityForResult(intent, REGISTRATION_REQUEST_CODE);
-                        },
-                        error -> {
-
-                        }));
+        RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
+        settings.setShowResult(true);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        settings.setNumberOfResultsToCollect(Integer.parseInt(Objects.requireNonNull(preferences.getString(getString(R.string.pref_key_number_of_faces_to_register), "1"))));
+        settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int) (settings.getFaceBoundsFraction().x * 20)) * 0.05f;
+        settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
+        if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
+            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+        }
+        addDisposable(VerIDSession.configure(this, settings).flatMap(VerIDSession::create).flatMapObservable(VerIDSession::startSession).flatMapCompletable(faceCapture -> {
+            if (faceCapture.getBearing() == Bearing.STRAIGHT) {
+                return getRxVerID().cropImageToFace(faceCapture.getImage(), faceCapture.getFace()).ignoreElement();
+            } else {
+                return Completable.complete();
+            }
+        }).compose(SchedulersTransformer.defaultInstance()).subscribe(
+                () -> {},
+                error -> {}
+        ));
     }
 
     private void unregisterUser() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_unregister)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.unregister, (dialog, which) -> addDisposable(application.getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
-                        .andThen(application.getRxVerID().getVerID())
+                .setPositiveButton(R.string.unregister, (dialog, which) -> addDisposable(getRxVerID().deleteUser(VerIDUser.DEFAULT_USER_ID)
+                        .andThen(getRxVerID().getVerID())
                         .compose(lifecycleProvider.bindToLifecycle())
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
@@ -279,25 +273,6 @@ public class RegisteredUserActivity extends RxVerIDActivity implements VerIDSess
                 })
                 .create()
                 .show();
-    }
-
-    //endregion
-
-    //region Ver-ID session delegate
-
-    @Override
-    public void veridSessionDidFinishWithResult(VerIDSession session, VerIDSessionResult result) {
-        if (session.getSettings() instanceof RegistrationSessionSettings) {
-            for (VerIDSessionResult.Capture capture : result.getCaptures(Bearing.STRAIGHT)) {
-                addDisposable(profilePhotoHelper.setProfilePhoto(capture.getFaceImage()).subscribe(this::loadProfilePicture, error -> {}));
-                return;
-            }
-        }
-    }
-
-    @Override
-    public void veridSessionWasCancelled(VerIDSession session) {
-
     }
 
     //endregion

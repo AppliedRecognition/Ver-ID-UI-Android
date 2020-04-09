@@ -6,19 +6,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-public class TipsActivity extends PageViewActivity implements IStringTranslator {
+public class TipsActivity extends PageViewActivity implements IStringTranslator, ITranslationSettable {
 
     private TranslatedStrings translatedStrings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getIntent() == null) {
-            return;
-        }
-        translatedStrings = new TranslatedStrings(this, getIntent());
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Tip 1 of 3"));
+        if (translatedStrings != null) {
+            setTranslatedStrings(translatedStrings);
         }
     }
 
@@ -81,5 +77,17 @@ public class TipsActivity extends PageViewActivity implements IStringTranslator 
     @Override
     public String getTranslatedString(String original, Object... args) {
         return translatedStrings.getTranslatedString(original, args);
+    }
+
+    @Override
+    public void setTranslatedStrings(TranslatedStrings translatedStrings) {
+        if (translatedStrings == null) {
+            this.translatedStrings = new TranslatedStrings(this, null);
+        } else {
+            this.translatedStrings = translatedStrings;
+        }
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Tip 1 of 3"));
+        }
     }
 }

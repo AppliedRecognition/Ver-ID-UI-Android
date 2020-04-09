@@ -23,13 +23,13 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
@@ -40,11 +40,14 @@ import androidx.exifinterface.media.ExifInterface;
 import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core.EulerAngle;
+import com.appliedrec.verid.core.Face;
+import com.appliedrec.verid.core.FaceCapture;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionStatus;
-import com.appliedrec.verid.core.VerIDImage;
-import com.appliedrec.verid.core.VerIDSessionResult;
+import com.appliedrec.verid.core.IFaceCaptureListener;
+import com.appliedrec.verid.core.IFaceDetectionListener;
 import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.ui.databinding.FragmentSessionBinding;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,23 +56,24 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener, IVideoRecorder {
+public class VerIDSessionFragment<T extends VerIDSessionSettings<U>, U extends Face> extends Fragment implements IFaceDetectionListener, IFaceCaptureListener<Face>, TextureView.SurfaceTextureListener, IVideoRecorder, ICameraOverlayShowable {
 
+    public static final String ARG_SESSION_SETTINGS = "com.appliedrec.ARG_SESSION_SETTINGS";
+
+    public interface Listener {
+        void onImage(Bitmap bitmap, int orientation);
+        void onError(Throwable throwable);
+    }
+
+    private Listener listener;
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
     private Integer sensorOrientation;
     private Size previewSize;
     private CameraDevice cameraDevice;
-    private TextureView textureView;
-    private TextView instructionTextView;
-    private DetectedFaceView detectedFaceView;
     private CameraCaptureSession captureSession;
     private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
 
@@ -102,49 +106,64 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private CaptureRequest.Builder previewBuilder;
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
-    private final SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
-    private Thread imageQueueThread;
-    private final Object imageQueueThreadLock = new Object();
-    private final ThreadPoolExecutor imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
-    private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
     private final Matrix faceBoundsMatrix = new Matrix();
     private String cameraId;
-    private Exception sessionException;
-    private boolean cameraStartRequested = false;
     private MediaRecorder mediaRecorder;
     private final Object mediaRecorderLock = new Object();
     private boolean isRecordingVideo = false;
     private File videoFile;
     private Size videoSize;
+    private FragmentSessionBinding viewBinding;
+    private T sessionSettings;
+    private boolean shouldShowCameraOverlay = false;
 
     // region Fragment lifecycle
+
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Bundle args = getArguments();
+        if (args != null) {
+            sessionSettings = args.getParcelable(ARG_SESSION_SETTINGS);
+            if (sessionSettings != null && sessionSettings.shouldRecordSessionVideo()) {
+                try {
+                    videoFile = File.createTempFile("verid_video_", ".mp4");
+                } catch (Exception ignore) {
+                }
+            }
+        }
+    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        ConstraintLayout view = (ConstraintLayout) inflater.inflate(R.layout.fragment_session, container, false);
-        textureView = view.findViewById(R.id.view_finder);
-        instructionTextView = view.findViewById(R.id.instruction_textview);
-        detectedFaceView = view.findViewById(R.id.detectedFaceView);
-        return view;
+        viewBinding = FragmentSessionBinding.inflate(inflater, container, false);
+        if (shouldShowCameraOverlay) {
+            showCameraOverlay();
+        }
+        return viewBinding.getRoot();
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        if (cameraStartRequested) {
-            startCamera();
-        }
+    public void onDestroyView() {
+        super.onDestroyView();
+        viewBinding = null;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        startCamera();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        cameraStartRequested = false;
         stopBackgroundThread();
-        if (textureView != null) {
-            textureView.setSurfaceTextureListener(null);
+        if (viewBinding != null) {
+            viewBinding.viewFinder.setSurfaceTextureListener(null);
         }
     }
 
@@ -158,14 +177,8 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        if (context instanceof VerIDSessionFragmentDelegate) {
-            delegate = (VerIDSessionFragmentDelegate) context;
-            if (delegate.getSessionSettings() != null && delegate.getSessionSettings().shouldRecordSessionVideo()) {
-                try {
-                    videoFile = File.createTempFile("verid_video_", ".mp4", context.getApplicationContext().getCacheDir());
-                } catch (Exception ignore) {
-                }
-            }
+        if (context instanceof Listener) {
+            listener = (Listener)context;
         }
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
@@ -175,119 +188,41 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     @Override
     public void onDetach() {
         super.onDetach();
-        delegate = null;
+        listener = null;
         stringTranslator = null;
-        sessionException = null;
     }
 
     // endregion
 
     @Override
-    public void startCamera() {
-        if (textureView == null) {
-            cameraStartRequested = true;
-            return;
-        }
-        cameraStartRequested = false;
-        sessionException = null;
-        startBackgroundThread();
-        textureView.setSurfaceTextureListener(this);
-        if (textureView.isAvailable()) {
-            openCamera(textureView.getWidth(), textureView.getHeight());
-        }
+    public void showCameraOverlay() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            shouldShowCameraOverlay = true;
+            if (viewBinding != null) {
+                viewBinding.detectedFaceView.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     @Override
-    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing) {
-        @Nullable String labelText;
-        RectF ovalBounds;
-        @Nullable RectF cutoutBounds;
-        @Nullable EulerAngle faceAngle;
-        boolean showArrow;
-        if (getDelegate() == null || getDelegate().getSessionSettings() == null) {
-            return;
-        }
-        VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
-        if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
-            labelText = getTranslatedString("Please wait");
-            ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-            cutoutBounds = null;
-            faceAngle = null;
-            showArrow = false;
-        } else {
-            switch (faceDetectionResult.getStatus()) {
-                case FACE_FIXED:
-                case FACE_ALIGNED:
-                    labelText = getTranslatedString("Great, hold it");
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = null;
-                    showArrow = false;
-                    break;
-                case FACE_MISALIGNED:
-                    labelText = getTranslatedString("Slowly turn to follow the arrow");
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = faceDetectionResult.getFaceAngle();
-                    showArrow = true;
-                    break;
-                case FACE_TURNED_TOO_FAR:
-                    labelText = null;
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
-                    faceAngle = null;
-                    showArrow = false;
-                    break;
-                default:
-                    labelText = getTranslatedString("Align your face with the oval");
-                    ovalBounds = defaultFaceBounds;
-                    cutoutBounds = faceDetectionResult.getFaceBounds();
-                    faceAngle = null;
-                    showArrow = false;
+    public void hideCameraOverlay() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            shouldShowCameraOverlay = false;
+            if (viewBinding != null) {
+                viewBinding.detectedFaceView.setVisibility(View.GONE);
             }
-        }
-        try {
-            faceBoundsMatrix.mapRect(ovalBounds);
-            if (cutoutBounds != null) {
-                faceBoundsMatrix.mapRect(cutoutBounds);
-            }
-            int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
-            int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
-            instructionTextView.setText(labelText);
-            instructionTextView.setTextColor(textColour);
-            instructionTextView.setBackgroundColor(colour);
-            instructionTextView.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
-
-            ((ConstraintLayout.LayoutParams)instructionTextView.getLayoutParams()).topMargin = (int) (ovalBounds.top - instructionTextView.getHeight() - getResources().getDisplayMetrics().density * 16f);
-            setTextViewColour(colour, textColour);
-            Double angle = null;
-            Double distance = null;
-            if (faceAngle != null && offsetAngleFromBearing != null && showArrow) {
-                angle = Math.atan2(offsetAngleFromBearing.getPitch(), offsetAngleFromBearing.getYaw());
-                distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
-            }
-            int backgroundColour = 0x80000000;
-            detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
-//            // Uncomment to plot face landmarks for debugging purposes
-//            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
-//                int i=0;
-//                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
-//                    landmarks[i++] = pt.x;
-//                    landmarks[i++] = pt.y;
-//                }
-//                faceBoundsMatrix.mapPoints(landmarks);
-//                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
-//                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
-//                detectedFaceView.setFaceLandmarks(pointLandmarks);
-//            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
     }
 
-    protected VerIDSessionFragmentDelegate getDelegate() {
-        return delegate;
+    public void startCamera() {
+        startBackgroundThread();
+        if (viewBinding == null) {
+            return;
+        }
+        viewBinding.viewFinder.setSurfaceTextureListener(this);
+        if (viewBinding.viewFinder.isAvailable()) {
+            openCamera(viewBinding.viewFinder.getWidth(), viewBinding.viewFinder.getHeight());
+        }
     }
 
     private String getTranslatedString(String original, Object ...args) {
@@ -295,14 +230,6 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             return stringTranslator.getTranslatedString(original, args);
         } else {
             return String.format(original, args);
-        }
-    }
-
-    private void interruptImageQueueThread() {
-        synchronized (imageQueueThreadLock) {
-            if (imageQueueThread != null) {
-                imageQueueThread.interrupt();
-            }
         }
     }
 
@@ -346,6 +273,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     private void setTextViewColour(int background, int text) {
+        if (viewBinding == null) {
+            return;
+        }
         float density = getResources().getDisplayMetrics().density;
         float[] corners = new float[8];
         Arrays.fill(corners, 10 * density);
@@ -353,44 +283,11 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         shapeDrawable.setPadding((int)(8f * density), (int)(4f * density), (int)(8f * density), (int)(4f * density));
         shapeDrawable.getPaint().setColor(background);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-            instructionTextView.setBackgroundDrawable(shapeDrawable);
+            viewBinding.instructionTextview.setBackgroundDrawable(shapeDrawable);
         } else {
-            instructionTextView.setBackground(shapeDrawable);
+            viewBinding.instructionTextview.setBackground(shapeDrawable);
         }
-        instructionTextView.setTextColor(text);
-    }
-
-    @Override
-    public void clearCameraOverlay() {
-
-    }
-
-    @Override
-    public void clearCameraPreview() {
-
-    }
-
-    @Override
-    public VerIDImage dequeueImage() throws Exception {
-        synchronized (imageQueueThreadLock) {
-            imageQueueThread = Thread.currentThread();
-        }
-        if (sessionException != null) {
-            throw new Exception(sessionException);
-        }
-        try {
-            return imageQueue.take();
-        } catch (InterruptedException e) {
-            if (sessionException != null) {
-                throw new Exception(sessionException);
-            }
-            throw new InterruptedException();
-        }
-    }
-
-    @Override
-    public int getOrientationOfCamera() {
-        return sensorOrientation;
+        viewBinding.instructionTextview.setTextColor(text);
     }
 
     // region Surface texture listener
@@ -412,47 +309,42 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        if (imageProcessingExecutor != null && imageProcessingExecutor.getActiveCount() == 0 && imageProcessingExecutor.getQueue().isEmpty()) {
-            int rotation = textureView.getDisplay().getRotation();
-            int surfaceRotationDegrees;
-            switch (rotation) {
-                case Surface.ROTATION_90:
-                    surfaceRotationDegrees = 90;
-                    break;
-                case Surface.ROTATION_180:
-                    surfaceRotationDegrees = 180;
-                    break;
-                case Surface.ROTATION_270:
-                    surfaceRotationDegrees = 270;
-                    break;
-                default:
-                    surfaceRotationDegrees = 0;
-            }
-            Bitmap bitmap;
-            if (sensorOrientation % 180 == 0) {
-                bitmap = textureView.getBitmap(previewSize.getWidth(), previewSize.getHeight());
-            } else {
-                bitmap = textureView.getBitmap(previewSize.getHeight(), previewSize.getWidth());
-            }
-            imageProcessingExecutor.execute(() -> {
-                Matrix matrix = new Matrix();
-                if (getDelegate().getSessionSettings().getFacingOfCameraLens() != VerIDSessionSettings.LensFacing.BACK) {
-                    matrix.setScale(-1, 1);
-                }
-                matrix.postRotate(surfaceRotationDegrees);
-                Bitmap flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                bitmap.recycle();
-                VerIDImage verIDImage = new VerIDImage(flippedBitmap, ExifInterface.ORIENTATION_NORMAL);
-                try {
-                    imageQueue.put(verIDImage);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
+        if (viewBinding == null) {
+            return;
+        }
+        int rotation = viewBinding.viewFinder.getDisplay().getRotation();
+        int surfaceExifOrientation;
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                surfaceExifOrientation = ExifInterface.ORIENTATION_ROTATE_270;
+                break;
+            case Surface.ROTATION_180:
+                surfaceExifOrientation = ExifInterface.ORIENTATION_ROTATE_180;
+                break;
+            case Surface.ROTATION_270:
+                surfaceExifOrientation = ExifInterface.ORIENTATION_ROTATE_90;
+                break;
+            default:
+                surfaceExifOrientation = ExifInterface.ORIENTATION_NORMAL;
+        }
+        Bitmap bitmap;
+        if (sensorOrientation % 180 == 0) {
+            bitmap = viewBinding.viewFinder.getBitmap(previewSize.getWidth(), previewSize.getHeight());
+        } else {
+            bitmap = viewBinding.viewFinder.getBitmap(previewSize.getHeight(), previewSize.getWidth());
+        }
+        if (listener != null) {
+            listener.onImage(bitmap, surfaceExifOrientation);
         }
     }
 
     // endregion
+
+    protected void onError(Exception e) {
+        if (listener != null) {
+            listener.onError(e);
+        }
+    }
 
     /**
      * Indicates how to transform an image of the given size to fit to the fragment view.
@@ -473,7 +365,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             return;
         }
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            sessionException = new Exception("Missing camera permission");
+            onError(new Exception("Missing camera permission"));
             return;
         }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
@@ -484,7 +376,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             String[] cameras = manager.getCameraIdList();
             cameraId = null;
             int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
-            if (getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
+            if (getRequestedFacingOfLens() == VerIDSessionSettings.LensFacing.BACK) {
                 requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
             }
             for (String camId : cameras) {
@@ -531,13 +423,19 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             configureTransform(previewSize.getWidth(), previewSize.getHeight());
             manager.openCamera(cameraId, stateCallback, null);
         } catch (TimeoutException e) {
-            sessionException = e;
-            interruptImageQueueThread();
+            onError(e);
         } catch (Exception e) {
-            sessionException = e;
+            onError(e);
             cameraOpenCloseLock.release();
-            interruptImageQueueThread();
         }
+    }
+
+    protected VerIDSessionSettings.LensFacing getRequestedFacingOfLens() {
+        return sessionSettings.getFacingOfCameraLens();
+    }
+
+    protected int getNumberOfResultsToCollect() {
+        return sessionSettings.getNumberOfResultsToCollect();
     }
 
     /**
@@ -600,12 +498,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
      * Start the camera preview.
      */
     private void startPreview() {
-        if (null == cameraDevice || !textureView.isAvailable() || null == previewSize) {
+        if (viewBinding != null && null == cameraDevice || !viewBinding.viewFinder.isAvailable() || null == previewSize) {
             return;
         }
         try {
             closePreviewSession();
-            SurfaceTexture texture = textureView.getSurfaceTexture();
+            SurfaceTexture texture = viewBinding.viewFinder.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
             previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -645,8 +543,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            sessionException = new Exception("Failed to start preview");
-                            interruptImageQueueThread();
+                            onError(new Exception("Failed to start preview"));
                         }
                     }, backgroundHandler);
         } catch (CameraAccessException e) {
@@ -714,14 +611,10 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
      * @param height The height of `textureView`
      */
     protected void configureTransform(int width, int height) {
-        View view = getView();
-        if (view == null) {
+        if (viewBinding == null || viewBinding.viewFinder.getDisplay() == null) {
             return;
         }
-        if (textureView.getDisplay() == null) {
-            return;
-        }
-        RectF viewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
+        RectF viewRect = new RectF(0,0, viewBinding.detectedFaceView.getWidth(), viewBinding.detectedFaceView.getHeight());
         float rotationDegrees = 0;
         try {
             rotationDegrees = (float)getDisplayRotation();
@@ -744,7 +637,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         } else {
             scale = viewRect.height()/h;
         }
-        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(textureView.getLayoutParams());
+        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(viewBinding.viewFinder.getLayoutParams());
         Matrix matrix = new Matrix();
         layoutParams.width = (int) (scale * w);
         layoutParams.height = (int) (scale * h);
@@ -752,7 +645,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
         layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
-        textureView.setLayoutParams(layoutParams);
+        viewBinding.viewFinder.setLayoutParams(layoutParams);
 
         RectF textureRect = new RectF(0, 0, layoutParams.width, layoutParams.height);
         float centerX = textureRect.centerX();
@@ -763,7 +656,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             }
             matrix.postRotate(0 - rotationDegrees, centerX, centerY);
         }
-        textureView.setTransform(matrix);
+        viewBinding.viewFinder.setTransform(matrix);
 
         // Configure transform for displaying faces
         RectF imageRect = new RectF();
@@ -836,7 +729,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     private boolean shouldRecordVideo() {
-        return delegate != null && delegate.getSessionSettings().shouldRecordSessionVideo();
+        return sessionSettings.shouldRecordSessionVideo();
     }
 
     private void stopRecordingVideo() {
@@ -857,5 +750,91 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     public File getVideoFile() {
         stopRecordingVideo();
         return this.videoFile;
+    }
+
+    @Override
+    public void onFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
+        if (viewBinding == null) {
+            return;
+        }
+        @Nullable String labelText;
+        RectF ovalBounds;
+        @Nullable RectF cutoutBounds;
+        @Nullable EulerAngle faceAngle;
+        boolean showArrow;
+        switch (faceDetectionResult.getStatus()) {
+            case FACE_FIXED:
+            case FACE_ALIGNED:
+                labelText = getTranslatedString("Great, hold it");
+                ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : faceDetectionResult.getDefaultFaceBounds();
+                cutoutBounds = null;
+                faceAngle = null;
+                showArrow = false;
+                break;
+            case FACE_MISALIGNED:
+                labelText = getTranslatedString("Slowly turn to follow the arrow");
+                ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : faceDetectionResult.getDefaultFaceBounds();
+                cutoutBounds = null;
+                faceAngle = faceDetectionResult.getFaceAngle();
+                showArrow = true;
+                break;
+            case FACE_TURNED_TOO_FAR:
+                labelText = null;
+                ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : faceDetectionResult.getDefaultFaceBounds();
+                cutoutBounds = null;
+                faceAngle = null;
+                showArrow = false;
+                break;
+            default:
+                labelText = getTranslatedString("Align your face with the oval");
+                ovalBounds = faceDetectionResult.getDefaultFaceBounds();
+                cutoutBounds = faceDetectionResult.getFaceBounds();
+                faceAngle = null;
+                showArrow = false;
+        }
+        try {
+            faceBoundsMatrix.mapRect(ovalBounds);
+            if (cutoutBounds != null) {
+                faceBoundsMatrix.mapRect(cutoutBounds);
+            }
+            int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), null);
+            int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), null);
+            viewBinding.instructionTextview.setText(labelText);
+            viewBinding.instructionTextview.setTextColor(textColour);
+            viewBinding.instructionTextview.setBackgroundColor(colour);
+            viewBinding.instructionTextview.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
+
+            ((ConstraintLayout.LayoutParams) viewBinding.instructionTextview.getLayoutParams()).topMargin = (int) (ovalBounds.top - viewBinding.instructionTextview.getHeight() - getResources().getDisplayMetrics().density * 16f);
+            setTextViewColour(colour, textColour);
+            Double angle = null;
+            Double distance = null;
+            if (faceAngle != null && faceDetectionResult.getOffsetAngleFromBearing() != null && showArrow) {
+                angle = Math.atan2(faceDetectionResult.getOffsetAngleFromBearing().getPitch(), faceDetectionResult.getOffsetAngleFromBearing().getYaw());
+                distance = Math.hypot(faceDetectionResult.getOffsetAngleFromBearing().getYaw(), 0 - faceDetectionResult.getOffsetAngleFromBearing().getPitch()) * 2;
+            }
+            int backgroundColour = 0x80000000;
+            viewBinding.detectedFaceView.setVisibility(View.VISIBLE);
+            viewBinding.detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+//            // Uncomment to plot face landmarks for debugging purposes
+//            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
+//                int i=0;
+//                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
+//                    landmarks[i++] = pt.x;
+//                    landmarks[i++] = pt.y;
+//                }
+//                faceBoundsMatrix.mapPoints(landmarks);
+//                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
+//                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
+//                detectedFaceView.setFaceLandmarks(pointLandmarks);
+//            }
+        } catch (Exception e) {
+            onError(e);
+        }
+    }
+
+    @Override
+    public void onFaceCapture(FaceCapture<Face> faceCapture) {
+
     }
 }
