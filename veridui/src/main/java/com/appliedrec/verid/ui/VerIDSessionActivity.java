@@ -43,6 +43,7 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +56,7 @@ import java.util.concurrent.TimeoutException;
  * @since 1.0.0
  */
 @SuppressWarnings("unchecked")
-public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator, ILocaleProvider, ITextSpeaker {
 
     //region Public constants
     /**
@@ -82,6 +83,10 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     public static final String EXTRA_TRANSLATION_FILE_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_FILE_PATH";
 
     public static final String EXTRA_TRANSLATION_ASSET_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_ASSET_PATH";
+
+    public static final String EXTRA_TRANSLATION = "com.appliedrec.verid.ui.EXTRA_TRANSLATION";
+
+    public static final String EXTRA_LOCALE = "com.appliedrec.verid.ui.EXTRA_LOCALE";
     //endregion
 
     //region Other constants
@@ -110,7 +115,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(getContentViewId());
-//        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         Intent intent = getIntent();
         if (intent == null) {
             return;
@@ -120,7 +124,10 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (getSessionSettings() == null) {
             return;
         }
-        translatedStrings = new TranslatedStrings(this, intent);
+        translatedStrings = intent.getParcelableExtra(EXTRA_TRANSLATION);
+        if (translatedStrings == null) {
+            translatedStrings = new TranslatedStrings(this, intent);
+        }
         try {
             if (getEnvironment() == null) {
                 this.environment = VerID.getInstance(instanceId);
@@ -137,6 +144,15 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         } catch (Exception e) {
             finishWithError(e);
         }
+        if (getSessionSettings().shouldSpeakPrompts()) {
+            TextSpeaker.setup(this);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        TextSpeaker.destroy();
     }
 
     @Override
@@ -361,12 +377,37 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED) {
             offsetAngleFromBearing = faceDetectionService.getAngleBearingEvaluation().offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
+        String labelText = null;
         if (sessionFragment != null) {
-            sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+            if (sessionFragment instanceof IVerIDSessionFragment2) {
+                if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
+                    labelText = getTranslatedString("Please wait");
+                } else {
+                    switch (faceDetectionResult.getStatus()) {
+                        case FACE_FIXED:
+                        case FACE_ALIGNED:
+                            labelText = getTranslatedString("Great, hold it");
+                            break;
+                        case FACE_MISALIGNED:
+                            labelText = getTranslatedString("Slowly turn to follow the arrow");
+                            break;
+                        case FACE_TURNED_TOO_FAR:
+                            labelText = null;
+                            break;
+                        default:
+                            labelText = getTranslatedString("Align your face with the oval");
+                    }
+                }
+                ((IVerIDSessionFragment2)sessionFragment).drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing, labelText);
+            } else {
+                sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+            }
         }
         if (sessionResult.getError() != null && retryCount < sessionSettings.getMaxRetryCount() && showFailureDialog(faceDetectionResult, sessionResult)) {
             shutDownExecutor();
             clearCameraOverlays();
+        } else if (labelText != null) {
+            speak(labelText, getLocale(), false);
         }
     }
 
@@ -484,6 +525,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         }
         shutDownExecutor();
         dialog.show();
+        speak(message, getLocale(), false);
         return true;
     }
 
@@ -625,7 +667,8 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
                 getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Failed"));
             }
         }
-        return ResultFragment.newInstance(sessionResult, result);
+        boolean speakText = getSessionSettings().shouldSpeakPrompts();
+        return ResultFragment.newInstance(sessionResult, result, speakText);
     }
 
     //endregion
@@ -715,6 +758,36 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     @Override
     public void onResultFragmentDismissed(IResultFragment resultFragment) {
         finishWithResult(resultFragment.getSessionResult());
+    }
+
+    //endregion
+
+    //region Locale provider
+
+    /**
+     * Get the locale of the translated strings associated with this activity
+     * @return Locale
+     * @since 1.21.0
+     */
+    @Override
+    public Locale getLocale() {
+        return translatedStrings.getLocale();
+    }
+
+    //endregion
+
+    //region Text speaker
+
+    /**
+     * Speak text
+     * @param text Text to be spoken
+     * @param locale Locale of the text
+     * @param interrupt {@literal true} to interrupt current speech
+     * @since 1.21.0
+     */
+    @Override
+    public void speak(String text, Locale locale, boolean interrupt) {
+        TextSpeaker.getInstance().speak(text, locale, interrupt);
     }
 
     //endregion

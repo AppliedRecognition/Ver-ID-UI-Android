@@ -15,16 +15,19 @@ import android.widget.ImageView;
 
 import androidx.lifecycle.Lifecycle;
 
-import com.appliedrec.rxverid.RxVerID;
 import com.appliedrec.rxverid.RxVerIDActivity;
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.ui.TranslatedStrings;
 import com.appliedrec.verid.ui.VerIDSessionActivity;
+import com.appliedrec.verid.ui.VerIDSessionIntent;
 import com.trello.lifecycle2.android.lifecycle.AndroidLifecycle;
 import com.trello.rxlifecycle3.LifecycleProvider;
 
+import java.io.IOException;
+import java.util.Locale;
 import java.util.Objects;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -175,12 +178,14 @@ public class RegisteredUserActivity extends RxVerIDActivity {
                                         }
                                         settings.getFaceBoundsFraction().x = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_width), (int)(settings.getFaceBoundsFraction().x * 20)) * 0.05f;
                                         settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int)(settings.getFaceBoundsFraction().y * 20)) * 0.05f;
-                                        Intent intent = new Intent(RegisteredUserActivity.this, VerIDSessionActivity.class);
-                                        intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);
-                                        intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                                        if (i == 1) {
-                                            intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "fr.xml");
+                                        if (preferences.getBoolean(getString(R.string.pref_key_speak_prompts), false)) {
+                                            settings.shouldSpeakPrompts(true);
                                         }
+                                        TranslatedStrings translatedStrings = null;
+                                        if (i == 1) {
+                                            translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
+                                        }
+                                        Intent intent = new VerIDSessionIntent<>(RegisteredUserActivity.this, verID, settings, translatedStrings);
                                         startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
                                     })
                                     .setTitle("Select language")
@@ -210,6 +215,9 @@ public class RegisteredUserActivity extends RxVerIDActivity {
                             settings.getFaceBoundsFraction().y = (float) preferences.getInt(getString(R.string.pref_key_face_bounds_height), (int) (settings.getFaceBoundsFraction().y * 20)) * 0.05f;
                             if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
                                 settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
+                            }
+                            if (preferences.getBoolean(getString(R.string.pref_key_speak_prompts), false)) {
+                                settings.shouldSpeakPrompts(true);
                             }
                             Intent intent = new Intent(this, VerIDSessionActivity.class);
                             intent.putExtra(VerIDSessionActivity.EXTRA_SETTINGS, settings);

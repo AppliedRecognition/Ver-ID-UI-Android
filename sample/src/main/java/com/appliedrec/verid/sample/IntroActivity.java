@@ -169,6 +169,9 @@ public class IntroActivity extends PageViewActivity {
                             if (preferences.getBoolean(getString(R.string.pref_key_use_back_camera), false)) {
                                 settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
                             }
+                            if (preferences.getBoolean(getString(R.string.pref_key_speak_prompts), false)) {
+                                settings.shouldSpeakPrompts(true);
+                            }
                             Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
                             startActivityForResult(intent, REQUEST_CODE_REGISTER);
                         },

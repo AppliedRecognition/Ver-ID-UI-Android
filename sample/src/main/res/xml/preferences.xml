@@ -45,6 +45,11 @@
             android:key="@string/pref_key_use_back_camera"
             android:title="@string/use_back_camera" />
     </androidx.preference.PreferenceCategory>
+    <androidx.preference.PreferenceCategory android:title="@string/accessibility">
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/pref_key_speak_prompts"
+            android:title="@string/speak_prompts" />
+    </androidx.preference.PreferenceCategory>
     <androidx.preference.PreferenceCategory android:title="@string/about">
         <androidx.preference.Preference
             android:key="@string/pref_key_version"

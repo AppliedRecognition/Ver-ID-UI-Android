@@ -55,7 +55,7 @@ DetectedFaceView extends View {
         faceTemplatePaint.setStyle(Paint.Style.FILL);
         faceTemplatePaint.setColor(Color.argb(128, 0, 0, 0));
 
-        templatePath.setFillType(Path.FillType.WINDING);
+        templatePath.setFillType(Path.FillType.EVEN_ODD);
 
         landmarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         landmarkPaint.setStyle(Paint.Style.FILL);
@@ -73,7 +73,7 @@ DetectedFaceView extends View {
             viewRect.right = getWidth();
             viewRect.top = getHeight();
             templatePath.addRect(viewRect, Path.Direction.CCW);
-            templatePath.addOval(templateRect, Path.Direction.CW);
+            templatePath.addOval(templateRect, Path.Direction.CCW);
             canvas.drawPath(templatePath, faceTemplatePaint);
         }
         if (faceRect != null) {

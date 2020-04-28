@@ -3,6 +3,7 @@ package com.appliedrec.verid.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
@@ -53,7 +54,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
@@ -61,7 +62,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment, TextureView.SurfaceTextureListener, IVideoRecorder {
+public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment2, TextureView.SurfaceTextureListener, IVideoRecorder {
 
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
     private Integer sensorOrientation;
@@ -108,6 +109,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private final ThreadPoolExecutor imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
+    private ITextSpeaker textSpeaker;
     private final Matrix faceBoundsMatrix = new Matrix();
     private String cameraId;
     private Exception sessionException;
@@ -170,6 +172,9 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
         }
+        if (context instanceof ITextSpeaker) {
+            textSpeaker = (ITextSpeaker) context;
+        }
     }
 
     @Override
@@ -178,6 +183,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         delegate = null;
         stringTranslator = null;
         sessionException = null;
+        textSpeaker = null;
     }
 
     // endregion
@@ -198,52 +204,40 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
     @Override
-    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing) {
-        @Nullable String labelText;
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing, String labelText) {
         RectF ovalBounds;
         @Nullable RectF cutoutBounds;
         @Nullable EulerAngle faceAngle;
-        boolean showArrow;
         if (getDelegate() == null || getDelegate().getSessionSettings() == null) {
             return;
         }
         VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
         if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
-            labelText = getTranslatedString("Please wait");
             ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-            cutoutBounds = null;
+            cutoutBounds = new RectF(ovalBounds);
             faceAngle = null;
-            showArrow = false;
         } else {
             switch (faceDetectionResult.getStatus()) {
                 case FACE_FIXED:
                 case FACE_ALIGNED:
-                    labelText = getTranslatedString("Great, hold it");
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
                     faceAngle = null;
-                    showArrow = false;
                     break;
                 case FACE_MISALIGNED:
-                    labelText = getTranslatedString("Slowly turn to follow the arrow");
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
                     faceAngle = faceDetectionResult.getFaceAngle();
-                    showArrow = true;
                     break;
                 case FACE_TURNED_TOO_FAR:
-                    labelText = null;
                     ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = null;
+                    cutoutBounds = new RectF(ovalBounds);
                     faceAngle = null;
-                    showArrow = false;
                     break;
                 default:
-                    labelText = getTranslatedString("Align your face with the oval");
                     ovalBounds = defaultFaceBounds;
-                    cutoutBounds = faceDetectionResult.getFaceBounds();
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds);
                     faceAngle = null;
-                    showArrow = false;
             }
         }
         try {
@@ -262,7 +256,100 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             setTextViewColour(colour, textColour);
             Double angle = null;
             Double distance = null;
-            if (faceAngle != null && offsetAngleFromBearing != null && showArrow) {
+            if (faceAngle != null && offsetAngleFromBearing != null) {
+                angle = Math.atan2(offsetAngleFromBearing.getPitch(), offsetAngleFromBearing.getYaw());
+                distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
+            }
+            int backgroundColour = 0x80000000;
+            detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
+//            // Uncomment to plot face landmarks for debugging purposes
+//            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
+//                int i=0;
+//                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
+//                    landmarks[i++] = pt.x;
+//                    landmarks[i++] = pt.y;
+//                }
+//                faceBoundsMatrix.mapPoints(landmarks);
+//                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
+//                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
+//                detectedFaceView.setFaceLandmarks(pointLandmarks);
+//            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing) {
+        @Nullable String labelText;
+        RectF ovalBounds;
+        @Nullable RectF cutoutBounds;
+        @Nullable EulerAngle faceAngle;
+        if (getDelegate() == null || getDelegate().getSessionSettings() == null) {
+            return;
+        }
+        VerIDSessionSettings sessionSettings = getDelegate().getSessionSettings();
+        if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
+            labelText = getTranslatedString("Please wait");
+            ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+            cutoutBounds = new RectF(ovalBounds);
+            faceAngle = null;
+        } else {
+            switch (faceDetectionResult.getStatus()) {
+                case FACE_FIXED:
+                case FACE_ALIGNED:
+                    labelText = getTranslatedString("Great, hold it");
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
+                    faceAngle = null;
+                    break;
+                case FACE_MISALIGNED:
+                    labelText = getTranslatedString("Slowly turn to follow the arrow");
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
+                    faceAngle = faceDetectionResult.getFaceAngle();
+                    break;
+                case FACE_TURNED_TOO_FAR:
+                    labelText = null;
+                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    cutoutBounds = new RectF(ovalBounds);
+                    faceAngle = null;
+                    break;
+                default:
+                    labelText = getTranslatedString("Align your face with the oval");
+                    ovalBounds = defaultFaceBounds;
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds);
+                    faceAngle = null;
+            }
+        }
+        try {
+            faceBoundsMatrix.mapRect(ovalBounds);
+            if (cutoutBounds != null) {
+                faceBoundsMatrix.mapRect(cutoutBounds);
+            }
+            int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
+            int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
+            instructionTextView.setText(labelText);
+            instructionTextView.setTextColor(textColour);
+            instructionTextView.setBackgroundColor(colour);
+            instructionTextView.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
+
+            if (getDelegate().getSessionSettings().shouldSpeakPrompts() && labelText != null && getContext() != null) {
+                Locale locale = null;
+                if (stringTranslator != null && stringTranslator instanceof ILocaleProvider) {
+                    locale = ((ILocaleProvider)stringTranslator).getLocale();
+                }
+                if (textSpeaker != null) {
+                    textSpeaker.speak(labelText, locale, false);
+                }
+            }
+
+            ((ConstraintLayout.LayoutParams)instructionTextView.getLayoutParams()).topMargin = (int) (ovalBounds.top - instructionTextView.getHeight() - getResources().getDisplayMetrics().density * 16f);
+            setTextViewColour(colour, textColour);
+            Double angle = null;
+            Double distance = null;
+            if (faceAngle != null && offsetAngleFromBearing != null) {
                 angle = Math.atan2(offsetAngleFromBearing.getPitch(), offsetAngleFromBearing.getYaw());
                 distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
             }

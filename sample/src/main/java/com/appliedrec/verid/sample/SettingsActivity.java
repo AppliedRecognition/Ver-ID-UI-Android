@@ -59,6 +59,8 @@ public class SettingsActivity extends AppCompatActivity {
                     break;
                 }
             }
+            CheckBoxPreference speakPromptsPreference = findPreference(getString(R.string.pref_key_speak_prompts));
+            Objects.requireNonNull(speakPromptsPreference).setDefaultValue(false);
             CheckBoxPreference disableEncryptionPreference = findPreference(getString(R.string.pref_key_disable_encryption));
             Objects.requireNonNull(disableEncryptionPreference).setDefaultValue(false);
             Bundle args = getArguments();

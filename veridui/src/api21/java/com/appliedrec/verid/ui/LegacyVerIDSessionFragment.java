@@ -2,6 +2,7 @@ package com.appliedrec.verid.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -42,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -61,6 +63,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     private ThreadPoolExecutor previewProcessingExecutor;
     private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
+    private ITextSpeaker textSpeaker;
     private int cameraOrientation = 0;
     private int deviceOrientation = 0;
     private Camera.Size previewSize;
@@ -120,6 +123,9 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
         }
+        if (context instanceof ITextSpeaker) {
+            textSpeaker = (ITextSpeaker) context;
+        }
     }
 
     @Override
@@ -127,6 +133,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         super.onDetach();
         delegate = null;
         stringTranslator = null;
+        textSpeaker = null;
     }
 
     @Override
@@ -558,6 +565,16 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         instructionTextView.setTextColor(textColour);
         instructionTextView.setBackgroundColor(colour);
         instructionView.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
+
+        if (getDelegate().getSessionSettings().shouldSpeakPrompts() && labelText != null && getContext() != null) {
+            Locale locale = null;
+            if (stringTranslator != null && stringTranslator instanceof ILocaleProvider) {
+                locale = ((ILocaleProvider)stringTranslator).getLocale();
+            }
+            if (textSpeaker != null) {
+                textSpeaker.speak(labelText, locale, false);
+            }
+        }
 
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(instructionView.getLayoutParams());
         params.topMargin = (int)(ovalBounds.top - instructionView.getHeight() - getResources().getDisplayMetrics().density * 16f);

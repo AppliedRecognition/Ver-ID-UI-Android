@@ -2,11 +2,15 @@ package com.appliedrec.verid.ui;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.util.Xml;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
-import android.util.Xml;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -21,35 +25,85 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_LOCALE;
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH;
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH;
 
-public class TranslatedStrings implements IStringTranslator {
+public class TranslatedStrings implements IStringTranslator, ILocaleProvider, Parcelable {
 
     private Map<String,String> strings = new HashMap<>();
     private boolean loaded = false;
+    private Locale locale = Locale.ENGLISH;
+    private final Object loadLock = new Object();
+
+    public TranslatedStrings(Context context, String assetPath, Locale locale) {
+        this.locale = locale;
+        AsyncTask.execute(() -> {
+            try (InputStream inputStream = context.getAssets().open(assetPath)) {
+                loadTranslatedStrings(inputStream);
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+                synchronized (loadLock) {
+                    loaded = true;
+                    loadLock.notifyAll();
+                }
+            }
+        });
+    }
+
+    public TranslatedStrings(Context context, Uri translationFileUri, Locale locale) {
+        this.locale = locale;
+        AsyncTask.execute(() -> {
+            try (InputStream inputStream = context.getContentResolver().openInputStream(translationFileUri)) {
+                loadTranslatedStrings(inputStream);
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+                synchronized (loadLock) {
+                    loaded = true;
+                    loadLock.notifyAll();
+                }
+            }
+        });
+    }
 
     public TranslatedStrings(final Context context, Intent intent) {
         if (intent != null) {
             final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
             final String translationAssetPath = intent.getStringExtra(EXTRA_TRANSLATION_ASSET_PATH);
+            Locale intentLocale = (Locale) intent.getSerializableExtra(EXTRA_LOCALE);
+            if (intentLocale != null) {
+                this.locale = intentLocale;
+            }
             if (translationFilePath != null) {
+                if (intentLocale == null) {
+                    setLocaleFromPath(translationFilePath);
+                }
                 AsyncTask.execute(() -> {
                     try {
                         loadTranslatedStrings(translationFilePath);
                     } catch (XmlPullParserException | IOException e) {
                         e.printStackTrace();
+                        synchronized (loadLock) {
+                            loaded = true;
+                            loadLock.notifyAll();
+                        }
                     }
                 });
                 return;
             }
             if (translationAssetPath != null) {
+                if (intentLocale == null) {
+                    setLocaleFromPath(translationFilePath);
+                }
                 AsyncTask.execute(() -> {
-                    try {
-                        InputStream inputStream = context.getAssets().open(translationAssetPath);
+                    try (InputStream inputStream = context.getAssets().open(translationAssetPath)) {
                         loadTranslatedStrings(inputStream);
                     } catch (IOException | XmlPullParserException e) {
                         e.printStackTrace();
+                        synchronized (loadLock) {
+                            loaded = true;
+                            loadLock.notifyAll();
+                        }
                     }
                 });
                 return;
@@ -111,12 +165,16 @@ public class TranslatedStrings implements IStringTranslator {
                     }
                     if (assetFile != null) {
                         final String asset = assetFile;
+                        this.locale = locale;
                         AsyncTask.execute(() -> {
-                            try {
-                                InputStream inputStream = context.getAssets().open(asset);
+                            try (InputStream inputStream = context.getAssets().open(asset)) {
                                 loadTranslatedStrings(inputStream);
                             } catch (IOException | XmlPullParserException e) {
                                 e.printStackTrace();
+                                synchronized (loadLock) {
+                                    loaded = true;
+                                    loadLock.notifyAll();
+                                }
                             }
                         });
                         return;
@@ -126,9 +184,33 @@ public class TranslatedStrings implements IStringTranslator {
                 }
             }
         }
-        synchronized (this) {
+        synchronized (loadLock) {
             loaded = true;
-            notifyAll();
+            loadLock.notifyAll();
+        }
+    }
+
+    private void setLocaleFromPath(String path) {
+        String filename = new File(path).getName();
+        int dotIndex = filename.lastIndexOf(".");
+        if (dotIndex > -1) {
+            filename = filename.substring(0, dotIndex);
+        }
+        int underscoreIndex = filename.indexOf("_");
+        String language = null;
+        String country = null;
+        if (underscoreIndex > -1) {
+            language = filename.substring(0, underscoreIndex);
+            if (filename.length() > underscoreIndex+1) {
+                country = filename.substring(underscoreIndex + 1);
+            }
+        } else {
+            language = filename;
+        }
+        if (country != null) {
+            this.locale = new Locale(language, country);
+        } else {
+            this.locale = new Locale(language);
         }
     }
 
@@ -141,13 +223,9 @@ public class TranslatedStrings implements IStringTranslator {
 
     @WorkerThread
     public void loadTranslatedStrings(InputStream inputStream) throws IOException, XmlPullParserException {
-        try {
-            XmlPullParser parser = Xml.newPullParser();
-            parser.setInput(inputStream, null);
-            loadTranslatedStrings(parser);
-        } finally {
-            inputStream.close();
-        }
+        XmlPullParser parser = Xml.newPullParser();
+        parser.setInput(inputStream, null);
+        loadTranslatedStrings(parser);
     }
 
     @WorkerThread
@@ -163,17 +241,15 @@ public class TranslatedStrings implements IStringTranslator {
                 String name = parser.getName();
                 if ("string".equalsIgnoreCase(name)) {
                     Map.Entry<String, String> entry = readTranslation(parser);
-                    synchronized (this) {
-                        strings.put(entry.getKey(), entry.getValue());
-                    }
+                    strings.put(entry.getKey(), entry.getValue());
                 } else {
                     skip(parser);
                 }
             }
         } finally {
-            synchronized (this) {
+            synchronized (loadLock) {
                 loaded = true;
-                notifyAll();
+                loadLock.notifyAll();
             }
         }
     }
@@ -183,13 +259,15 @@ public class TranslatedStrings implements IStringTranslator {
     }
 
     @Override
-    public synchronized  @NonNull String getTranslatedString(@NonNull String original, Object ...args) {
-        while (!loaded) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
+    public  @NonNull String getTranslatedString(@NonNull String original, Object ...args) {
+        synchronized (loadLock) {
+            while (!loaded) {
+                try {
+                    loadLock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
+                }
             }
         }
         if (strings.containsKey(original)) {
@@ -251,6 +329,64 @@ public class TranslatedStrings implements IStringTranslator {
             }
         }
     }
+
+    @Override
+    public Locale getLocale() {
+        return locale;
+    }
+
+    //endregion
+
+    //region Parcelable
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        synchronized (loadLock) {
+            while (!loaded) {
+                try {
+                    loadLock.wait();
+                } catch (InterruptedException ignore) {
+                }
+            }
+        }
+        parcel.writeSerializable(locale);
+        parcel.writeInt(strings.size());
+        for (Map.Entry<String,String> entry : strings.entrySet()) {
+            parcel.writeString(entry.getKey());
+            parcel.writeString(entry.getValue());
+        }
+    }
+
+    protected TranslatedStrings(Parcel in) {
+        locale = (Locale) in.readSerializable();
+        int stringCount = in.readInt();
+        for (int i=0; i<stringCount; i++) {
+            String key = in.readString();
+            String value = in.readString();
+            strings.put(key, value);
+        }
+        synchronized (loadLock) {
+            loaded = true;
+            loadLock.notifyAll();
+        }
+    }
+
+    public static final Creator<TranslatedStrings> CREATOR = new Creator<TranslatedStrings>() {
+        @Override
+        public TranslatedStrings createFromParcel(Parcel in) {
+            return new TranslatedStrings(in);
+        }
+
+        @Override
+        public TranslatedStrings[] newArray(int size) {
+            return new TranslatedStrings[size];
+        }
+    };
 
     //endregion
 }
