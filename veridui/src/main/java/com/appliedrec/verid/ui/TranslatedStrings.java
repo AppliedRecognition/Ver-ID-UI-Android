@@ -29,6 +29,7 @@ import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_LOCALE;
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH;
 import static com.appliedrec.verid.ui.VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH;
 
+@SuppressWarnings("WeakerAccess")
 public class TranslatedStrings implements IStringTranslator, ILocaleProvider, Parcelable {
 
     private Map<String,String> strings = new HashMap<>();
@@ -197,7 +198,7 @@ public class TranslatedStrings implements IStringTranslator, ILocaleProvider, Pa
             filename = filename.substring(0, dotIndex);
         }
         int underscoreIndex = filename.indexOf("_");
-        String language = null;
+        String language;
         String country = null;
         if (underscoreIndex > -1) {
             language = filename.substring(0, underscoreIndex);

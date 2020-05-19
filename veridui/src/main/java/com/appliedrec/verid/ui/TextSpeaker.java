@@ -72,7 +72,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
     private SpeechProgressListener listener;
     private final Object ttsLock = new Object();
 
-    private UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
+    private final UtteranceProgressListener utteranceProgressListener = new UtteranceProgressListener() {
         @Override
         public void onStart(String s) {
 
@@ -104,6 +104,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @param context Context for the speaker
      * @since 1.21.0
      */
+    @SuppressWarnings("WeakerAccess")
     public TextSpeaker(Context context) {
         consumerExecutor = Executors.newSingleThreadExecutor();
         producerExecutor = Executors.newSingleThreadExecutor();
@@ -132,11 +133,15 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
             }
             speak();
         }
-        if (text != null && !text.equalsIgnoreCase(lastSpokenText)) {
-            synchronized (textLock) {
-                this.text = text;
-                this.locale = locale;
-                textLock.notifyAll();
+        if (text != null) {
+            if (!text.equalsIgnoreCase(lastSpokenText)) {
+                synchronized (textLock) {
+                    this.text = text;
+                    this.locale = locale;
+                    textLock.notifyAll();
+                }
+            } else if (listener != null) {
+                listener.onSpoken(this, text);
             }
         }
     }

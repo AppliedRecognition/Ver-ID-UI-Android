@@ -94,7 +94,9 @@ public class ResultFragment extends Fragment implements IResultFragment {
                 tipsButton.setVisibility(View.VISIBLE);
                 tipsButton.setOnClickListener(v -> {
                     Intent tipsIntent = new Intent(getContext(), TipsActivity.class);
-                    tipsIntent.putExtras(getActivity().getIntent());
+                    if (getActivity() != null && getActivity().getIntent() != null) {
+                        tipsIntent.putExtras(getActivity().getIntent());
+                    }
                     startActivity(tipsIntent);
                 });
             }

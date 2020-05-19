@@ -1,10 +1,12 @@
-package com.appliedrec.verid.sample;
+package com.appliedrec.verid.sample.sharing;
 
 import android.graphics.Bitmap;
 
 import com.appliedrec.verid.core.RecognizableSubject;
+import com.google.gson.annotations.JsonAdapter;
 
-class RegistrationData {
+@JsonAdapter(RegistrationDataJsonAdapter.class)
+public class RegistrationData {
 
     private RecognizableSubject[] faceTemplates;
     private Bitmap profilePicture;

@@ -52,8 +52,8 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
     }
 
     @Override
-    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, EulerAngle offsetAngleFromBearing) {
-        super.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+    public void drawFaceFromResult(FaceDetectionResult faceDetectionResult, VerIDSessionResult sessionResult, RectF defaultFaceBounds, @Nullable EulerAngle offsetAngleFromBearing, String labelText) {
+        super.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing, labelText);
         if (getDelegate() == null) {
             return;
         }

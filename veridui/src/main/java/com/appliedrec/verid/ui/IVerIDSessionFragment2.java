@@ -3,12 +3,12 @@ package com.appliedrec.verid.ui;
 import android.graphics.RectF;
 
 import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
 
 import com.appliedrec.verid.core.EulerAngle;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.VerIDSessionResult;
 
+@SuppressWarnings("WeakerAccess")
 public interface IVerIDSessionFragment2 extends IVerIDSessionFragment {
     /**
      * Called when the session produces an interim session result from a face detection result.

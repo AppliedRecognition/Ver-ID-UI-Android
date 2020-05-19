@@ -6,6 +6,7 @@ import java.io.File;
  * Video recorder interface
  * @since 1.17.0
  */
+@SuppressWarnings("WeakerAccess")
 public interface IVideoRecorder {
 
     /**

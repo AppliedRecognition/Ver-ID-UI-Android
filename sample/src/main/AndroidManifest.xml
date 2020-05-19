@@ -21,10 +21,31 @@
         <activity android:name=".ErrorActivity" />
         <activity android:name=".IntroActivity" />
         <activity android:name=".RegisteredUserActivity" />
-        <activity android:name=".SettingsActivity" />
+        <activity android:name=".preferences.SettingsActivity" />
+        <activity android:name=".SessionResultActivity" />
+        <activity android:name=".sharing.RegistrationImportReviewActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <data android:mimeType="application/verid-registration" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <meta-data
             android:name="com.appliedrec.verid.password"
             android:value="e422e5ce-7d45-4df6-be56-1c8132c592e4" />
+
+        <provider
+            android:name=".sharing.SampleAppFileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
     </application>
 
 </manifest>

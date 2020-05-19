@@ -29,6 +29,7 @@ public class TipFragment extends Fragment {
         return tipFragment;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static View createView(LayoutInflater inflater, ViewGroup container, int tipIndex, IStringTranslator translator) {
         int imgSrc;
         String tipText;

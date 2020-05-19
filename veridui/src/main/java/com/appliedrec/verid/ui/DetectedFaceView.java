@@ -23,11 +23,10 @@ DetectedFaceView extends View {
     private Paint landmarkPaint;
     private RectF faceRect;
     private RectF templateRect;
-    private RectF viewRect = new RectF();
+    private final RectF viewRect = new RectF();
     private Double angle;
     private Double distance;
     private PointF[] landmarks;
-    private float landmarkRadius;
     private final Path landmarkPath = new Path();
     private final Path path = new Path();
     private final Path arrowPath = new Path();
@@ -76,6 +75,7 @@ DetectedFaceView extends View {
             templatePath.addOval(templateRect, Path.Direction.CCW);
             canvas.drawPath(templatePath, faceTemplatePaint);
         }
+        float landmarkRadius;
         if (faceRect != null) {
             landmarkRadius = faceRect.width() * 0.01f;
             strokePaint.setStrokeWidth(faceRect.width() * 0.038f);

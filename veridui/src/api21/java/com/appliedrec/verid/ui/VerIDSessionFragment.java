@@ -3,7 +3,6 @@ package com.appliedrec.verid.ui;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
@@ -242,9 +241,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         }
         try {
             faceBoundsMatrix.mapRect(ovalBounds);
-            if (cutoutBounds != null) {
-                faceBoundsMatrix.mapRect(cutoutBounds);
-            }
+            faceBoundsMatrix.mapRect(cutoutBounds);
             int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
             int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
             instructionTextView.setText(labelText);
@@ -325,9 +322,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         }
         try {
             faceBoundsMatrix.mapRect(ovalBounds);
-            if (cutoutBounds != null) {
-                faceBoundsMatrix.mapRect(cutoutBounds);
-            }
+            faceBoundsMatrix.mapRect(cutoutBounds);
             int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
             int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus(), sessionResult.getError());
             instructionTextView.setText(labelText);
@@ -499,7 +494,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        if (imageProcessingExecutor != null && imageProcessingExecutor.getActiveCount() == 0 && imageProcessingExecutor.getQueue().isEmpty()) {
+        if (imageProcessingExecutor.getActiveCount() == 0 && imageProcessingExecutor.getQueue().isEmpty()) {
             int rotation = textureView.getDisplay().getRotation();
             int surfaceRotationDegrees;
             switch (rotation) {
@@ -547,7 +542,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
      * @return Transformation matrix
      * @since 1.0.0
      */
-    public Matrix imageScaleTransformAtImageSize(com.appliedrec.verid.core.Size size) throws Exception {
+    public Matrix imageScaleTransformAtImageSize(com.appliedrec.verid.core.Size size) {
         return faceBoundsMatrix;
     }
 
@@ -564,6 +559,10 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             return;
         }
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        if (manager == null) {
+            sessionException = new Exception("Camera manager unreachable");
+            return;
+        }
         try {
             if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
                 throw new TimeoutException("Time out waiting to acquire camera lock.");
@@ -655,7 +654,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     }
 
 
-    protected Comparator<Size> videoSizeComparator = new Comparator<Size>() {
+    protected final Comparator<Size> videoSizeComparator = new Comparator<Size>() {
 
         private boolean is4x3(Size size) {
             return size.getWidth() == size.getHeight() * 4 / 3;

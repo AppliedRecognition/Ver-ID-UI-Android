@@ -1,14 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="pose_count_values">
-        <item>0</item>
         <item>1</item>
         <item>2</item>
         <item>3</item>
-        <item>4</item>
     </string-array>
     <string-array name="registration_face_count_values">
         <item>1</item>
         <item>3</item>
+    </string-array>
+    <string-array name="confidence_threshold_values">
+        <item>-0.5</item>
+        <item>0.0</item>
+    </string-array>
+    <string-array name="yaw_thresholds">
+        <item>12.0</item>
+        <item>15.0</item>
+        <item>18.0</item>
+        <item>21.0</item>
+        <item>24.0</item>
+    </string-array>
+    <string-array name="pitch_thresholds">
+        <item>10.0</item>
+        <item>12.0</item>
+        <item>15.0</item>
+        <item>18.0</item>
+        <item>21.0</item>
+    </string-array>
+    <string-array name="auth_threshold_values">
+        <item>3.0</item>
+        <item>3.5</item>
+        <item>4.0</item>
+        <item>4.5</item>
+        <item>5.0</item>
+    </string-array>
+    <string-array name="security_profile_presets">
+        <item>Low</item>
+        <item>Normal</item>
+        <item>High</item>
+    </string-array>
+    <string-array name="face_detection_profile_presets">
+        <item>Permissive</item>
+        <item>Normal</item>
+        <item>Restrictive</item>
+    </string-array>
+    <string-array name="face_template_extraction_thresholds">
+        <item>5.0</item>
+        <item>6.0</item>
+        <item>7.0</item>
+        <item>8.0</item>
+        <item>9.0</item>
+    </string-array>
+    <string-array name="pose_count_titles">
+        <item>1 pose</item>
+        <item>2 poses</item>
+        <item>3 poses</item>
+    </string-array>
+    <string-array name="registration_face_count_titles">
+        <item>1 face</item>
+        <item>3 faces</item>
     </string-array>
 </resources>

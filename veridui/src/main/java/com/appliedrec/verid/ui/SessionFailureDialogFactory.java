@@ -1,7 +1,6 @@
 package com.appliedrec.verid.ui;
 
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.os.Build;
