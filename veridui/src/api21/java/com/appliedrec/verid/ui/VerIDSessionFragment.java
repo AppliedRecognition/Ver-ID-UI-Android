@@ -154,6 +154,7 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
         super.onDestroy();
         closePreviewSession();
         stopRecordingVideo();
+        closeCamera();
     }
 
     @Override
@@ -750,6 +751,21 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
             }
             captureSession.close();
             captureSession = null;
+        }
+    }
+
+    @MainThread
+    private void closeCamera() {
+        try {
+            if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+                if (cameraDevice != null) {
+                    cameraDevice.close();
+                    cameraDevice = null;
+                }
+                cameraOpenCloseLock.release();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
