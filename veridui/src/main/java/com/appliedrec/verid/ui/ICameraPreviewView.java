@@ -5,6 +5,7 @@ import android.view.ViewGroup;
 
 public interface ICameraPreviewView {
 
+    @SuppressWarnings("EmptyMethod")
     interface CameraPreviewViewListener {
         void onCameraPreviewStarted(Camera camera);
         void onCameraReleased(Camera camera);

@@ -4,9 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,22 +13,34 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
 import com.appliedrec.verid.core.Bearing;
 import com.appliedrec.verid.core.VerIDSessionResult;
 
+import java.util.Locale;
+
 public class ResultFragment extends Fragment implements IResultFragment {
 
+    private static final String ARG_SPEAK_TEXT = "speakText";
     private ResultFragmentListener resultFragmentListener;
     private VerIDSessionResult sessionResult;
     private IStringTranslator stringTranslator;
 
     public static ResultFragment newInstance(VerIDSessionResult result, String text) {
+        return ResultFragment.newInstance(result, text, false);
+    }
+
+    public static ResultFragment newInstance(VerIDSessionResult result, String text, boolean speakText) {
         ResultFragment fragment = new ResultFragment();
         Bundle args = new Bundle();
         args.putParcelable(VerIDSessionActivity.EXTRA_RESULT, result);
         if (text != null) {
             args.putString(Intent.EXTRA_TEXT, text);
         }
+        args.putBoolean(ARG_SPEAK_TEXT, speakText);
         fragment.setArguments(args);
         return fragment;
     }
@@ -85,7 +94,9 @@ public class ResultFragment extends Fragment implements IResultFragment {
                 tipsButton.setVisibility(View.VISIBLE);
                 tipsButton.setOnClickListener(v -> {
                     Intent tipsIntent = new Intent(getContext(), TipsActivity.class);
-                    tipsIntent.putExtras(getActivity().getIntent());
+                    if (getActivity() != null && getActivity().getIntent() != null) {
+                        tipsIntent.putExtras(getActivity().getIntent());
+                    }
                     startActivity(tipsIntent);
                 });
             }
@@ -101,6 +112,13 @@ public class ResultFragment extends Fragment implements IResultFragment {
         }
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
+        }
+        if (getArguments() != null && getArguments().getBoolean(ARG_SPEAK_TEXT, false) && context instanceof ITextSpeaker) {
+            Locale locale = null;
+            if (stringTranslator != null && stringTranslator instanceof ILocaleProvider) {
+                locale = ((ILocaleProvider)stringTranslator).getLocale();
+            }
+            ((ITextSpeaker)context).speak(getArguments().getString(Intent.EXTRA_TEXT), locale, false);
         }
     }
 

@@ -3,7 +3,6 @@ package com.appliedrec.verid.ui;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -14,7 +13,7 @@ import androidx.appcompat.app.AlertDialog;
 /**
  * Shows an error message dialog.
  */
-public class CameraPermissionErrorDialog extends DialogFragment {
+class CameraPermissionErrorDialog extends DialogFragment {
 
     private IStringTranslator translator;
 

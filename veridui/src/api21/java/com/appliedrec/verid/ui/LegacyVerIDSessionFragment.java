@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -61,6 +62,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     private ThreadPoolExecutor previewProcessingExecutor;
     private VerIDSessionFragmentDelegate delegate;
     private IStringTranslator stringTranslator;
+    private ITextSpeaker textSpeaker;
     private int cameraOrientation = 0;
     private int deviceOrientation = 0;
     private Camera.Size previewSize;
@@ -68,13 +70,13 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     private int exifOrientation = ExifInterface.ORIENTATION_NORMAL;
     private Camera camera;
 
-    protected TextView instructionTextView;
-    protected View instructionView;
+    private TextView instructionTextView;
+    private View instructionView;
 
     private static final int IMAGE_FORMAT_CERIDIAN_NV12 = 0x103;
-    private int backgroundColour = 0x80000000;
+    private final int backgroundColour = 0x80000000;
     private boolean isCameraStartRequested = false;
-    private SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
+    private final SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
 
     //region Fragment lifecycle
 
@@ -112,13 +114,16 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof VerIDSessionFragmentDelegate) {
             delegate = (VerIDSessionFragmentDelegate)context;
         }
         if (context instanceof IStringTranslator) {
             stringTranslator = (IStringTranslator) context;
+        }
+        if (context instanceof ITextSpeaker) {
+            textSpeaker = (ITextSpeaker) context;
         }
     }
 
@@ -127,6 +132,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         super.onDetach();
         delegate = null;
         stringTranslator = null;
+        textSpeaker = null;
     }
 
     @Override
@@ -149,26 +155,23 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         if (previewProcessingExecutor == null) {
             return;
         }
-        previewProcessingExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (LegacyVerIDSessionFragment.this.camera != null) {
-                    LegacyVerIDSessionFragment.this.camera.release();
-                    LegacyVerIDSessionFragment.this.camera = null;
-                }
+        previewProcessingExecutor.execute(() -> {
+            if (LegacyVerIDSessionFragment.this.camera != null) {
+                LegacyVerIDSessionFragment.this.camera.release();
+                LegacyVerIDSessionFragment.this.camera = null;
             }
         });
     }
 
     //endregion
 
-    protected final void runOnUIThread(Runnable runnable) {
+    final void runOnUIThread(Runnable runnable) {
         new Handler(Looper.getMainLooper()).post(runnable);
     }
 
     //region Camera
 
-    protected ICameraPreviewView createCameraView() {
+    private ICameraPreviewView createCameraView() {
         if (getCameraId() == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             return new CameraTextureView(getActivity(), null);
         } else {
@@ -214,13 +217,20 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         }
     }
 
-    protected void setupCamera() {
+    private void setupCamera() {
         final Activity activity = getActivity();
         if (activity == null || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && activity.isDestroyed()) || activity.isFinishing() || camera == null) {
             return;
         }
+        if (getView() == null) {
+            return;
+        }
         final Point displaySize = new Point(getView().getWidth(), getView().getHeight());
-        final Display display = ((WindowManager) activity.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        WindowManager windowManager = (WindowManager) activity.getSystemService(Context.WINDOW_SERVICE);
+        if (windowManager == null) {
+            return;
+        }
+        final Display display = windowManager.getDefaultDisplay();
         final int rotation = display.getRotation();
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
             return;
@@ -339,7 +349,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         });
     }
 
-    protected Camera openCamera() {
+    private Camera openCamera() {
         int numberOfCameras = Camera.getNumberOfCameras();
         Camera.CameraInfo info = new Camera.CameraInfo();
         for (int i = 0; i < numberOfCameras; i++) {
@@ -363,7 +373,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         return 0;
     }
 
-    protected int getCameraId() {
+    private int getCameraId() {
         if (getDelegate() != null && getDelegate().getSessionSettings().getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK) {
             return Camera.CameraInfo.CAMERA_FACING_BACK;
         }
@@ -406,11 +416,12 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     }
 
     // Override if you need to update camera parameters while the camera is being initialized
-    protected void updateCameraParams(Camera.Parameters params) {
+    @SuppressWarnings("EmptyMethod")
+    private void updateCameraParams(Camera.Parameters params) {
     }
 
 
-    protected void setPreviewCallbackWithBuffer() {
+    private void setPreviewCallbackWithBuffer() {
         camera.addCallbackBuffer(new byte[getPreviewBufferLength()]);
         camera.setPreviewCallbackWithBuffer(LegacyVerIDSessionFragment.this);
     }
@@ -423,7 +434,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         }
     }
 
-    protected final void releaseCamera() {
+    private void releaseCamera() {
         isCameraStartRequested = false;
     }
 
@@ -435,7 +446,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
      * @return Transformation matrix
      * @since 1.0.0
      */
-    public Matrix imageScaleTransformAtImageSize(Size size) {
+    private Matrix imageScaleTransformAtImageSize(Size size) {
         float width = (float)viewOverlays.getWidth();
         float height = (float)viewOverlays.getHeight();
         float viewAspectRatio = width / height;
@@ -459,7 +470,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         return matrix;
     }
 
-    protected VerIDSessionFragmentDelegate getDelegate() {
+    VerIDSessionFragmentDelegate getDelegate() {
         return delegate;
     }
 
@@ -470,7 +481,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
     public void startCamera() {
         addCameraView();
         if (previewProcessingExecutor == null || previewProcessingExecutor.isShutdown()) {
-            previewProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+            previewProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
         }
         previewProcessingExecutor.execute(() -> {
             try {
@@ -559,13 +570,23 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
         instructionTextView.setBackgroundColor(colour);
         instructionView.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
 
+        if (getDelegate().getSessionSettings().shouldSpeakPrompts() && labelText != null && getContext() != null) {
+            Locale locale = null;
+            if (stringTranslator != null && stringTranslator instanceof ILocaleProvider) {
+                locale = ((ILocaleProvider)stringTranslator).getLocale();
+            }
+            if (textSpeaker != null) {
+                textSpeaker.speak(labelText, locale, false);
+            }
+        }
+
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(instructionView.getLayoutParams());
         params.topMargin = (int)(ovalBounds.top - instructionView.getHeight() - getResources().getDisplayMetrics().density * 16f);
         instructionView.setLayoutParams(params);
         setTextViewColour(colour, textColour);
         Double angle = null;
         Double distance = null;
-        if (faceAngle != null && offsetAngleFromBearing != null && showArrow) {
+        if (faceAngle != null && offsetAngleFromBearing != null) {
             angle = Math.atan2(offsetAngleFromBearing.getPitch(), offsetAngleFromBearing.getYaw());
             distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0-offsetAngleFromBearing.getPitch()) * 2;
         }
@@ -604,7 +625,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
      * @return Integer representing a colour in ARGB space
      * @since 1.6.0
      */
-    public int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
+    private int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
         if (resultError != null) {
             return 0xFFFF0000;
         }
@@ -623,7 +644,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
      * @return Integer representing a colour in ARGB space
      * @since 1.6.0
      */
-    public int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
+    private int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus, @Nullable Exception resultError) {
         if (resultError != null) {
             return 0xFFFFFFFF;
         }
@@ -686,7 +707,7 @@ public class LegacyVerIDSessionFragment extends Fragment implements IVerIDSessio
                 YuvImage image = new YuvImage(imageData, previewFormat, previewSize.width, previewSize.height, null);
                 try {
                     imageQueue.put(new VerIDImage(image, exifOrientation));
-                } catch (Exception e) {
+                } catch (Exception ignored) {
                 }
             });
         }

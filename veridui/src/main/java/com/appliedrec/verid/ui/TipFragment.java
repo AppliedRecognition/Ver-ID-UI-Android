@@ -2,16 +2,17 @@ package com.appliedrec.verid.ui;
 
 import android.content.Context;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 
 /**
  * Created by jakub on 23/08/2017.
@@ -28,16 +29,12 @@ public class TipFragment extends Fragment {
         return tipFragment;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static View createView(LayoutInflater inflater, ViewGroup container, int tipIndex, IStringTranslator translator) {
-        View view = inflater.inflate(R.layout.fragment_guide, container, false);
-        ((ViewGroup)view.findViewById(R.id.hero)).removeView(view.findViewById(R.id.textureView));
-        View lineView = new CrossOutView(view.getContext());
-        FrameLayout.LayoutParams lineLayoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        ((FrameLayout)view.findViewById(R.id.hero)).addView(lineView, 1, lineLayoutParams);
         int imgSrc;
         String tipText;
         if (translator == null) {
-            translator = new TranslatedStrings(view.getContext(), null);
+            translator = new TranslatedStrings(inflater.getContext(), null);
         }
         switch (tipIndex) {
             case 1:
@@ -52,7 +49,16 @@ public class TipFragment extends Fragment {
                 imgSrc = R.mipmap.tip_sharp_light;
                 tipText = translator.getTranslatedString("Avoid standing in a light that throws sharp shadows like in sharp sunlight or directly under a lamp.");
         }
-        ((TextView) view.findViewById(R.id.text)).setText(tipText);
+        return TipFragment.createView(inflater, container, imgSrc, tipText);
+    }
+
+    public static View createView(LayoutInflater inflater, ViewGroup container, @DrawableRes int imgSrc, String text) {
+        View view = inflater.inflate(R.layout.fragment_guide, container, false);
+        ((ViewGroup)view.findViewById(R.id.hero)).removeView(view.findViewById(R.id.textureView));
+        View lineView = new CrossOutView(view.getContext());
+        FrameLayout.LayoutParams lineLayoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        ((FrameLayout)view.findViewById(R.id.hero)).addView(lineView, 1, lineLayoutParams);
+        ((TextView) view.findViewById(R.id.text)).setText(text);
         ((ImageView) view.findViewById(R.id.imageView)).setImageResource(imgSrc);
         view.findViewById(R.id.buttonLeft).setVisibility(View.GONE);
         view.findViewById(R.id.buttonRight).setVisibility(View.GONE);

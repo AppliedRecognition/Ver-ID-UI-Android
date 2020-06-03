@@ -20,7 +20,6 @@ import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core.AuthenticationSessionSettings;
 import com.appliedrec.verid.core.EulerAngle;
-import com.appliedrec.verid.core.Face;
 import com.appliedrec.verid.core.FaceAlignmentDetection;
 import com.appliedrec.verid.core.FaceDetectionResult;
 import com.appliedrec.verid.core.FaceDetectionServiceFactory;
@@ -44,6 +43,7 @@ import com.appliedrec.verid.core.VerIDSessionSettings;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -56,7 +56,7 @@ import java.util.concurrent.TimeoutException;
  * @since 1.0.0
  */
 @SuppressWarnings("unchecked")
-public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator {
+public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U extends Fragment & IVerIDSessionFragment> extends AppCompatActivity implements IImageProviderServiceFactory, IImageProviderService, SessionTaskDelegate, VerIDSessionFragmentDelegate, ResultFragmentListener, IStringTranslator, ILocaleProvider, ITextSpeaker {
 
     //region Public constants
     /**
@@ -83,6 +83,10 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
     public static final String EXTRA_TRANSLATION_FILE_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_FILE_PATH";
 
     public static final String EXTRA_TRANSLATION_ASSET_PATH = "com.appliedrec.verid.ui.EXTRA_TRANSLATION_ASSET_PATH";
+
+    public static final String EXTRA_TRANSLATION = "com.appliedrec.verid.ui.EXTRA_TRANSLATION";
+
+    public static final String EXTRA_LOCALE = "com.appliedrec.verid.ui.EXTRA_LOCALE";
     //endregion
 
     //region Other constants
@@ -111,7 +115,6 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(getContentViewId());
-//        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         Intent intent = getIntent();
         if (intent == null) {
             return;
@@ -121,7 +124,10 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
         if (getSessionSettings() == null) {
             return;
         }
-        translatedStrings = new TranslatedStrings(this, intent);
+        translatedStrings = intent.getParcelableExtra(EXTRA_TRANSLATION);
+        if (translatedStrings == null) {
+            translatedStrings = new TranslatedStrings(this, intent);
+        }
         try {
             if (getEnvironment() == null) {
                 this.environment = VerID.getInstance(instanceId);
@@ -138,6 +144,15 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
         } catch (Exception e) {
             finishWithError(e);
         }
+        if (getSessionSettings().shouldSpeakPrompts()) {
+            TextSpeaker.setup(this);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        TextSpeaker.destroy();
     }
 
     @Override
@@ -251,11 +266,11 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
             startTime = System.currentTimeMillis();
             faceDetectionService = makeFaceDetectionServiceFactory().makeFaceDetectionService(getSessionSettings());
             IResultEvaluationService resultEvaluationService = makeResultEvaluationServiceFactory().makeResultEvaluationService(getSessionSettings());
-//            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
-//            if (executor == null || executor.isShutdown()) {
-//                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
-//            }
-//            sessionTask.executeOnExecutor(executor, this);
+            SessionTask sessionTask = new SessionTask(getEnvironment(), makeImageProviderService(), faceDetectionService, resultEvaluationService, makeImageWriterServiceFactory().makeImageWriterService());
+            if (executor == null || executor.isShutdown()) {
+                executor = new ThreadPoolExecutor(0, 1, Integer.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+            }
+            sessionTask.executeOnExecutor(executor, this);
         } catch (Exception e) {
             finishWithError(e);
         }
@@ -279,7 +294,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
             result.putExtra(EXTRA_ERROR, sessionResult.getError());
         }
         result.putExtra(EXTRA_RESULT, sessionResult);
-//        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
+        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -298,7 +313,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
         Intent result = new Intent();
         result.putExtra(EXTRA_ERROR, error);
         result.putExtra(EXTRA_RESULT, new VerIDSessionResult(error));
-//        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
+        result.putExtra(EXTRA_SETTINGS, getSessionSettings());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -345,6 +360,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
      * @param faceDetectionResult Face detection result that was used to generate the session result
      * @since 1.0.0
      */
+    @Override
     @MainThread
     public void onProgress(SessionTask sessionTask, VerIDSessionResult sessionResult, FaceDetectionResult faceDetectionResult) {
         if (isExecutorShutdown()) {
@@ -361,12 +377,37 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED) {
             offsetAngleFromBearing = faceDetectionService.getAngleBearingEvaluation().offsetFromAngleToBearing(faceDetectionResult.getFaceAngle() != null ? faceDetectionResult.getFaceAngle() : new EulerAngle(), faceDetectionResult.getRequestedBearing());
         }
+        String labelText = null;
         if (sessionFragment != null) {
-            sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+            if (sessionFragment instanceof IVerIDSessionFragment2) {
+                if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
+                    labelText = getTranslatedString("Please wait");
+                } else {
+                    switch (faceDetectionResult.getStatus()) {
+                        case FACE_FIXED:
+                        case FACE_ALIGNED:
+                            labelText = getTranslatedString("Great, hold it");
+                            break;
+                        case FACE_MISALIGNED:
+                            labelText = getTranslatedString("Slowly turn to follow the arrow");
+                            break;
+                        case FACE_TURNED_TOO_FAR:
+                            labelText = null;
+                            break;
+                        default:
+                            labelText = getTranslatedString("Align your face with the oval");
+                    }
+                }
+                ((IVerIDSessionFragment2)sessionFragment).drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing, labelText);
+            } else {
+                sessionFragment.drawFaceFromResult(faceDetectionResult, sessionResult, defaultFaceBounds, offsetAngleFromBearing);
+            }
         }
         if (sessionResult.getError() != null && retryCount < sessionSettings.getMaxRetryCount() && showFailureDialog(faceDetectionResult, sessionResult)) {
             shutDownExecutor();
             clearCameraOverlays();
+        } else if (labelText != null) {
+            speak(labelText, getLocale(), false);
         }
     }
 
@@ -377,6 +418,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
      * @param sessionResult Result of the task
      * @since 1.0.0
      */
+    @Override
     public void onComplete(final SessionTask sessionTask, final VerIDSessionResult sessionResult) {
         runOnUiThread(() -> {
             if (sessionFragment != null) {
@@ -483,6 +525,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
         }
         shutDownExecutor();
         dialog.show();
+        speak(message, getLocale(), false);
         return true;
     }
 
@@ -505,7 +548,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
      * @return Result evaluation service factory
      * @since 1.0.0
      */
-    protected IResultEvaluationServiceFactory<T, Face> makeResultEvaluationServiceFactory() {
+    protected IResultEvaluationServiceFactory<T> makeResultEvaluationServiceFactory() {
         return new ResultEvaluationServiceFactory<>(getEnvironment());
     }
 
@@ -557,17 +600,11 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
     }
 
     @Override
-    public void startCollectingImages() {
-
-    }
-
-    @Override
-    public void stopCollectingImages() {
-
-    }
-
-    public void setVerIDSessionSettings(VerIDSessionSettings settings) {
-
+    public int getOrientationOfCamera() {
+        if (sessionFragment != null) {
+            return sessionFragment.getOrientationOfCamera();
+        }
+        return 0;
     }
 
     //endregion
@@ -630,7 +667,8 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
                 getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Failed"));
             }
         }
-        return ResultFragment.newInstance(sessionResult, result);
+        boolean speakText = getSessionSettings().shouldSpeakPrompts();
+        return ResultFragment.newInstance(sessionResult, result, speakText);
     }
 
     //endregion
@@ -720,6 +758,36 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings, U extends Frag
     @Override
     public void onResultFragmentDismissed(IResultFragment resultFragment) {
         finishWithResult(resultFragment.getSessionResult());
+    }
+
+    //endregion
+
+    //region Locale provider
+
+    /**
+     * Get the locale of the translated strings associated with this activity
+     * @return Locale
+     * @since 1.21.0
+     */
+    @Override
+    public Locale getLocale() {
+        return translatedStrings.getLocale();
+    }
+
+    //endregion
+
+    //region Text speaker
+
+    /**
+     * Speak text
+     * @param text Text to be spoken
+     * @param locale Locale of the text
+     * @param interrupt {@literal true} to interrupt current speech
+     * @since 1.21.0
+     */
+    @Override
+    public void speak(String text, Locale locale, boolean interrupt) {
+        TextSpeaker.getInstance().speak(text, locale, interrupt);
     }
 
     //endregion

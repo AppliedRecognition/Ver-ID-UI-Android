@@ -6,12 +6,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
 import androidx.annotation.Nullable;
-
-import android.graphics.Xfermode;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -23,19 +19,18 @@ public class
 DetectedFaceView extends View {
 
     private Paint strokePaint;
-    private Paint faceTemplateBackgroundPaint;
+    private Paint faceTemplatePaint;
     private Paint landmarkPaint;
     private RectF faceRect;
     private RectF templateRect;
+    private final RectF viewRect = new RectF();
     private Double angle;
     private Double distance;
     private PointF[] landmarks;
-    private float landmarkRadius;
     private final Path landmarkPath = new Path();
     private final Path path = new Path();
     private final Path arrowPath = new Path();
     private final Path templatePath = new Path();
-    private Paint faceTemplatePaint;
 
     public DetectedFaceView(Context context) {
         super(context);
@@ -49,22 +44,17 @@ DetectedFaceView extends View {
 
     private void init(Context context) {
         setWillNotDraw(false);
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-
         float screenDensity = context.getResources().getDisplayMetrics().density;
         strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         strokePaint.setStyle(Paint.Style.STROKE);
         strokePaint.setStrokeWidth(screenDensity * 8f);
         strokePaint.setStrokeCap(Paint.Cap.ROUND);
 
-        faceTemplateBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        faceTemplateBackgroundPaint.setStyle(Paint.Style.FILL);
-        faceTemplateBackgroundPaint.setColor(Color.argb(128, 0, 0, 0));
-
         faceTemplatePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        faceTemplatePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        faceTemplatePaint.setStyle(Paint.Style.FILL);
+        faceTemplatePaint.setColor(Color.argb(128, 0, 0, 0));
 
-        templatePath.setFillType(Path.FillType.WINDING);
+        templatePath.setFillType(Path.FillType.EVEN_ODD);
 
         landmarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         landmarkPaint.setStyle(Paint.Style.FILL);
@@ -79,19 +69,18 @@ DetectedFaceView extends View {
         templatePath.rewind();
         landmarkPath.rewind();
         if (templateRect != null) {
-            canvas.drawPaint(faceTemplateBackgroundPaint);
-            templatePath.addOval(templateRect, Path.Direction.CW);
+            viewRect.right = getWidth();
+            viewRect.top = getHeight();
+            templatePath.addRect(viewRect, Path.Direction.CCW);
+            templatePath.addOval(templateRect, Path.Direction.CCW);
             canvas.drawPath(templatePath, faceTemplatePaint);
         }
+        float landmarkRadius;
         if (faceRect != null) {
             landmarkRadius = faceRect.width() * 0.01f;
             strokePaint.setStrokeWidth(faceRect.width() * 0.038f);
             strokePaint.setShadowLayer(15, 0, 0, Color.argb(0x33, 0, 0, 0));
             path.addOval(faceRect, Path.Direction.CW);
-            if (templateRect == null) {
-                canvas.drawPaint(faceTemplateBackgroundPaint);
-                canvas.drawPath(path, faceTemplatePaint);
-            }
             canvas.drawPath(path, strokePaint);
             if (angle != null && distance != null) {
                 drawArrow(canvas, angle, distance);
@@ -117,7 +106,7 @@ DetectedFaceView extends View {
         this.faceRect = faceRect;
         this.templateRect = templateRect;
         this.strokePaint.setColor(faceRectColour);
-        this.faceTemplateBackgroundPaint.setColor(faceBackgroundColour);
+        this.faceTemplatePaint.setColor(faceBackgroundColour);
         this.angle = angle;
         this.distance = distance;
         postInvalidate();

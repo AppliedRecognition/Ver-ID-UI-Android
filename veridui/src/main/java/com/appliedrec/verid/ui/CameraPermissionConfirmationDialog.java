@@ -15,7 +15,7 @@ import androidx.fragment.app.DialogFragment;
 /**
  * Shows OK/Cancel confirmation dialog about camera permission.
  */
-public class CameraPermissionConfirmationDialog extends DialogFragment {
+class CameraPermissionConfirmationDialog extends DialogFragment {
 
     private IStringTranslator translator;
 
@@ -47,11 +47,7 @@ public class CameraPermissionConfirmationDialog extends DialogFragment {
                 .setMessage(translator.getTranslatedString("Camera used for face authentication"))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, VerIDSessionActivity.REQUEST_CAMERA_PERMISSION))
                 .setNegativeButton(android.R.string.cancel,
-                        (dialog, which) -> {
-                            if (activity != null) {
-                                activity.finish();
-                            }
-                        })
+                        (dialog, which) -> activity.finish())
                 .create();
     }
 }

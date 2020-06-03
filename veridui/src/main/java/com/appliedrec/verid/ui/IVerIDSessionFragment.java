@@ -13,6 +13,7 @@ import com.appliedrec.verid.core.VerIDSessionResult;
  * Interface that works with {@link VerIDSessionActivity}.
  * @since 1.0.0
  */
+@SuppressWarnings("WeakerAccess")
 public interface IVerIDSessionFragment extends IImageProviderService {
 
     /**
