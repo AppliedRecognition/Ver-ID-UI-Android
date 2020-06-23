@@ -2,13 +2,14 @@ package com.appliedrec.verid.sample.sharing;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.BuildConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,6 +24,8 @@ import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import io.reactivex.rxjava3.core.Single;
+
 public class SessionExport {
 
     private final VerIDSessionSettings sessionSettings;
@@ -35,14 +38,19 @@ public class SessionExport {
         this.environmentSettings = environmentSettings;
     }
 
-    @WorkerThread
-    public Intent createShareIntent(Context context) throws Exception {
-        Uri uri = createZipArchive(context);
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.setDataAndType(uri, context.getContentResolver().getType(uri));
-        intent.putExtra(Intent.EXTRA_STREAM, uri);
-        return intent;
+    public Single<Intent> createShareIntent(Context context) {
+        return Single.create(emitter -> {
+            try {
+                Uri uri = createZipArchive(context);
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.setDataAndType(uri, context.getContentResolver().getType(uri));
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                emitter.onSuccess(intent);
+            } catch (Exception e) {
+                emitter.onError(e);
+            }
+        });
     }
 
     @WorkerThread
@@ -71,24 +79,11 @@ public class SessionExport {
                     }
                 }
                 int i = 1;
-                for (Uri imageUri : sessionResult.getImageUris()) {
-                    String name = imageUri.getLastPathSegment();
-                    if (name == null) {
-                        continue;
-                    }
-                    String ext = name.substring(name.lastIndexOf(".")+1);
-                    try (InputStream inputStream = context.getContentResolver().openInputStream(imageUri)) {
-                        if (inputStream != null) {
-                            ZipEntry zipEntry = new ZipEntry("image" + (i++) + "." + ext);
-                            zipOutputStream.putNextEntry(zipEntry);
-                            byte[] buffer = new byte[512];
-                            int read;
-                            while ((read = inputStream.read(buffer, 0, buffer.length)) > 0) {
-                                zipOutputStream.write(buffer, 0, read);
-                            }
-                            zipOutputStream.closeEntry();
-                        }
-                    }
+                for (Bitmap bitmap : sessionResult.getImages()) {
+                    ZipEntry zipEntry = new ZipEntry("image" + (i++) + ".jpg");
+                    zipOutputStream.putNextEntry(zipEntry);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, zipOutputStream);
+                    zipOutputStream.closeEntry();
                 }
                 Gson gson = new GsonBuilder()
                         .registerTypeAdapter(VerIDSessionSettings.class, new SessionSettingsDataJsonAdapter())

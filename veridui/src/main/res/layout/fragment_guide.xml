@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/background_light">
+        android:background="@android:color/background_light">
 
         <TextureView
             android:visibility="gone"
@@ -36,7 +36,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:padding="@dimen/padding_default">
+            android:padding="16dp">
 
             <TextView
                 android:id="@+id/text"
@@ -50,7 +50,7 @@
             android:layout_height="wrap_content"
             android:gravity="right"
             android:orientation="horizontal"
-            android:padding="@dimen/padding_default">
+            android:padding="16dp">
 
             <Button
                 android:id="@+id/buttonLeft"
@@ -63,7 +63,7 @@
                 style="@style/Widget.AppCompat.Button.Borderless.Colored"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/padding_default" />
+                android:layout_marginLeft="16dp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

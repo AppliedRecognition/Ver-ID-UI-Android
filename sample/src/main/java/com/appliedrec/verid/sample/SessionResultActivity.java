@@ -1,68 +1,78 @@
 package com.appliedrec.verid.sample;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.Toast;
-
-import com.appliedrec.verid.core.FaceDetectionRecognitionSettings;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.sharing.EnvironmentSettings;
 import com.appliedrec.verid.sample.sharing.SessionExport;
-import com.appliedrec.verid.ui.VerIDSessionActivity;
+
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class SessionResultActivity extends AppCompatActivity implements IVerIDLoadObserver {
+
+    public static final String EXTRA_RESULT = "com.appliedrec.verid.EXTRA_RESULT";
+    public static final String EXTRA_SETTINGS = "com.appliedrec.verid.EXTRA_SETTINGS";
 
     private static final int REQUEST_CODE_SHARE = 1;
     private VerIDSessionResult sessionResult;
     private VerIDSessionSettings sessionSettings;
     private EnvironmentSettings environmentSettings;
+    private Disposable createIntentDisposable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_session_result);
-        sessionResult = getIntent().getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-        sessionSettings = getIntent().getParcelableExtra(VerIDSessionActivity.EXTRA_SETTINGS);
+        sessionResult = getIntent().getParcelableExtra(EXTRA_RESULT);
+        sessionSettings = getIntent().getParcelableExtra(EXTRA_SETTINGS);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (sessionResult != null) {
             if (sessionResult.getVideoUri() != null) {
                 transaction.add(R.id.content, SessionVideoFragment.newInstance(sessionResult.getVideoUri()));
             }
-            if (sessionResult.getAttachments().length > 0) {
+            if (sessionResult.getFaceCaptures().length > 0) {
                 transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Faces"));
-                transaction.add(R.id.content, SessionFacesFragment.newInstance(sessionResult.getAttachments()));
+                transaction.add(R.id.content, SessionFacesFragment.newInstance(sessionResult));
             }
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Result"));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Succeeded", sessionResult.getError() == null ? "Yes" : "No"));
-            if (sessionResult.getError() != null) {
-                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Error", sessionResult.getError().getLocalizedMessage()));
-            }
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Succeeded", sessionResult.getError().isPresent() ? "No" : "Yes"));
+            sessionResult.getError().ifPresent(error -> {
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Error", error.toString()));
+            });
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Started", sessionResult.getSessionStartTime().toString()));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format("%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format("%.01f faces/second", sessionResult.getFaceDetectionRate())));
         }
         if (sessionSettings != null) {
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Settings"));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format("%d seconds", sessionSettings.getExpiryTime()/1000)));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Number of results to collect", String.format("%d", sessionSettings.getNumberOfResultsToCollect())));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Using back camera", sessionSettings.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK ? "Yes" : "No"));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Maximum retry count", String.format("%d", sessionSettings.getMaxRetryCount())));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format("%d seconds", sessionSettings.getMaxDuration(TimeUnit.SECONDS))));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Number of results to collect", String.format("%d", sessionSettings.getNumberOfFacesToCapture())));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Using back camera", PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? "Yes" : "No"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Yaw threshold", String.format("%.01f", sessionSettings.getYawThreshold())));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pitch threshold", String.format("%.01f", sessionSettings.getPitchThreshold())));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Speak prompts", sessionSettings.shouldSpeakPrompts() ? "Yes" : "No"));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Speak prompts", PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false) ? "Yes" : "No"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face width", String.format("%.0f %%", sessionSettings.getFaceBoundsFraction().x * 100)));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face height", String.format("%.0f %%", sessionSettings.getFaceBoundsFraction().y * 100)));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pause duration", String.format("%.01f seconds", (float)sessionSettings.getPauseDuration()/1000f)));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pause duration", String.format("%.01f seconds", (float)sessionSettings.getPauseDuration(TimeUnit.MILLISECONDS)/1000f)));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face buffer size", String.format("%d", sessionSettings.getFaceBufferSize())));
         }
         if (environmentSettings != null) {
@@ -73,6 +83,15 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Confidence threshold", String.format("%.01f", environmentSettings.getConfidenceThreshold())));
         }
         transaction.commit();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (createIntentDisposable != null && !createIntentDisposable.isDisposed()) {
+            createIntentDisposable.dispose();
+        }
+        createIntentDisposable = null;
     }
 
     @Override
@@ -108,25 +127,17 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
 
     private void shareSession() {
         SessionExport sessionExport = new SessionExport(sessionSettings, sessionResult, environmentSettings);
-        AsyncTask.execute(() -> {
-            try {
-                Intent shareIntent = sessionExport.createShareIntent(this);
-                runOnUiThread(() -> {
-                    if (isDestroyed()) {
-                        return;
-                    }
-                    startActivityForResult(Intent.createChooser(shareIntent, "Share session"), REQUEST_CODE_SHARE);
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> {
-                    if (isDestroyed()) {
-                        return;
-                    }
-                    Toast.makeText(this, "Failed to create session archive", Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
+        createIntentDisposable = sessionExport.createShareIntent(this)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        shareIntent -> {
+                            startActivityForResult(Intent.createChooser(shareIntent, "Share session"), REQUEST_CODE_SHARE);
+                        },
+                        error -> {
+                            Toast.makeText(this, "Failed to create session archive", Toast.LENGTH_SHORT).show();
+                        }
+                );
     }
 
     @Override

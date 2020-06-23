@@ -3,7 +3,9 @@ package com.appliedrec.verid.sample.preferences;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.hardware.Camera;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -14,13 +16,15 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.sample.IntroActivity;
 import com.appliedrec.verid.sample.R;
 
-class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+import static android.content.Context.CAMERA_SERVICE;
+
+public class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -93,7 +97,7 @@ class SettingsFragment extends PreferenceFragmentCompat implements SharedPrefere
         registrationFaceCountPref.setEntries(R.array.registration_face_count_titles);
         registrationFaceCountPref.setEntryValues(R.array.registration_face_count_values);
         RegistrationSessionSettings registrationSessionSettings = new RegistrationSessionSettings("");
-        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format("%d",registrationSessionSettings.getNumberOfResultsToCollect()));
+        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format("%d",registrationSessionSettings.getNumberOfFacesToCapture()));
         registrationFaceCountPref.setValue(registrationFaceCount);
         registrationFaceCountPref.setSummaryProvider(ListPreference.SimpleSummaryProvider.getInstance());
         registrationCategory.addPreference(registrationFaceCountPref);
@@ -113,24 +117,26 @@ class SettingsFragment extends PreferenceFragmentCompat implements SharedPrefere
         speakPromptsPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.SPEAK_PROMPTS, false));
         accessibilityCategory.addPreference(speakPromptsPref);
 
-        int camCount = Camera.getNumberOfCameras();
-        for (int i = 0; i < camCount; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-
-                // CAMERA
-                PreferenceCategory cameraCategory = new PreferenceCategory(context);
-                cameraCategory.setTitle(R.string.camera);
-                preferenceScreen.addPreference(cameraCategory);
-                SwitchPreferenceCompat useBackCameraPref = new SwitchPreferenceCompat(context);
-                useBackCameraPref.setTitle(R.string.use_back_camera);
-                useBackCameraPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false));
-                cameraCategory.addPreference(useBackCameraPref);
-                break;
+        try {
+            CameraManager cameraManager = (CameraManager) context.getSystemService(CAMERA_SERVICE);
+            for (String id : cameraManager.getCameraIdList()) {
+                Integer facing = cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING);
+                if (facing != null && facing.equals(CameraCharacteristics.LENS_FACING_BACK)) {
+                    // CAMERA
+                    PreferenceCategory cameraCategory = new PreferenceCategory(context);
+                    cameraCategory.setTitle(R.string.camera);
+                    preferenceScreen.addPreference(cameraCategory);
+                    SwitchPreferenceCompat useBackCameraPref = new SwitchPreferenceCompat(context);
+                    useBackCameraPref.setTitle(R.string.use_back_camera);
+                    useBackCameraPref.setKey(PreferenceKeys.USE_BACK_CAMERA);
+                    useBackCameraPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false));
+                    cameraCategory.addPreference(useBackCameraPref);
+                    break;
+                }
             }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
-
         setPreferenceScreen(preferenceScreen);
     }
 

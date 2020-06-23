@@ -2,7 +2,7 @@ package com.appliedrec.verid.sample.sharing;
 
 import android.graphics.Bitmap;
 
-import com.appliedrec.verid.core.RecognizableSubject;
+import com.appliedrec.verid.core2.RecognizableSubject;
 import com.google.gson.annotations.JsonAdapter;
 
 @JsonAdapter(RegistrationDataJsonAdapter.class)

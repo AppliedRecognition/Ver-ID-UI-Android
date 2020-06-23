@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.appliedrec.verid.ui.DetectedFaceView
+    <com.appliedrec.verid.ui2.DetectedFaceView
         android:id="@+id/detectedFaceView"
         android:layout_width="0dp"
         android:layout_height="0dp"

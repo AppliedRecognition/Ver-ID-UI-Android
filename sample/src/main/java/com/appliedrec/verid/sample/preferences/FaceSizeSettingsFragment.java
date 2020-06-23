@@ -14,9 +14,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
-import com.appliedrec.verid.ui.DetectedFaceView;
+import com.appliedrec.verid.ui2.DetectedFaceView;
 
 public class FaceSizeSettingsFragment extends Fragment implements SeekBar.OnSeekBarChangeListener, ViewTreeObserver.OnGlobalLayoutListener {
 

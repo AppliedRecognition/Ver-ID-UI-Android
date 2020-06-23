@@ -1,4 +1,4 @@
-package com.appliedrec.verid.ui;
+package com.appliedrec.verid.ui2;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -22,14 +22,14 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
-import com.appliedrec.verid.core.DetectedFace;
-import com.appliedrec.verid.core.EulerAngle;
-import com.appliedrec.verid.core.Face;
-import com.appliedrec.verid.core.FaceDetectionResult;
-import com.appliedrec.verid.core.FaceDetectionStatus;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.DetectedFace;
+import com.appliedrec.verid.core2.EulerAngle;
+import com.appliedrec.verid.core2.Face;
+import com.appliedrec.verid.core2.FaceDetectionResult;
+import com.appliedrec.verid.core2.FaceDetectionStatus;
+import com.appliedrec.verid.core2.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.VerIDSessionResult;
+import com.appliedrec.verid.core2.VerIDSessionSettings;
 
 public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
 

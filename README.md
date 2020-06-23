@@ -82,26 +82,14 @@ To build this project and to run the sample app you will need a computer with th
         }
     }
     ~~~
-1. If you are targeting Android API level 21 or later
-	
-	- Add the following dependency to your **gradle.build** file:
+1. Add the following dependency to your **gradle.build** file:
 
-		~~~groovy
-	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.19.0'
-	    }
-		~~~
-
-1. If you are targeting Android API level 14–20
-
-	- Add the following dependency to your **gradle.build** file:
-
-		~~~groovy
-	    dependencies {
-		    implementation 'com.appliedrec.verid:ui-api14:1.19.0'
-	    }
-		~~~
-
+    ~~~groovy
+    dependencies {
+	    implementation 'com.appliedrec.verid:ui:2.0.0-alpha.01'
+    }
+    ~~~
+		
 ## Usage
 
 ### Creating Ver-ID Environment
@@ -124,62 +112,85 @@ verIDFactory.createVerID();
 
 ### Running Ver-ID Session Activities
 ~~~java
-class MyActivity extends AppCompatActivity {
-
-    static final int REQUEST_CODE_LIVENESS_DETECTION = 0;
+class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerIDSessionDelegate {
 
     void startLivenessDetectionSession() {
-        try {
-            VerIDSDKIdentity identity = new VerIDSDKIdentity(this);
-            VerIDFactory veridFactory = new VerIDFactory(this, identity, new VerIDFactoryDelegate() {
-                @Override
-                public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
-                    // You can now start a Ver-ID session
-                    LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-                    settings.setNumberOfResultsToCollect(2);
-                    Intent intent = new VerIDSessionIntent(this, verID, settings);
-                    startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
-                }
+        VerIDFactory veridFactory = new VerIDFactory(this);
+        veridFactory.setDelegate(this);
+        veridFactory.createVerID();
+    }
     
-                @Override
-                public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
-                    // Failed to create an instance of Ver-ID
-                }
-            });
-            veridFactory.createVerID();
-        } catch (Exception e) {
-            // Failed to create Ver-ID SDK identity
-        }
-    }
-
+    //region Ver-ID factory delegate
+    
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_LIVENESS_DETECTION && resultCode == RESULT_OK && data != null) {
-            VerIDSessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-            if (sessionResult != null && sessionResult.getError() == null) {
-                // Liveness detection session succeeded
-            }
+    public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
+        // You can now start a Ver-ID session
+        LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
+        VerIDSession<LivenessDetectionSessionSettings> session = new VerIDSession<>(verID, settings);
+        session.setDelegate(this);
+        session.start();
+    }
+    
+    @Override
+    public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+        // Failed to create an instance of Ver-ID
+    }
+    
+    //endregion
+    
+    //region Ver-ID session delegate
+    
+    @Override
+    public void sessionDidFinishWithResult(AbstractVerIDSession<?,?,?> session, VerIDSessionResult result) {
+        if (!result.getError().isPresent()) {
+            // Session succeeded
+        } else {
+            // Session failed
         }
     }
+    
+    // The following four delegate methods are optional
+    
+    @Override
+    public void sessionWasCanceled(AbstractVerIDSession<?,?,?> session) {
+        // Implement this method if you need to handle the case where the user cancels the session.
+    }
+    
+    @Override
+    public boolean shouldSessionShowResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+        // Here you can decide whether to show the result of the session to the user.
+        // For example, if you have your own way of showing a successful result but you want Ver-ID
+        // to handle showing failures you may do something like this:
+        return result.getError().isPresent();
+    }
+    
+    @Override
+    public boolean shouldSpeakPromptsInSession(AbstractVerIDSession<?, ?, ?> session) {
+        // Return true to let the device use speech synthesis to speak the prompts during the session.
+        return false;
+    }
+    
+    @Override
+    public CameraLens getCameraLensForSession(AbstractVerIDSession<?, ?, ?> session) {
+        // Return CameraLens.FACING_BACK to use the device's back camera. 
+        // The default is to use the front-facing (selfie) camera.
+        return CameraLens.FACING_FRONT;
+    }
+    
+    //endregion
 }
 ~~~
-
-### Customizing Ver-ID Session Behaviour
-The Ver-ID session activity finishes as the session concludes. If you want to change this or other behaviour of the session you can write your own activity class that extends `VerIDSessionActivity`.
-
-For an example of an activity that extends `VerIDSessionActivity` take a look at [AuthenticationActivity](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android/blob/master/app/src/main/java/com/appliedrec/verid/kiosk/AuthenticationActivity.java) in the [Ver-ID Kiosk sample app](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android).
 
 ### Controlling Liveness Detection
 If you run a Ver-ID session with `LivenessDetectionSessionSettings` or its subclass `AuthenticationSessionSettings` you can control how Ver-ID detects liveness.
 
-To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionSettings.html#setNumberOfResultsToCollect(int)) to `1`.
+To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.VerIDSessionSettings.html#setNumberOfFacesToCapture(int)) to `1`.
 
-To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.AbstractLivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
+To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
 
 ~~~java
 LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-settings.setNumberOfResultsToCollect(3); // 1 straight plus 2 other poses
+settings.setNumberOfFacesToCapture(3); // 1 straight plus 2 other poses
 settings.setBearings(EnumSet.of(Bearing.STRAIGHT, Bearing.LEFT, Bearing.RIGHT)); // Limit the poses to left and right
 ~~~
 The session result will contain 3 faces: 1 looking straight at the camera and 2 in random poses.

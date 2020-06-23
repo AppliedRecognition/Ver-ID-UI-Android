@@ -13,20 +13,21 @@ import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 import androidx.preference.PreferenceManager;
 
-import com.appliedrec.verid.core.FaceDetectionRecognitionFactory;
-import com.appliedrec.verid.core.FaceDetectionRecognitionSettings;
-import com.appliedrec.verid.core.UserManagementFactory;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.core.VerIDFactory;
-import com.appliedrec.verid.core.VerIDFactoryDelegate;
+import com.appliedrec.verid.core2.FaceDetectionRecognitionFactory;
+import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
+import com.appliedrec.verid.core2.UserManagementFactory;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDFactory;
+import com.appliedrec.verid.core2.VerIDFactoryDelegate;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SampleApplication extends MultiDexApplication implements VerIDFactoryDelegate, SharedPreferences.OnSharedPreferenceChangeListener, Application.ActivityLifecycleCallbacks {
 
-    private VerID verID;
-    private final Object veridLock = new Object();
+    private AtomicReference<VerID> verID = new AtomicReference<>();
     private final ArrayList<IVerIDLoadObserver> createdActivities = new ArrayList<>();
     private final Runnable reloadRunnable = this::loadVerID;
     private Handler mainHandler;
@@ -44,12 +45,9 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     }
 
     private void loadVerID() {
-        synchronized (veridLock) {
-            if (verID != null) {
-                verID = null;
-                for (IVerIDLoadObserver activity : createdActivities) {
-                    activity.onVerIDUnloaded();
-                }
+        if (verID.getAndSet(null) != null) {
+            for (IVerIDLoadObserver activity : createdActivities) {
+                activity.onVerIDUnloaded();
             }
         }
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -73,8 +71,8 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (key.equals(PreferenceKeys.AUTHENTICATION_THRESHOLD)) {
-            if (verID != null) {
-                verID.getFaceRecognition().setAuthenticationThreshold(Float.parseFloat(sharedPreferences.getString(key, Float.toString(verID.getFaceRecognition().getAuthenticationThreshold()))));
+            if (verID.get() != null) {
+                verID.get().getFaceRecognition().setAuthenticationThreshold(Float.parseFloat(sharedPreferences.getString(key, Float.toString(verID.get().getFaceRecognition().getAuthenticationThreshold()))));
             }
             return;
         }
@@ -89,16 +87,14 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
 
     @Override
     public void veridFactoryDidCreateEnvironment(VerIDFactory factory, VerID environment) {
-        synchronized (veridLock) {
-            verID = environment;
-            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-            if (preferences.contains(PreferenceKeys.AUTHENTICATION_THRESHOLD)) {
-                float authThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.AUTHENTICATION_THRESHOLD, "4.0"));
-                verID.getFaceRecognition().setAuthenticationThreshold(authThreshold);
-            }
+        verID.set(environment);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        if (preferences.contains(PreferenceKeys.AUTHENTICATION_THRESHOLD)) {
+            float authThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.AUTHENTICATION_THRESHOLD, "4.0"));
+            verID.get().getFaceRecognition().setAuthenticationThreshold(authThreshold);
         }
         for (IVerIDLoadObserver activity : createdActivities) {
-            activity.onVerIDLoaded(verID);
+            activity.onVerIDLoaded(environment);
         }
     }
 
@@ -106,20 +102,23 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     public void veridFactoryDidFailWithException(VerIDFactory factory, Exception error) {
         Intent intent = new Intent(this, ErrorActivity.class);
         intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.verid_failed_to_load));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
 
     //endregion
+
+    public Optional<VerID> getVerID() {
+        return Optional.ofNullable(verID.get());
+    }
 
     //region Activity lifecycle callbacks
 
     @Override
     public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
         if (activity instanceof IVerIDLoadObserver) {
-            synchronized (veridLock) {
-                if (verID != null) {
-                    ((IVerIDLoadObserver)activity).onVerIDLoaded(verID);
-                }
+            if (verID.get() != null) {
+                ((IVerIDLoadObserver)activity).onVerIDLoaded(verID.get());
             }
             createdActivities.add((IVerIDLoadObserver)activity);
         }

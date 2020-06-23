@@ -1,4 +1,4 @@
-package com.appliedrec.verid.ui;
+package com.appliedrec.verid.ui2;
 
 import android.app.Activity;
 import android.content.Context;
@@ -30,13 +30,13 @@ import androidx.annotation.UiThread;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.fragment.app.Fragment;
 
-import com.appliedrec.verid.core.EulerAngle;
-import com.appliedrec.verid.core.FaceDetectionResult;
-import com.appliedrec.verid.core.FaceDetectionStatus;
-import com.appliedrec.verid.core.Size;
-import com.appliedrec.verid.core.VerIDImage;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.EulerAngle;
+import com.appliedrec.verid.core2.FaceDetectionResult;
+import com.appliedrec.verid.core2.FaceDetectionStatus;
+import com.appliedrec.verid.core2.Size;
+import com.appliedrec.verid.core2.VerIDImage;
+import com.appliedrec.verid.core2.VerIDSessionResult;
+import com.appliedrec.verid.core2.VerIDSessionSettings;
 
 import java.util.Arrays;
 import java.util.Collections;

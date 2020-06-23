@@ -2,10 +2,7 @@ package com.appliedrec.verid.sample;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,29 +13,26 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.util.Consumer;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
-import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.Face;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.Bearing;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui.PageViewActivity;
-import com.appliedrec.verid.ui.VerIDSessionActivity;
-import com.appliedrec.verid.ui.VerIDSessionIntent;
+import com.appliedrec.verid.ui2.AbstractVerIDSession;
+import com.appliedrec.verid.ui2.CameraLens;
+import com.appliedrec.verid.ui2.PageViewActivity;
+import com.appliedrec.verid.ui2.VerIDSession;
+import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
 
-public class IntroActivity extends PageViewActivity implements IVerIDLoadObserver {
+public class IntroActivity extends PageViewActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
-    private static final int REQUEST_CODE_REGISTER = 0;
     public static final String EXTRA_SHOW_REGISTRATION = "showRegistration";
     private static final int REQUEST_CODE_IMPORT = 2;
     private static final int REQUEST_CODE_IMPORT_REVIEW = 3;
@@ -106,30 +100,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
-            VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-            if (result != null) {
-                if (result.getError() == null) {
-                    Iterator<Map.Entry<Face, Uri>> imageFaceIterator = result.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
-                    if (imageFaceIterator.hasNext()) {
-                        Map.Entry<Face, Uri> entry = imageFaceIterator.next();
-                        AsyncTask.execute(() -> {
-                            try {
-                                new ProfilePhotoHelper(this).setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds());
-                            } catch (Exception ignore) {
-                            }
-                        });
-                    }
-                    Intent intent = new Intent(this, RegisteredUserActivity.class);
-                    startActivity(intent);
-                    finish();
-                } else {
-                    Intent intent = new Intent(this, SessionResultActivity.class);
-                    intent.putExtras(data);
-                    startActivity(intent);
-                }
-            }
-        } else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_IMPORT && data != null) {
+        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_IMPORT && data != null) {
             Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
             intent.putExtras(data);
             intent.setData(data.getData());
@@ -145,20 +116,14 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         if (preferences != null) {
             if (preferences.contains(PreferenceKeys.REGISTRATION_FACE_COUNT)) {
-                settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getNumberOfResultsToCollect()))));
-            }
-            if (preferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false)) {
-                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-            }
-            if (preferences.getBoolean(PreferenceKeys.SPEAK_PROMPTS, false)) {
-                settings.shouldSpeakPrompts(true);
+                settings.setNumberOfFacesToCapture(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getNumberOfFacesToCapture()))));
             }
             settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
             settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
         }
-        settings.shouldRecordSessionVideo(true);
-        Intent intent = new VerIDSessionIntent<>(IntroActivity.this, verID, settings);
-        startActivityForResult(intent, REQUEST_CODE_REGISTER);
+        VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
+        session.setDelegate(this);
+        session.start();
     }
 
     @Override
@@ -186,6 +151,36 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     @Override
     public void onVerIDUnloaded() {
 
+    }
+
+    @Override
+    public void sessionDidFinishWithResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+        if (!result.getError().isPresent()) {
+            result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
+                try {
+                    new ProfilePhotoHelper(this).setProfilePhoto(faceCapture.getFaceImage());
+                } catch (Exception ignore) {
+                }
+            });
+            Intent intent = new Intent(this, RegisteredUserActivity.class);
+            startActivity(intent);
+            finish();
+        } else {
+            Intent intent = new Intent(this, SessionResultActivity.class);
+            intent.putExtra(SessionResultActivity.EXTRA_RESULT, result);
+            intent.putExtra(SessionResultActivity.EXTRA_SETTINGS, session.getSettings());
+            startActivity(intent);
+        }
+    }
+
+    @Override
+    public boolean shouldSpeakPromptsInSession(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
+    }
+
+    @Override
+    public CameraLens getCameraLensForSession(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLens.FACING_BACK : CameraLens.FACING_FRONT;
     }
 
     public static class IntroFragment extends Fragment {

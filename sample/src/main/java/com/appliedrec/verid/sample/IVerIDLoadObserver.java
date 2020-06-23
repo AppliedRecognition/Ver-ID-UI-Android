@@ -1,6 +1,6 @@
 package com.appliedrec.verid.sample;
 
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.VerID;
 
 public interface IVerIDLoadObserver {
 

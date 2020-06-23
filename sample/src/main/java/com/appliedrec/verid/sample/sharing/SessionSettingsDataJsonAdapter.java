@@ -1,10 +1,10 @@
 package com.appliedrec.verid.sample.sharing;
 
-import com.appliedrec.verid.core.AuthenticationSessionSettings;
-import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.Bearing;
+import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
@@ -29,17 +29,13 @@ class SessionSettingsDataJsonAdapter implements JsonSerializer<VerIDSessionSetti
             jsonObject.add("bearings", context.serialize(((LivenessDetectionSessionSettings)src).getBearings(), EnumSet.class));
         }
         jsonObject.addProperty("expiryTime", src.getExpiryTime()/1000);
-        jsonObject.addProperty("numberOfResultsToCollect", src.getNumberOfResultsToCollect());
-        jsonObject.addProperty("useBackCamera", src.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.BACK);
-        jsonObject.addProperty("maxRetryCount", src.getMaxRetryCount());
+        jsonObject.addProperty("numberOfResultsToCollect", src.getNumberOfFacesToCapture());
         jsonObject.addProperty("yawThreshold", src.getYawThreshold());
         jsonObject.addProperty("pitchThreshold", src.getPitchThreshold());
-        jsonObject.addProperty("speakPrompts", src.shouldSpeakPrompts());
         jsonObject.addProperty("faceWidthFraction", src.getFaceBoundsFraction().x);
         jsonObject.addProperty("faceHeightFraction", src.getFaceBoundsFraction().y);
         jsonObject.addProperty("pauseDuration", src.getPauseDuration()/1000);
         jsonObject.addProperty("faceBufferSize", src.getFaceBufferSize());
-        jsonObject.addProperty("extractFaceTemplates", src.getIncludeFaceTemplatesInResult());
 
         return jsonObject;
     }
