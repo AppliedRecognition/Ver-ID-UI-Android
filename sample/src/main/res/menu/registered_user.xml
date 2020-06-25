@@ -4,6 +4,9 @@
         android:id="@+id/action_settings"
         android:title="@string/settings" />
     <item
+        android:id="@+id/action_kiosk_demo"
+        android:title="Kiosk demo" />
+    <item
         android:id="@+id/action_export_registration"
         android:title="@string/export_registration"
         android:visible="false" />
