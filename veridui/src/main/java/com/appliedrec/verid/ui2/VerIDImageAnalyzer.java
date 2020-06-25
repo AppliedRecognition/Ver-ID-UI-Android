@@ -60,7 +60,6 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
 
     @Override
     public void analyze(@NonNull ImageProxy image) {
-        long start = System.currentTimeMillis();
         int yRowStride = image.getPlanes()[0].getRowStride();
         int uRowStride = image.getPlanes()[1].getRowStride();
         int vRowStride = image.getPlanes()[2].getRowStride();
@@ -72,25 +71,23 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         ByteBuffer vBuffer = image.getPlanes()[2].getBuffer(); // V
 
         byte[] y = cropBitmapToSize(yBuffer, width, height, yRowStride);
-        byte[] u = cropBitmapToSize(uBuffer, width/2, height/2, uRowStride);
-        byte[] v = cropBitmapToSize(vBuffer, width/2, height/2, vRowStride);
+        byte[] u = cropBitmapToSize(uBuffer, width / 2, height / 2, uRowStride);
+        byte[] v = cropBitmapToSize(vBuffer, width / 2, height / 2, vRowStride);
 
-        byte[] nv21 = new byte[y.length+u.length+v.length];
+        byte[] nv21 = new byte[y.length + u.length + v.length];
         System.arraycopy(y, 0, nv21, 0, y.length);
-        for (int i=0, j=y.length; i<u.length; i++) {
+        for (int i = 0, j = y.length; i < u.length; i++) {
             nv21[j++] = v[i];
             nv21[j++] = u[i];
         }
         YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
-
+        VerIDImage verIDImage = new VerIDImage(yuvImage, exifOrientation.get());
+        verIDImage.setIsMirrored(isMirrored.get());
         try {
-            VerIDImage verIDImage = new VerIDImage(yuvImage, exifOrientation.get());
-            verIDImage.setIsMirrored(isMirrored.get());
             imageQueue.put(verIDImage);
         } catch (InterruptedException ignore) {
         }
         image.close();
-        Log.d("Ver-ID", String.format("Converted to VerIDImage in %d ms", System.currentTimeMillis()-start));
     }
 
     @Override
