@@ -4,13 +4,8 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.RectF;
-import android.graphics.drawable.ShapeDrawable;
-import android.graphics.drawable.shapes.RoundRectShape;
 import android.os.Bundle;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -28,7 +23,6 @@ import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.RoundedBitmapDrawable;
@@ -36,10 +30,8 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 import androidx.exifinterface.media.ExifInterface;
 
 import com.appliedrec.verid.core2.Bearing;
-import com.appliedrec.verid.core2.EulerAngle;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
-import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.IImageFlowable;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
@@ -47,7 +39,6 @@ import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -60,10 +51,9 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
     private static final int REQUEST_CODE_CAMERA_PERMISSION = 1;
     private ThreadPoolExecutor imageProcessingExecutor;
     private ExecutorService backgroundExecutor;
-    private final Matrix faceBoundsMatrix = new Matrix();
     private VerIDSessionSettings sessionSettings;
     private CameraLens cameraLens = CameraLens.FACING_FRONT;
-    private PreviewView viewFinder;
+    private VerIDSessionFragment sessionFragment;
     private ActivitySessionBinding viewBinding;
     private ArrayList<Bitmap> faceImages = new ArrayList<>();
     private final VerIDImageAnalyzer imageAnalyzer = new VerIDImageAnalyzer();
@@ -73,13 +63,8 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
         super.onCreate(savedInstanceState);
         viewBinding = ActivitySessionBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
-        viewFinder = viewBinding.viewFinder;
-        if (savedInstanceState != null) {
-            faceImages = savedInstanceState.getParcelableArrayList("faceImages");
-            if (faceImages == null) {
-                faceImages = new ArrayList<>();
-            }
-        }
+        sessionFragment = (VerIDSessionFragment) getSupportFragmentManager().findFragmentById(R.id.session_fragment);
+        faceImages = new ArrayList<>();
         imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), runnable -> {
             Thread thread = new Thread(runnable);
             thread.setName("Ver-ID image processing");
@@ -102,7 +87,8 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
     protected void onDestroy() {
         super.onDestroy();
         viewBinding = null;
-        viewFinder = null;
+        sessionFragment = null;
+        sessionSettings = null;
         faceImages.clear();
         if (imageProcessingExecutor != null) {
             imageProcessingExecutor.shutdown();
@@ -112,12 +98,6 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
             backgroundExecutor.shutdown();
             backgroundExecutor = null;
         }
-    }
-
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelableArrayList("faceImages", faceImages);
     }
 
     public void setSessionSettings(VerIDSessionSettings sessionSettings, CameraLens cameraLens) {
@@ -159,8 +139,12 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
                 imageAnalysis.setAnalyzer(imageProcessingExecutor, imageAnalyzer);
                 Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, cameraPreview, imageAnalysis);
                 imageAnalyzer.setExifOrientation(getExifOrientationFromCamera(camera, cameraPreview));
-                viewFinder.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
-                cameraPreview.setSurfaceProvider(viewFinder.createSurfaceProvider());
+                if (sessionFragment != null) {
+                    sessionFragment.getViewFinder().ifPresent(viewFinder -> {
+                        viewFinder.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
+                        cameraPreview.setSurfaceProvider(viewFinder.createSurfaceProvider());
+                    });
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -172,17 +156,11 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
         return imageAnalyzer;
     }
 
-    public void setFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
-        runOnUiThread(() -> displayFaceDetectionResult(faceDetectionResult));
-    }
-
-    public void setLabelText(String labelText) {
+    public void setFaceDetectionResult(FaceDetectionResult faceDetectionResult, String prompt) {
         runOnUiThread(() -> {
-            if (viewBinding == null) {
-                return;
+            if (sessionFragment != null) {
+                sessionFragment.accept(faceDetectionResult, prompt);
             }
-            viewBinding.instructionTextview.setText(labelText);
-            viewBinding.instructionTextview.setVisibility(labelText != null ? View.VISIBLE : View.GONE);
         });
     }
 
@@ -219,129 +197,6 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
             }
         }
         return exifOrientation;
-    }
-
-    private void displayFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
-        int backgroundColour = 0x80000000;
-        if (faceDetectionResult == null) {
-            viewBinding.detectedFaceView.setFaceRect(null, null, Color.WHITE, backgroundColour, 0.0, 0.0);
-            setLabelText(null);
-            return;
-        }
-        RectF ovalBounds;
-        @Nullable RectF cutoutBounds;
-        @Nullable EulerAngle faceAngle;
-        RectF defaultFaceBounds = sessionSettings.getDefaultFaceBounds(faceDetectionResult.getImageSize());
-//        if (sessionSettings != null && sessionResult.getAttachments().length >= sessionSettings.getNumberOfResultsToCollect()) {
-//            ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-//            cutoutBounds = new RectF(ovalBounds);
-//            faceAngle = null;
-//        } else {
-            switch (faceDetectionResult.getStatus()) {
-                case FACE_FIXED:
-                case FACE_ALIGNED:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
-                    faceAngle = null;
-                    break;
-                case FACE_MISALIGNED:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
-                    faceAngle = faceDetectionResult.getFaceAngle();
-                    break;
-                case FACE_TURNED_TOO_FAR:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = new RectF(ovalBounds);
-                    faceAngle = null;
-                    break;
-                default:
-                    ovalBounds = defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds);
-                    faceAngle = null;
-            }
-//        }
-        try {
-            float scale = Math.max((float)viewFinder.getWidth() / (float)faceDetectionResult.getImageSize().width, (float)viewFinder.getHeight() / (float)faceDetectionResult.getImageSize().height);
-            faceBoundsMatrix.reset();
-            faceBoundsMatrix.setScale(scale, scale);
-            faceBoundsMatrix.postTranslate((float)viewFinder.getWidth() / 2f - (float)faceDetectionResult.getImageSize().width * scale / 2f, (float)viewFinder.getHeight() / 2f - (float)faceDetectionResult.getImageSize().height * scale / 2f);
-
-            faceBoundsMatrix.mapRect(ovalBounds);
-            faceBoundsMatrix.mapRect(cutoutBounds);
-            int colour = getOvalColourFromFaceDetectionStatus(faceDetectionResult.getStatus());
-            int textColour = getTextColourFromFaceDetectionStatus(faceDetectionResult.getStatus());
-            viewBinding.instructionTextview.setTextColor(textColour);
-            viewBinding.instructionTextview.setBackgroundColor(colour);
-
-            ((ConstraintLayout.LayoutParams)viewBinding.instructionTextview.getLayoutParams()).topMargin = (int) (ovalBounds.top - viewBinding.instructionTextview.getHeight() - getResources().getDisplayMetrics().density * 16f);
-            setTextViewColour(colour, textColour);
-            Double angle = null;
-            Double distance = null;
-            EulerAngle offsetAngleFromBearing = faceDetectionResult.getOffsetAngleFromBearing();
-            if (faceAngle != null && offsetAngleFromBearing != null) {
-                angle = Math.atan2(offsetAngleFromBearing.getPitch(), offsetAngleFromBearing.getYaw());
-                distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
-            }
-            viewBinding.detectedFaceView.setFaceRect(ovalBounds, cutoutBounds, colour, backgroundColour, angle, distance);
-//            // Uncomment to plot face landmarks for debugging purposes
-//            if (faceDetectionResult.getFace() != null && faceDetectionResult.getFace().getLandmarks() != null && faceDetectionResult.getFace().getLandmarks().length > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//                float[] landmarks = new float[faceDetectionResult.getFace().getLandmarks().length*2];
-//                int i=0;
-//                for (PointF pt : faceDetectionResult.getFace().getLandmarks()) {
-//                    landmarks[i++] = pt.x;
-//                    landmarks[i++] = pt.y;
-//                }
-//                faceBoundsMatrix.mapPoints(landmarks);
-//                PointF[] pointLandmarks = new PointF[faceDetectionResult.getFace().getLandmarks().length];
-//                Arrays.parallelSetAll(pointLandmarks, idx -> new PointF(landmarks[idx*2], landmarks[idx*2+1]));
-//                detectedFaceView.setFaceLandmarks(pointLandmarks);
-//            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Get the colour of the oval drawn around the face and of the background of the instruction text label. The colour should reflect the supplied state of the face detection.
-     * @param faceDetectionStatus Face detection status
-     * @return Integer representing a colour in ARGB space
-     * @since 1.6.0
-     */
-    public int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
-        switch (faceDetectionStatus) {
-            case FACE_FIXED:
-            case FACE_ALIGNED:
-                return 0xFF36AF00;
-            default:
-                return 0xFFFFFFFF;
-        }
-    }
-
-    /**
-     * Get the colour of the text inside the instruction text label. The colour should reflect the supplied state of the face detection.
-     * @param faceDetectionStatus Face detection status
-     * @return Integer representing a colour in ARGB space
-     * @since 1.6.0
-     */
-    public int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
-        switch (faceDetectionStatus) {
-            case FACE_FIXED:
-            case FACE_ALIGNED:
-                return 0xFFFFFFFF;
-            default:
-                return 0xFF000000;
-        }
-    }
-
-    private void setTextViewColour(int background, int text) {
-        float density = getResources().getDisplayMetrics().density;
-        float[] corners = new float[8];
-        Arrays.fill(corners, 10 * density);
-        ShapeDrawable shapeDrawable = new ShapeDrawable(new RoundRectShape(corners, null, null));
-        shapeDrawable.setPadding((int)(8f * density), (int)(4f * density), (int)(8f * density), (int)(4f * density));
-        shapeDrawable.getPaint().setColor(background);
-        viewBinding.instructionTextview.setBackground(shapeDrawable);
-        viewBinding.instructionTextview.setTextColor(text);
     }
 
     @Override
@@ -393,7 +248,7 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
 
     @MainThread
     private void drawFaces() {
-        if (isDestroyed()) {
+        if (viewBinding == null) {
             return;
         }
         viewBinding.faceImages.removeAllViews();
@@ -425,7 +280,7 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
                     bitmapDrawables.add(drawable);
                 }
                 runOnUiThread(() -> {
-                    if (isDestroyed()) {
+                    if (viewBinding == null) {
                         return;
                     }
                     for (RoundedBitmapDrawable drawable : bitmapDrawables) {

@@ -7,19 +7,11 @@
     android:layout_height="match_parent"
     tools:context=".SessionActivity">
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
+    <fragment
+        android:id="@+id/session_fragment"
+        android:name="com.appliedrec.verid.ui2.VerIDSessionFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
-    <com.appliedrec.verid.ui2.DetectedFaceView
-        android:id="@+id/detectedFaceView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
 
     <LinearLayout
         android:id="@+id/faceImages"
@@ -31,23 +23,5 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent">
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/instruction_textview"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/rounded_corner_white"
-        android:padding="4dp"
-        android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
-        android:textColor="@android:color/black"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

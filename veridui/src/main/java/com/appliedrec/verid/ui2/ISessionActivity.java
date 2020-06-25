@@ -11,9 +11,7 @@ public interface ISessionActivity extends Consumer<FaceCapture> {
 
     void setSessionSettings(VerIDSessionSettings settings, CameraLens cameraLens);
 
-    void setLabelText(String labelText);
-
-    void setFaceDetectionResult(FaceDetectionResult faceDetectionResult);
+    void setFaceDetectionResult(FaceDetectionResult faceDetectionResult, String prompt);
 
     IImageFlowable getImageFlowable();
 }

@@ -63,6 +63,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private AtomicReference<Supplier<Function<VerIDImage, FaceDetectionResult>>> faceDetectionFunctionSupplier;
     private AtomicReference<Supplier<Function<FaceDetectionResult, FaceCapture>>> faceDetectionResultEvaluationFunctionSupplier;
     private ResourceCallback idlingResourceCallback;
+    private final SessionPrompts sessionPrompts;
 
     private static AtomicLong lastSessionId = new AtomicLong(0);
 
@@ -90,6 +91,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         this.sessionId = lastSessionId.getAndIncrement();
         this.faceDetectionFunctionSupplier = new AtomicReference<>(() -> new FaceDetection(verID, settings));
         this.faceDetectionResultEvaluationFunctionSupplier = new AtomicReference<>(() -> new FaceDetectionResultEvaluation(verID, settings));
+        this.sessionPrompts = new SessionPrompts(stringTranslator);
         verID.getContext().ifPresent(context -> this.textSpeaker = new TextSpeaker(context));
     }
 
@@ -227,8 +229,8 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     private Session<Settings> createCoreSession(T sessionActivity) {
         return new Session.Builder<>(verID, settings, sessionActivity.getImageFlowable())
-                .setFaceDetectionFunction(getFaceDetectionFunctionSupplier().get())
-                .setFaceDetectionResultEvaluationFunction(getFaceDetectionResultEvaluationFunctionSupplier().get())
+                .setFaceDetectionFunctionSupplier(getFaceDetectionFunctionSupplier())
+                .setFaceDetectionResultEvaluationFunctionSupplier(getFaceDetectionResultEvaluationFunctionSupplier())
                 .setFaceDetectionCallback(getFaceDetectionCallback())
                 .setFaceCaptureCallback(sessionActivity)
                 .bindToLifecycle(sessionActivity.getLifecycle())
@@ -279,7 +281,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         int runCount = this.runCount.incrementAndGet();
         onSessionFinished();
         if (sessionActivity != null) {
-            sessionActivity.setFaceDetectionResult(null);
+            sessionActivity.setFaceDetectionResult(null, null);
         }
         if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionShowResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
             resultToShow.set(result);
@@ -290,13 +292,17 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             if (isStarted.getAndSet(false)) {
                 getDelegate().ifPresent(listener -> listener.sessionDidFinishWithResult(this, result));
             }
-            if (sessionDisposable != null && !sessionDisposable.isDisposed()) {
-                sessionDisposable.dispose();
-            }
-            sessionDisposable = null;
+            disposeSession();
             unregisterActivityCallbacks();
         }
         finishSessionActivity();
+    }
+
+    private void disposeSession() {
+        if (sessionDisposable != null && !sessionDisposable.isDisposed()) {
+            sessionDisposable.dispose();
+        }
+        sessionDisposable = null;
     }
 
     @UiThread
@@ -304,6 +310,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         finishWithResult(new VerIDSessionResult(new VerIDSessionException(throwable), System.currentTimeMillis(), System.currentTimeMillis(), 0));
     }
 
+    @UiThread
     private void finishSessionActivity() {
         if (sessionActivity != null && !sessionActivity.isFinishing()) {
             sessionActivity.finish();
@@ -343,23 +350,8 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private Consumer<? super FaceDetectionResult> getFaceDetectionCallback() {
         return faceDetectionResult -> {
             if (sessionActivity != null) {
-                sessionActivity.setFaceDetectionResult(faceDetectionResult);
-                String labelText;
-                switch (faceDetectionResult.getStatus()) {
-                    case FACE_FIXED:
-                    case FACE_ALIGNED:
-                        labelText = stringTranslator.getTranslatedString("Great, hold it");
-                        break;
-                    case FACE_MISALIGNED:
-                        labelText = stringTranslator.getTranslatedString("Slowly turn to follow the arrow");
-                        break;
-                    case FACE_TURNED_TOO_FAR:
-                        labelText = null;
-                        break;
-                    default:
-                        labelText = stringTranslator.getTranslatedString("Align your face with the oval");
-                }
-                sessionActivity.setLabelText(labelText);
+                String labelText = sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null);
+                sessionActivity.setFaceDetectionResult(faceDetectionResult, labelText);
                 getTextSpeaker().ifPresent(speaker -> speaker.speak(labelText, stringTranslator.getLocale(), false));
             }
         };
@@ -421,10 +413,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     @Override
     public void onActivityDestroyed(@NonNull Activity activity) {
         if (sessionActivity(activity).isPresent()) {
-            if (sessionDisposable != null && !sessionDisposable.isDisposed()) {
-                sessionDisposable.dispose();
-            }
-            sessionDisposable = null;
+            disposeSession();
             sessionActivity = null;
             if (activity.isFinishing() && resultToShow.get() == null) {
                 if (isStarted.getAndSet(false)) {
