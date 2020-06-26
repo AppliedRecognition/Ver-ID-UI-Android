@@ -8,7 +8,7 @@ This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-I
 
 To build this project and to run the sample app you will need a computer with these applications:
 
-- [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.5.0 or newer
+- [Android Studio 4](https://developer.android.com/studio) with Gradle plugin version 4.0.0 or newer
 - [Git](https://git-scm.com)
 
 ## Installation
@@ -60,8 +60,8 @@ To build this project and to run the sample app you will need a computer with th
             // Failed to create identity with your credentials.
         }
         ~~~
-
-1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
+    - Constructing `VerIDFactory` without an instance of `VerIDSDKIdentity` assumes that the **Ver-ID identity.p12** file is in the app's **assets** folder and the password is in the **AndroidManifest.xml**.
+1. Add the following entries in your app module's **gradle.build** file:
     
     ~~~groovy
     repositories {
@@ -69,23 +69,18 @@ To build this project and to run the sample app you will need a computer with th
             url 'https://dev.ver-id.com/artifactory/gradle-release'
         }
     }
-    ~~~
-1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~ <br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
-
-1. Add the following statement in your app's **gradle.build** file:
-
-    ~~~groovy
     android {
+        defaultConfig {
+            multiDexEnabled true
+        }
         compileOptions {
+            coreLibraryDesugaringEnabled true
             sourceCompatibility JavaVersion.VERSION_1_8
             targetCompatibility JavaVersion.VERSION_1_8
         }
     }
-    ~~~
-1. Add the following dependency to your **gradle.build** file:
-
-    ~~~groovy
     dependencies {
+        coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.7'
 	    implementation 'com.appliedrec.verid:ui:2.0.0-alpha.01'
     }
     ~~~
@@ -108,6 +103,23 @@ VerIDFactory verIDFactory = new VerIDFactory(getContext(), new VerIDFactoryDeleg
     }
 });
 verIDFactory.createVerID();
+~~~
+`VerIDFactory` extends the reactive class `Single`. As an alternative to using `VerIDFactoryDelegate` you can use the reactive implementation:
+
+~~~java
+VerIDFactor verIDFactory = new VerIDFactory(getContext());
+Disposable veridFactoryDisposable = verIDFactory
+    .subscribeOn(Schedulers.io())
+    .observeOn(AndroidSchedulers.mainThread())
+    .subscribe(
+        verID -> {
+            // You can now use the VerID instance
+        },
+        error -> {
+            // Failed to create an instance of Ver-ID
+        }
+    );
+// Call veridFactoryDisposable.dispose() to cancel the operation.
 ~~~
 
 ### Running Ver-ID Session Activities

@@ -30,6 +30,7 @@ import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
@@ -52,6 +53,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import io.reactivex.rxjava3.functions.Function;
@@ -68,10 +70,14 @@ import static androidx.test.espresso.intent.Intents.times;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.withChild;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
+import static androidx.test.espresso.matcher.ViewMatchers.withParent;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -81,12 +87,7 @@ import static org.junit.Assert.fail;
  * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
  */
 @RunWith(AndroidJUnit4.class)
-public class ExampleInstrumentedTest {
-
-    @Before
-    public void resetApp() {
-
-    }
+public class SampleAppTest {
 
     @After
     public void unregisterIdlingResources() {
@@ -195,76 +196,31 @@ public class ExampleInstrumentedTest {
     }
 
     @Test
-    public void test_authenticate_succeeds() {
-        ((SampleApplication)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext()).getVerID().ifPresent(verID -> {
-            try {
-                AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                VerIDSession<AuthenticationSessionSettings> authenticationSession = new VerIDSession<>(verID, sessionSettings);
-                authenticationSession.setFaceDetectionFunctionSupplier(() -> image -> new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, Bearing.STRAIGHT));
-                authenticationSession.setFaceDetectionResultEvaluationFunctionSupplier(() -> faceDetection -> createFaceCapture());
-                VerIDSessionResult[] results = new VerIDSessionResult[1];
-                CountDownLatch latch = new CountDownLatch(1);
-                authenticationSession.setDelegate((session, result) -> {
-                    results[0] = result;
-                    latch.countDown();
-                });
-                authenticationSession.start();
-                assertTrue(latch.await(20, TimeUnit.SECONDS));
-                assertFalse(results[0].getError().isPresent());
-            } catch (Exception e) {
-                fail();
-            }
-        });
-    }
-
-    @Test
     public void test_authenticateWithWrongFace_fails() throws Exception {
-        ((SampleApplication)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext()).getVerID().ifPresent(verID -> {
-            try {
-                AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                VerIDSession<AuthenticationSessionSettings> authenticationSession = new VerIDSession<>(verID, sessionSettings);
-                authenticationSession.setFaceDetectionFunctionSupplier(() -> image -> new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, Bearing.STRAIGHT));
-                authenticationSession.setFaceDetectionResultEvaluationFunctionSupplier(() -> faceDetection -> {
-                    throw new VerIDSessionException(new VerIDCoreException(VerIDCoreException.Code.AUTHENTICATION_SCORE_TOO_LOW), VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
-                });
-                VerIDSessionResult[] results = new VerIDSessionResult[1];
-                CountDownLatch latch = new CountDownLatch(1);
-                authenticationSession.setDelegate((session, result) -> {
-                    results[0] = result;
-                    latch.countDown();
-                });
-                authenticationSession.start();
-                assertTrue(latch.await(20, TimeUnit.SECONDS));
-                assertTrue(results[0].getError().isPresent());
-                assertEquals(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR, results[0].getError().get().getCode());
-            } catch (Exception e) {
-                fail();
-            }
+        AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        runSession(sessionSettings, () -> faceDetection -> {
+            throw new VerIDSessionException(new VerIDCoreException(VerIDCoreException.Code.AUTHENTICATION_SCORE_TOO_LOW), VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
         });
+        intended(hasComponent(SessionResultActivity.class.getName()));
+        onView(allOf(withId(R.id.value), withText("No"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
 
     @Test
-    public void test_authenticate_showsResult() {
-        ((SampleApplication)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext()).getVerID().ifPresent(verID -> {
-            try {
-                AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                VerIDSession<AuthenticationSessionSettings> authenticationSession = new VerIDSession<>(verID, sessionSettings);
-                authenticationSession.setFaceDetectionFunctionSupplier(() -> image -> new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, Bearing.STRAIGHT));
-                authenticationSession.setFaceDetectionResultEvaluationFunctionSupplier(() -> faceDetection -> createFaceCapture());
-                VerIDSessionResult[] results = new VerIDSessionResult[1];
-                CountDownLatch latch = new CountDownLatch(1);
-                authenticationSession.setDelegate((session, result) -> {
-                    results[0] = result;
-                    latch.countDown();
-                });
-                authenticationSession.start();
-                assertTrue(latch.await(20, TimeUnit.SECONDS));
-                assertFalse(results[0].getError().isPresent());
-                intended(hasComponent(SessionSuccessActivity.class.getName()));
-            } catch (Exception e) {
-                fail();
-            }
+    public void test_registerWithFailure_showsFailurePage() {
+        RegistrationSessionSettings sessionSettings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        runSession(sessionSettings, () -> faceDetectionResult -> {
+            throw new VerIDSessionException(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
         });
+        intended(hasComponent(SessionResultActivity.class.getName()));
+        onView(allOf(withId(R.id.value), withText("No"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void test_authenticate_showsResult() throws Exception {
+        AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        runSession(sessionSettings, () -> faceDetectionResult -> createFaceCapture());
+        intended(hasComponent(SessionResultActivity.class.getName()));
+        onView(allOf(withId(R.id.value), withText("Yes"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
 
     @Test
@@ -280,6 +236,8 @@ public class ExampleInstrumentedTest {
     @Test
     public void test_registerMoreFaces_launchesRegistrationSession() throws Exception {
         test_importRegistration();
+        release();
+        init();
         onView(withId(R.id.register)).perform(click());
         intended(hasComponent(SessionActivity.class.getName()));
     }
@@ -287,9 +245,11 @@ public class ExampleInstrumentedTest {
     @Test
     public void test_unregisterUser_showsIntroActivity() throws Exception {
         test_importRegistration();
+        release();
+        init();
         onView(withId(R.id.removeButton)).perform(click());
         onView(withText(R.string.unregister)).perform(click());
-        intended(hasComponent(IntroActivity.class.getName()), times(2));
+        intended(hasComponent(IntroActivity.class.getName()));
     }
 
     @Test
@@ -303,7 +263,8 @@ public class ExampleInstrumentedTest {
     @Test
     public void test_runSuccessfulSession_showsSuccessActivity() {
         runSession(getLivenessDetectionSessionSettings(true, 2), () -> faceDetectionResult -> createFaceCapture());
-        intended(hasComponent(SessionSuccessActivity.class.getName()));
+        intended(hasComponent(SessionResultActivity.class.getName()));
+        onView(allOf(withId(R.id.value), withText("Yes"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
 
     @Test
@@ -312,29 +273,10 @@ public class ExampleInstrumentedTest {
             throw new VerIDSessionException(new AntiSpoofingException(AntiSpoofingException.Code.MOVED_OPPOSITE, Bearing.STRAIGHT), VerIDSessionException.Code.LIVENESS_FAILURE);
         });
         intended(hasComponent(SessionLivenessDetectionFailureActivity.class.getName()));
-        release();
-        init();
-        onView(withId(R.id.retryButton)).perform(click());
-        IdlingRegistry.getInstance().register(session);
-        Espresso.onIdle();
-        intended(hasComponent(SessionFailureActivity.class.getName()));
-    }
-
-    @Test
-    public void test_runSessionWithFailure_showsFailureActivity() {
-        runSession(getLivenessDetectionSessionSettings(true, 2), () -> faceDetectionResult -> {
-            throw new VerIDSessionException(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
-        });
-        intended(hasComponent(SessionFailureActivity.class.getName()));
     }
 
     private <T extends VerIDSessionSettings> VerIDSession<T> runSession(T settings, Supplier<Function<FaceDetectionResult, FaceCapture>> faceDetectionResultEvaluationFunctionSupplier) {
-        mainActivityIntentsTestRule.launchActivity(null);
-        IdlingRegistry.getInstance().register(mainActivityIntentsTestRule.getActivity());
-        Espresso.onIdle();
-        assertTrue(getSampleApplication().getVerID().isPresent());
-        VerID verID = getSampleApplication().getVerID().get();
-        mainActivityIntentsTestRule.finishActivity();
+        VerID verID = getSampleAppVerID();
         registeredUserActivityIntentsTestRule.launchActivity(null);
         VerIDSession<T> session = new VerIDSession<>(verID, settings);
         session.setDelegate(registeredUserActivityIntentsTestRule.getActivity());
@@ -355,6 +297,16 @@ public class ExampleInstrumentedTest {
 
     private SampleApplication getSampleApplication() {
         return (SampleApplication)InstrumentationRegistry.getInstrumentation().getTargetContext().getApplicationContext();
+    }
+
+    private VerID getSampleAppVerID() {
+        mainActivityIntentsTestRule.launchActivity(null);
+        IdlingRegistry.getInstance().register(mainActivityIntentsTestRule.getActivity());
+        Espresso.onIdle();
+        assertTrue(getSampleApplication().getVerID().isPresent());
+        VerID verID = getSampleApplication().getVerID().get();
+        mainActivityIntentsTestRule.finishActivity();
+        return verID;
     }
 
     private FaceCapture createFaceCapture() {
