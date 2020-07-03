@@ -107,4 +107,5 @@
     <string name="confidence_threshold">Confidence threshold</string>
     <string name="face_template_extraction_threshold">Face template extraction threshold</string>
     <string name="verid_failed_to_load">Ver-ID failed to load</string>
+    <string name="record_session_video">Record session video</string>
 </resources>

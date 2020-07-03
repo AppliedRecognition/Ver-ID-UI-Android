@@ -10,7 +10,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 /**
- * Ver-ID session that uses {@link SessionActivity} and {@link SessionResultActivity}
+ * Ver-ID session that uses {@link SessionActivityCameraX} and {@link SessionResultActivity}
  *
  * <h3>Example: Running a liveness detection session</h3>
  * <pre>
@@ -33,7 +33,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
  * @param <Settings>
  * @since 2.0.0
  */
-public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, SessionActivity, SessionResultActivity> {
+public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
     /**
      * Session constructor
@@ -58,7 +58,7 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
 
     @NonNull
     @Override
-    protected Class<? extends SessionActivity> getSessionActivityClass() {
+    protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
         return SessionActivity.class;
     }
 

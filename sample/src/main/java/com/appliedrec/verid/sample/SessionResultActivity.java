@@ -46,9 +46,7 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
         sessionSettings = getIntent().getParcelableExtra(EXTRA_SETTINGS);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (sessionResult != null) {
-            if (sessionResult.getVideoUri() != null) {
-                transaction.add(R.id.content, SessionVideoFragment.newInstance(sessionResult.getVideoUri()));
-            }
+            sessionResult.getVideoUri().ifPresent(videoUri -> transaction.add(R.id.content, SessionVideoFragment.newInstance(videoUri)));
             if (sessionResult.getFaceCaptures().length > 0) {
                 transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Faces"));
                 transaction.add(R.id.content, SessionFacesFragment.newInstance(sessionResult));
@@ -60,20 +58,20 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
             });
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Started", sessionResult.getSessionStartTime().toString()));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format("%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format("%.01f faces/second", sessionResult.getFaceDetectionRate())));
+            sessionResult.getSessionDiagnostics().ifPresent(diagnostics -> transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format("%.01f faces/second", (float)diagnostics.getDiagnosticImages().length/(float)sessionResult.getSessionDuration(TimeUnit.MILLISECONDS)*1000f))));
         }
         if (sessionSettings != null) {
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Settings"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format("%d seconds", sessionSettings.getMaxDuration(TimeUnit.SECONDS))));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Number of results to collect", String.format("%d", sessionSettings.getNumberOfFacesToCapture())));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Number of results to collect", String.format("%d", sessionSettings.getFaceCaptureCount())));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Using back camera", PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? "Yes" : "No"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Yaw threshold", String.format("%.01f", sessionSettings.getYawThreshold())));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pitch threshold", String.format("%.01f", sessionSettings.getPitchThreshold())));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Speak prompts", PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false) ? "Yes" : "No"));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face width", String.format("%.0f %%", sessionSettings.getFaceBoundsFraction().x * 100)));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face height", String.format("%.0f %%", sessionSettings.getFaceBoundsFraction().y * 100)));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face width", String.format("%.0f %%", sessionSettings.getExpectedFaceExtents().getProportionOfViewWidth() * 100)));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face height", String.format("%.0f %%", sessionSettings.getExpectedFaceExtents().getProportionOfViewHeight() * 100)));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pause duration", String.format("%.01f seconds", (float)sessionSettings.getPauseDuration(TimeUnit.MILLISECONDS)/1000f)));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face buffer size", String.format("%d", sessionSettings.getFaceBufferSize())));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face buffer size", String.format("%d", sessionSettings.getFaceCaptureFaceCount())));
         }
         if (environmentSettings != null) {
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Environment"));

@@ -3,8 +3,6 @@ package com.appliedrec.verid.sample;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,18 +40,16 @@ public class SessionFacesFragment extends Fragment {
         if (args != null) {
             VerIDSessionResult result = args.getParcelable(ARG_RESULT);
             if (result != null && getContext() != null) {
-                new Thread(() -> {
-                    for (FaceCapture face : result.getFaceCaptures()) {
-                        Bitmap bitmap = face.getFaceImage();
-                        float height = this.height * getResources().getDisplayMetrics().density;
-                        float scale = height / (float)bitmap.getHeight();
-                        bitmap = Bitmap.createScaledBitmap(bitmap, (int)((float)bitmap.getWidth()*scale), (int)((float)bitmap.getHeight() * scale), true);
-                        ImageView imageView = new ImageView(getContext());
-                        imageView.setImageBitmap(bitmap);
-                        imageView.setScaleType(ImageView.ScaleType.CENTER);
-                        view.post(() -> view.addView(imageView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1)));
-                    }
-                }).start();
+                for (FaceCapture face : result.getFaceCaptures()) {
+                    Bitmap bitmap = face.getFaceImage();
+                    float height = this.height * getResources().getDisplayMetrics().density;
+                    float scale = height / (float)bitmap.getHeight();
+                    bitmap = Bitmap.createScaledBitmap(bitmap, (int)((float)bitmap.getWidth()*scale), (int)((float)bitmap.getHeight() * scale), true);
+                    ImageView imageView = new ImageView(getContext());
+                    imageView.setImageBitmap(bitmap);
+                    imageView.setScaleType(ImageView.ScaleType.CENTER);
+                    view.addView(imageView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+                }
             }
         }
         return view;

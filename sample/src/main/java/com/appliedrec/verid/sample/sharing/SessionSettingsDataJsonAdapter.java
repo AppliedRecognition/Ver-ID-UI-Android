@@ -12,6 +12,7 @@ import com.google.gson.JsonSerializer;
 
 import java.lang.reflect.Type;
 import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
 
 class SessionSettingsDataJsonAdapter implements JsonSerializer<VerIDSessionSettings> {
 
@@ -28,14 +29,14 @@ class SessionSettingsDataJsonAdapter implements JsonSerializer<VerIDSessionSetti
             jsonObject.addProperty("type", "liveness detection");
             jsonObject.add("bearings", context.serialize(((LivenessDetectionSessionSettings)src).getBearings(), EnumSet.class));
         }
-        jsonObject.addProperty("expiryTime", src.getExpiryTime()/1000);
-        jsonObject.addProperty("numberOfResultsToCollect", src.getNumberOfFacesToCapture());
+        jsonObject.addProperty("expiryTime", src.getMaxDuration(TimeUnit.SECONDS));
+        jsonObject.addProperty("numberOfResultsToCollect", src.getFaceCaptureCount());
         jsonObject.addProperty("yawThreshold", src.getYawThreshold());
         jsonObject.addProperty("pitchThreshold", src.getPitchThreshold());
-        jsonObject.addProperty("faceWidthFraction", src.getFaceBoundsFraction().x);
-        jsonObject.addProperty("faceHeightFraction", src.getFaceBoundsFraction().y);
-        jsonObject.addProperty("pauseDuration", src.getPauseDuration()/1000);
-        jsonObject.addProperty("faceBufferSize", src.getFaceBufferSize());
+        jsonObject.addProperty("faceWidthFraction", src.getExpectedFaceExtents().getProportionOfViewWidth());
+        jsonObject.addProperty("faceHeightFraction", src.getExpectedFaceExtents().getProportionOfViewHeight());
+        jsonObject.addProperty("pauseDuration", src.getPauseDuration(TimeUnit.SECONDS));
+        jsonObject.addProperty("faceBufferSize", src.getFaceCaptureFaceCount());
 
         return jsonObject;
     }

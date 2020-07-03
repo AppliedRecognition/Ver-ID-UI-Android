@@ -28,7 +28,6 @@ class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSessionResult>
         jsonObject.add("faces", faces);
         jsonObject.addProperty("start_time", src.getSessionStartTime().getTime());
         jsonObject.addProperty("duration_seconds", src.getSessionDuration(TimeUnit.SECONDS));
-        jsonObject.addProperty("face_detection_rate", src.getFaceDetectionRate());
         if (!src.getError().isPresent()) {
             jsonObject.addProperty("succeeded", true);
         } else {

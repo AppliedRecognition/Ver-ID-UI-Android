@@ -71,7 +71,7 @@ public class FaceSizeSettingsFragment extends Fragment implements SeekBar.OnSeek
         seekBar.setOnSeekBarChangeListener(this);
         if (getArguments() != null) {
             LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
-            int value = (int)(getArguments().getFloat(ARG_INITIAL_VALUE, isLandscape ? livenessDetectionSessionSettings.getFaceBoundsFraction().y : livenessDetectionSessionSettings.getFaceBoundsFraction().x)*seekBar.getMax());
+            int value = (int)(getArguments().getFloat(ARG_INITIAL_VALUE, isLandscape ? livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight() : livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth())*seekBar.getMax());
             seekBar.setProgress(value);
         }
         detectedFaceView = view.findViewById(R.id.detectedFaceView);

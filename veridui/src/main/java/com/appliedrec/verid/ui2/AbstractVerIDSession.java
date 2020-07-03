@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -18,6 +19,7 @@ import com.appliedrec.verid.core2.AntiSpoofingException;
 import com.appliedrec.verid.core2.FacePresenceException;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDImage;
+import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetection;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
@@ -36,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.functions.Function;
 
@@ -60,10 +63,11 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private ITextSpeaker textSpeaker;
     private AtomicReference<VerIDSessionResult> resultToShow = new AtomicReference<>();
     private AtomicInteger runCount = new AtomicInteger(0);
-    private AtomicReference<Supplier<Function<VerIDImage, FaceDetectionResult>>> faceDetectionFunctionSupplier;
+    private AtomicReference<Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>>> faceDetectionFunctionSupplier;
     private AtomicReference<Supplier<Function<FaceDetectionResult, FaceCapture>>> faceDetectionResultEvaluationFunctionSupplier;
     private ResourceCallback idlingResourceCallback;
     private final SessionPrompts sessionPrompts;
+    private ISessionVideoRecorder videoRecorder;
 
     private static AtomicLong lastSessionId = new AtomicLong(0);
 
@@ -116,7 +120,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
                 isStarted.set(false);
                 onSessionFinished();
                 long now = System.currentTimeMillis();
-                getDelegate().ifPresent(listener -> listener.sessionDidFinishWithResult(this, new VerIDSessionResult(new VerIDSessionException(e), now, now, 0)));
+                getDelegate().ifPresent(listener -> listener.onSessionFinished(this, new VerIDSessionResult(new VerIDSessionException(e), now, now, null)));
             }
         });
     }
@@ -165,6 +169,13 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
      */
     public void setDelegate(@Nullable VerIDSessionDelegate delegate) {
         this.delegateReference = delegate != null ? new WeakReference<>(delegate) : null;
+        if (delegate != null && delegate.shallSessionRecordVideo(this)) {
+            videoRecorder = new SessionVideoRecorder();
+        }
+    }
+
+    protected Optional<ISessionVideoRecorder> getVideoRecorder() {
+        return Optional.ofNullable(videoRecorder);
     }
 
     /**
@@ -188,7 +199,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
      * @return Face detection function supplier
      * @since 2.0.0
      */
-    public Supplier<Function<VerIDImage, FaceDetectionResult>> getFaceDetectionFunctionSupplier() {
+    public Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>> getFaceDetectionFunctionSupplier() {
         return faceDetectionFunctionSupplier.get();
     }
 
@@ -197,7 +208,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
      * @param faceDetectionFunctionSupplier Face detection function supplier
      * @since 2.0.0
      */
-    public void setFaceDetectionFunctionSupplier(@NonNull Supplier<Function<VerIDImage, FaceDetectionResult>> faceDetectionFunctionSupplier) {
+    public void setFaceDetectionFunctionSupplier(@NonNull Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>> faceDetectionFunctionSupplier) {
         this.faceDetectionFunctionSupplier.set(faceDetectionFunctionSupplier);
     }
 
@@ -228,7 +239,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     }
 
     private Session<Settings> createCoreSession(T sessionActivity) {
-        return new Session.Builder<>(verID, settings, sessionActivity.getImageFlowable())
+        return new Session.Builder<>(verID, settings, sessionActivity.getImageFlowable(), sessionActivity)
                 .setFaceDetectionFunctionSupplier(getFaceDetectionFunctionSupplier())
                 .setFaceDetectionResultEvaluationFunctionSupplier(getFaceDetectionResultEvaluationFunctionSupplier())
                 .setFaceDetectionCallback(getFaceDetectionCallback())
@@ -242,21 +253,22 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private void startSessionWithActivity(T sessionActivity) {
         this.sessionActivity = sessionActivity;
         sessionActivity.setSessionSettings(settings, getCameraLens());
+        getVideoRecorder().ifPresent(sessionActivity::setVideoRecorder);
         createCoreSession(sessionActivity).start();
     }
 
-    private CameraLens getCameraLens() {
+    private CameraLocation getCameraLens() {
         if (getDelegate().isPresent()) {
-            return getDelegate().get().getCameraLensForSession(this);
+            return getDelegate().get().getSessionCameraLocation(this);
         }
-        return CameraLens.FACING_FRONT;
+        return CameraLocation.FRONT;
     }
 
     @UiThread
     private void startSessionActivity(@NonNull Context context) {
         if (sessionActivity == null) {
             Intent intent = new Intent(context, getSessionActivityClass());
-            intent.putExtra(SessionActivity.EXTRA_SESSION_ID, sessionId);
+            intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, sessionId);
             if (!(context instanceof Activity)) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             }
@@ -279,18 +291,24 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     @UiThread
     private void finishWithResult(@NonNull VerIDSessionResult result) {
         int runCount = this.runCount.incrementAndGet();
+        getVideoRecorder().flatMap(recorder -> {
+            recorder.stop();
+            return recorder.getVideoFile();
+        }).ifPresent(videoFile -> {
+            result.setVideoUri(Uri.fromFile(videoFile));
+        });
         onSessionFinished();
         if (sessionActivity != null) {
             sessionActivity.setFaceDetectionResult(null, null);
         }
-        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionShowResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
+        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shallSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
             resultToShow.set(result);
             Intent intent = new Intent(sessionActivity, getSessionResultActivityClass(result));
-            intent.putExtra(SessionActivity.EXTRA_SESSION_ID, sessionId);
+            intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, sessionId);
             sessionActivity.startActivity(intent);
         } else {
             if (isStarted.getAndSet(false)) {
-                getDelegate().ifPresent(listener -> listener.sessionDidFinishWithResult(this, result));
+                getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result));
             }
             disposeSession();
             unregisterActivityCallbacks();
@@ -307,7 +325,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @UiThread
     private void finishWithError(@NonNull Throwable throwable) {
-        finishWithResult(new VerIDSessionResult(new VerIDSessionException(throwable), System.currentTimeMillis(), System.currentTimeMillis(), 0));
+        finishWithResult(new VerIDSessionResult(new VerIDSessionException(throwable), System.currentTimeMillis(), System.currentTimeMillis(), null));
     }
 
     @UiThread
@@ -320,7 +338,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<T> sessionActivity(Activity activity) {
-        if (getSessionActivityClass().isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (getSessionActivityClass().isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
             return Optional.of((T)activity);
         } else {
             return Optional.empty();
@@ -329,7 +347,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<ISessionResultActivity> sessionResultActivity(Activity activity) {
-        if (resultToShow.get() != null && getSessionResultActivityClass(resultToShow.get()).isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (resultToShow.get() != null && getSessionResultActivityClass(resultToShow.get()).isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
             return Optional.of((ISessionResultActivity)activity);
         } else {
             return Optional.empty();
@@ -338,7 +356,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<TipsActivity> tipsActivity(Activity activity) {
-        if (activity instanceof TipsActivity && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (activity instanceof TipsActivity && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
             TipsActivity tipsActivity = (TipsActivity)activity;
             return Optional.of(tipsActivity);
         } else {
@@ -358,7 +376,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     }
 
     private Optional<ITextSpeaker> getTextSpeaker() {
-        if (getDelegate().isPresent() && getDelegate().get().shouldSpeakPromptsInSession(this)) {
+        if (getDelegate().isPresent() && getDelegate().get().shallSessionSpeakPrompts(this)) {
             return Optional.ofNullable(textSpeaker);
         }
         return Optional.empty();
@@ -418,7 +436,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             if (activity.isFinishing() && resultToShow.get() == null) {
                 if (isStarted.getAndSet(false)) {
                     onSessionFinished();
-                    getDelegate().ifPresent(listener -> listener.sessionWasCanceled(this));
+                    getDelegate().ifPresent(listener -> listener.onSessionCanceled(this));
                 }
                 unregisterActivityCallbacks();
             }
@@ -432,7 +450,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
                 VerIDSessionResult result = resultToShow.getAndSet(null);
                 if (result != null) {
                     isStarted.set(false);
-                    getDelegate().ifPresent(listener -> listener.sessionDidFinishWithResult(this, result));
+                    getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result));
                 }
                 unregisterActivityCallbacks();
             }

@@ -7,7 +7,6 @@ import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewTreeObserver;
@@ -16,10 +15,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
@@ -28,7 +29,7 @@ import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.AbstractVerIDSession;
-import com.appliedrec.verid.ui2.CameraLens;
+import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -168,12 +169,15 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                     // The higher the count the more confident we can be of a live face at the expense of usability
                     // Note that 1 is added to the setting to include the initial mandatory straight pose
                     if (preferences != null) {
-                        settings.setNumberOfFacesToCapture(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getNumberOfFacesToCapture()))));
+                        settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
                         settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
                         settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
-                        settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
-                        settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
+                        settings.setExpectedFaceExtents(new FaceExtents(
+                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+                        ));
                     }
+                    settings.setSessionDiagnosticsEnabled(true);
                     VerIDSession<AuthenticationSessionSettings> authenticationSession;
                     if (i == 1) {
                         TranslatedStrings translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
@@ -197,12 +201,15 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (preferences != null) {
-            settings.setNumberOfFacesToCapture(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getNumberOfFacesToCapture()))));
+            settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
             settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
             settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
-            settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
-            settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
+            settings.setExpectedFaceExtents(new FaceExtents(
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+            ));
         }
+        settings.setSessionDiagnosticsEnabled(true);
         VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
         registrationSession.setDelegate(this);
         registrationSession.start();
@@ -309,7 +316,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     //endregion
 
     @Override
-    public void sessionDidFinishWithResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public void onSessionFinished(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -328,13 +335,18 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     }
 
     @Override
-    public boolean shouldSpeakPromptsInSession(AbstractVerIDSession<?, ?, ?> session) {
-        return androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
+    public boolean shallSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
     @Override
-    public CameraLens getCameraLensForSession(AbstractVerIDSession<?, ?, ?> session) {
-        return androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLens.FACING_BACK : CameraLens.FACING_FRONT;
+    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
+    }
+
+    @Override
+    public boolean shallSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false);
     }
 
     private void executeInBackground(Runnable runnable) {

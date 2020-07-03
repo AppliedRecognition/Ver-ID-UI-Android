@@ -18,13 +18,14 @@ import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.AbstractVerIDSession;
-import com.appliedrec.verid.ui2.CameraLens;
+import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.PageViewActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -116,10 +117,12 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         if (preferences != null) {
             if (preferences.contains(PreferenceKeys.REGISTRATION_FACE_COUNT)) {
-                settings.setNumberOfFacesToCapture(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getNumberOfFacesToCapture()))));
+                settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
             }
-            settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
-            settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
+            settings.setExpectedFaceExtents(new FaceExtents(
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+            ));
         }
         VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
         session.setDelegate(this);
@@ -154,7 +157,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public void sessionDidFinishWithResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public void onSessionFinished(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -174,13 +177,13 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public boolean shouldSpeakPromptsInSession(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shallSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
     @Override
-    public CameraLens getCameraLensForSession(AbstractVerIDSession<?, ?, ?> session) {
-        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLens.FACING_BACK : CameraLens.FACING_FRONT;
+    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
     }
 
     public static class IntroFragment extends Fragment {

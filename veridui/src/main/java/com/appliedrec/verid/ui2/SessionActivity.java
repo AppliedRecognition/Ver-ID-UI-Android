@@ -1,86 +1,43 @@
 package com.appliedrec.verid.ui2;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
-import androidx.annotation.DrawableRes;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.AspectRatio;
-import androidx.camera.core.Camera;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.graphics.drawable.RoundedBitmapDrawable;
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
-import androidx.exifinterface.media.ExifInterface;
 
-import com.appliedrec.verid.core2.Bearing;
-import com.appliedrec.verid.core2.session.FaceCapture;
-import com.appliedrec.verid.core2.session.FaceDetectionResult;
-import com.appliedrec.verid.core2.session.IImageFlowable;
-import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
-import com.appliedrec.verid.core2.session.VerIDSessionSettings;
+import com.appliedrec.verid.core2.Size;
+import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
-import com.google.common.util.concurrent.ListenableFuture;
 
-import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class SessionActivity extends AppCompatActivity implements ISessionActivity {
+public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragment> implements SurfaceHolder.Callback, CameraWrapper.Listener {
 
-    public static final String EXTRA_SESSION_ID = "com.appliedrec.verid.EXTRA_SESSION_ID";
-    private static final int REQUEST_CODE_CAMERA_PERMISSION = 1;
-    private ThreadPoolExecutor imageProcessingExecutor;
-    private ExecutorService backgroundExecutor;
-    private VerIDSessionSettings sessionSettings;
-    private CameraLens cameraLens = CameraLens.FACING_FRONT;
-    private VerIDSessionFragment sessionFragment;
+    private static final int REQUEST_CODE_CAMERA_PERMISSION = 0;
     private ActivitySessionBinding viewBinding;
-    private ArrayList<Bitmap> faceImages = new ArrayList<>();
-    private final VerIDImageAnalyzer imageAnalyzer = new VerIDImageAnalyzer();
+    private VerIDSessionFragment sessionFragment;
+    private AtomicReference<ISessionVideoRecorder> sessionVideoRecorder = new AtomicReference<>();
+    private CameraWrapper cameraWrapper;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewBinding = ActivitySessionBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
         sessionFragment = (VerIDSessionFragment) getSupportFragmentManager().findFragmentById(R.id.session_fragment);
-        faceImages = new ArrayList<>();
-        imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setName("Ver-ID image processing");
-            return thread;
-        });
-        backgroundExecutor = Executors.newSingleThreadExecutor(runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setName("Ver-ID session background");
-            return thread;
-        });
+        cameraWrapper = new CameraWrapper(this, getCameraLocation(), getImageAnalyzer(), getSessionVideoRecorder().orElse(null));
+        cameraWrapper.setListener(this);
         drawFaces();
-        if (hasCameraPermission()) {
-            startCamera();
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA_PERMISSION);
-        }
     }
 
     @Override
@@ -88,217 +45,160 @@ public class SessionActivity extends AppCompatActivity implements ISessionActivi
         super.onDestroy();
         viewBinding = null;
         sessionFragment = null;
-        sessionSettings = null;
-        faceImages.clear();
-        if (imageProcessingExecutor != null) {
-            imageProcessingExecutor.shutdown();
-            imageProcessingExecutor = null;
+        if (cameraWrapper != null) {
+            cameraWrapper.stop();
+            cameraWrapper = null;
         }
-        if (backgroundExecutor != null) {
-            backgroundExecutor.shutdown();
-            backgroundExecutor = null;
-        }
-    }
-
-    public void setSessionSettings(VerIDSessionSettings sessionSettings, CameraLens cameraLens) {
-        this.sessionSettings = sessionSettings;
-        this.cameraLens = cameraLens;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE_CAMERA_PERMISSION) {
-            if (hasCameraPermission()) {
-                startCamera();
-            } else {
-                Toast.makeText(this, "Failed to obtain camera permission", Toast.LENGTH_SHORT).show();
-            }
-        }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    private boolean hasCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> processCameraFuture = ProcessCameraProvider.getInstance(this);
-        processCameraFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = processCameraFuture.get();
-                Preview cameraPreview = new Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build();
-                int lensFacing = CameraSelector.LENS_FACING_FRONT;
-                if (cameraLens == CameraLens.FACING_BACK) {
-                    lensFacing = CameraSelector.LENS_FACING_BACK;
-                }
-                CameraSelector cameraSelector = new CameraSelector.Builder()
-                        .requireLensFacing(lensFacing)
-                        .build();
-                cameraProvider.unbindAll();
-                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build();
-                imageAnalysis.setAnalyzer(imageProcessingExecutor, imageAnalyzer);
-                Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, cameraPreview, imageAnalysis);
-                imageAnalyzer.setExifOrientation(getExifOrientationFromCamera(camera, cameraPreview));
-                if (sessionFragment != null) {
-                    sessionFragment.getViewFinder().ifPresent(viewFinder -> {
-                        viewFinder.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
-                        cameraPreview.setSurfaceProvider(viewFinder.createSurfaceProvider());
-                    });
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    @Override
-    public IImageFlowable getImageFlowable() {
-        return imageAnalyzer;
-    }
-
-    public void setFaceDetectionResult(FaceDetectionResult faceDetectionResult, String prompt) {
-        runOnUiThread(() -> {
-            if (sessionFragment != null) {
-                sessionFragment.accept(faceDetectionResult, prompt);
-            }
+        getSessionVideoRecorder().ifPresent(videoRecorder -> {
+            getLifecycle().removeObserver(videoRecorder);
         });
     }
 
-    private @VerIDImageAnalyzer.ExifOrientation int getExifOrientationFromCamera(Camera camera, Preview cameraPreview) {
-        int rotationDegrees = camera.getCameraInfo().getSensorRotationDegrees(cameraPreview.getTargetRotation());
-        int exifOrientation;
-        switch (rotationDegrees) {
-            case 90:
-                exifOrientation = ExifInterface.ORIENTATION_ROTATE_90;
-                break;
-            case 180:
-                exifOrientation = ExifInterface.ORIENTATION_ROTATE_180;
-                break;
-            case 270:
-                exifOrientation = ExifInterface.ORIENTATION_ROTATE_270;
-                break;
-            default:
-                exifOrientation = ExifInterface.ORIENTATION_NORMAL;
-        }
-        if (cameraLens == CameraLens.FACING_FRONT) {
-            switch (exifOrientation) {
-                case ExifInterface.ORIENTATION_NORMAL:
-                    exifOrientation = ExifInterface.ORIENTATION_FLIP_HORIZONTAL;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_90:
-                    exifOrientation = ExifInterface.ORIENTATION_TRANSVERSE;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_180:
-                    exifOrientation = ExifInterface.ORIENTATION_FLIP_VERTICAL;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_270:
-                    exifOrientation = ExifInterface.ORIENTATION_TRANSPOSE;
-                    break;
-            }
-        }
-        return exifOrientation;
+    @Override
+    protected void onResumeFragments() {
+        super.onResumeFragments();
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> {
+            surfaceView.getHolder().addCallback(this);
+        });
     }
 
     @Override
-    public void accept(FaceCapture faceCapture) {
-        if (sessionSettings instanceof RegistrationSessionSettings) {
-            runOnUiThread(() -> {
-                float screenDensity = getResources().getDisplayMetrics().density;
-                executeInBackground(() -> {
-                    float targetHeightDp = 96f;
-                    float scale = targetHeightDp / (float) faceCapture.getFaceImage().getHeight() * screenDensity;
-                    Bitmap bitmap = Bitmap.createScaledBitmap(faceCapture.getFaceImage(), Math.round((float) faceCapture.getFaceImage().getWidth() * scale), Math.round((float) faceCapture.getFaceImage().getHeight() * scale), true);
-                    if (cameraLens == CameraLens.FACING_FRONT) {
-                        Matrix matrix = new Matrix();
-                        matrix.setScale(-1, 1);
-                        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                    }
-                    faceImages.add(bitmap);
-                    runOnUiThread(this::drawFaces);
-                });
-            });
+    protected void onPause() {
+        super.onPause();
+        if (cameraWrapper != null) {
+            cameraWrapper.stop();
+            cameraWrapper = null;
         }
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> {
+            surfaceView.getHolder().removeCallback(this);
+        });
     }
 
-    @DrawableRes
-    private int placeholderImageForBearing(Bearing bearing) {
-        switch (bearing) {
-            case STRAIGHT:
-                return R.mipmap.head_straight;
-            case LEFT:
-                return R.mipmap.head_left;
-            case RIGHT:
-                return R.mipmap.head_right;
-            case UP:
-                return R.mipmap.head_up;
-            case DOWN:
-                return R.mipmap.head_down;
-            case LEFT_UP:
-                return R.mipmap.head_left_up;
-            case RIGHT_UP:
-                return R.mipmap.head_right_up;
-            case LEFT_DOWN:
-                return R.mipmap.head_left_down;
-            case RIGHT_DOWN:
-                return R.mipmap.head_right_down;
-            default:
-                return R.mipmap.head_straight;
-        }
+    //region Video recording
+
+    @Override
+    public void setVideoRecorder(ISessionVideoRecorder videoRecorder) {
+        this.sessionVideoRecorder.set(videoRecorder);
+        this.getLifecycle().addObserver(videoRecorder);
+    }
+
+    //endregion
+
+    protected Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
+        return Optional.ofNullable(sessionVideoRecorder.get());
+    }
+
+    protected Optional<VerIDSessionFragment> getSessionFragment() {
+        return Optional.ofNullable(sessionFragment);
+    }
+
+    @Override
+    protected Optional<LinearLayout> getFaceImagesView() {
+        return Optional.ofNullable(viewBinding).map(views -> views.faceImages);
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    @MainThread
+    protected void startCamera() {
+        getSessionFragment().ifPresent(fragment -> {
+            if (fragment.getView() == null) {
+                return;
+            }
+            int width = fragment.getView().getWidth();
+            int height = fragment.getView().getHeight();
+            int displayRotation = getDisplayRotation();
+
+            cameraWrapper.start(width, height, displayRotation);
+        });
     }
 
     @MainThread
-    private void drawFaces() {
+    protected int getDisplayRotation() {
         if (viewBinding == null) {
-            return;
+            return 0;
         }
-        viewBinding.faceImages.removeAllViews();
-        if (sessionSettings instanceof RegistrationSessionSettings) {
-            float screenDensity = getResources().getDisplayMetrics().density;
-            int height = Math.round(screenDensity * 96f);
-            int margin = Math.round(screenDensity * 8f);
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, height);
-            Bearing[] bearingsToRegister = ((RegistrationSessionSettings) sessionSettings).getBearingsToRegister();
-            executeInBackground(() -> {
-                ArrayList<RoundedBitmapDrawable> bitmapDrawables = new ArrayList<>();
-                for (int i = 0; i<sessionSettings.getNumberOfFacesToCapture(); i++) {
-                    RoundedBitmapDrawable drawable;
-                    if (i < faceImages.size()) {
-                        Bitmap bitmap = faceImages.get(i);
-                        drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
-                    } else {
-                        int bearingIndex = i % bearingsToRegister.length;
-                        Bearing bearing = bearingsToRegister[bearingIndex];
-                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), placeholderImageForBearing(bearing));
-                        if (cameraLens == CameraLens.FACING_FRONT) {
-                            Matrix matrix = new Matrix();
-                            matrix.setScale(-1, 1);
-                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                        }
-                        drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
-                    }
-                    drawable.setCornerRadius(height / 6f);
-                    bitmapDrawables.add(drawable);
-                }
-                runOnUiThread(() -> {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    for (RoundedBitmapDrawable drawable : bitmapDrawables) {
-                        ImageView imageView = new ImageView(this);
-                        imageView.setScaleType(ImageView.ScaleType.CENTER);
-                        imageView.setImageDrawable(drawable);
-                        layoutParams.leftMargin = margin;
-                        layoutParams.rightMargin = margin;
-                        viewBinding.faceImages.addView(imageView, layoutParams);
-                    }
-                });
-            });
+        switch (viewBinding.getRoot().getDisplay().getRotation()) {
+            case Surface.ROTATION_0:
+            default:
+                return 0;
+            case Surface.ROTATION_90:
+                return  90;
+            case Surface.ROTATION_180:
+                return  180;
+            case Surface.ROTATION_270:
+                return 270;
         }
     }
 
-    private void executeInBackground(Runnable runnable) {
-        if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
-            backgroundExecutor.execute(runnable);
+    //region Surface callback
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+        if (hasCameraPermission()) {
+            cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+            startCamera();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA_PERMISSION);
         }
     }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        if (cameraWrapper != null) {
+            cameraWrapper.stop();
+            cameraWrapper = null;
+        }
+    }
+
+    @Override
+    public void onPreviewSize(int width, int height, int sensorOrientation) {
+        runOnUiThread(() -> {
+            if (viewBinding == null) {
+                return;
+            }
+            getSessionFragment().ifPresent(sessionFragment -> {
+                View fragmentView = sessionFragment.getView();
+                if (fragmentView == null) {
+                    return;
+                }
+                float fragmentWidth = fragmentView.getWidth();
+                float fragmentHeight = fragmentView.getHeight();
+                sessionFragment.getViewFinder().ifPresent(viewFinder -> {
+                    int rotationDegrees = getDisplayRotation();
+                    float w, h;
+                    if ((sensorOrientation - rotationDegrees) % 180 == 0) {
+                        w = width;
+                        h = height;
+                    } else {
+                        w = height;
+                        h = width;
+                    }
+                    float viewAspectRatio = fragmentWidth/fragmentHeight;
+                    float imageAspectRatio = w/h;
+                    final float scale;
+                    if (viewAspectRatio > imageAspectRatio) {
+                        scale = fragmentWidth/w;
+                    } else {
+                        scale = fragmentHeight/h;
+                    }
+                    ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(viewFinder.getLayoutParams());
+                    layoutParams.width = (int) (scale * w);
+                    layoutParams.height = (int) (scale * h);
+                    layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
+                    layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
+                    layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+                    viewFinder.setLayoutParams(layoutParams);
+                });
+            });
+        });
+    }
+
+    //endregion
 }

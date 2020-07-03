@@ -3,12 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:clipChildren="false">
 
     <com.appliedrec.verid.ui2.DetectedFaceView
         android:id="@+id/detectedFaceView"
@@ -32,9 +29,9 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Headline"
         android:textColor="@android:color/black"
         android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/detectedFaceView"
+        app:layout_constraintStart_toStartOf="@id/detectedFaceView"
+        app:layout_constraintTop_toTopOf="@id/detectedFaceView"
         tools:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -8,6 +8,7 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
+import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.BuildConfig;
@@ -61,10 +62,10 @@ public class SessionExport {
         File zipFile = new File(sessionsDir, "Ver-ID session "+ SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.MEDIUM, SimpleDateFormat.MEDIUM).format(new Date()) + ".zip");
         try (FileOutputStream fileOutputStream = new FileOutputStream(zipFile)) {
             try (ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
-                if (sessionResult.getVideoUri() != null) {
-                    String videoPath = sessionResult.getVideoUri().getLastPathSegment();
+                sessionResult.getVideoUri().ifPresent(videoUri -> {
+                    String videoPath = videoUri.getLastPathSegment();
                     if (videoPath != null) {
-                        try (InputStream inputStream = context.getContentResolver().openInputStream(sessionResult.getVideoUri())) {
+                        try (InputStream inputStream = context.getContentResolver().openInputStream(videoUri)) {
                             if (inputStream != null) {
                                 ZipEntry zipEntry = new ZipEntry("video" + videoPath.substring(videoPath.lastIndexOf(".")));
                                 zipOutputStream.putNextEntry(zipEntry);
@@ -75,14 +76,15 @@ public class SessionExport {
                                 }
                                 zipOutputStream.closeEntry();
                             }
+                        } catch (Exception ignore) {
                         }
                     }
-                }
+                });
                 int i = 1;
-                for (Bitmap bitmap : sessionResult.getImages()) {
+                for (FaceCapture faceCapture : sessionResult.getFaceCaptures()) {
                     ZipEntry zipEntry = new ZipEntry("image" + (i++) + ".jpg");
                     zipOutputStream.putNextEntry(zipEntry);
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, zipOutputStream);
+                    faceCapture.getImage().compress(Bitmap.CompressFormat.JPEG, 95, zipOutputStream);
                     zipOutputStream.closeEntry();
                 }
                 Gson gson = new GsonBuilder()

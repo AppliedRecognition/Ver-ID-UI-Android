@@ -32,18 +32,14 @@ import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
-import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui2.SessionActivity;
-import com.appliedrec.verid.ui2.SessionFailureActivity;
+import com.appliedrec.verid.ui2.SessionActivityCameraX;
 import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
-import com.appliedrec.verid.ui2.SessionSuccessActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,9 +47,6 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import io.reactivex.rxjava3.functions.Function;
@@ -66,7 +59,6 @@ import static androidx.test.espresso.intent.Intents.init;
 import static androidx.test.espresso.intent.Intents.intended;
 import static androidx.test.espresso.intent.Intents.intending;
 import static androidx.test.espresso.intent.Intents.release;
-import static androidx.test.espresso.intent.Intents.times;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
@@ -192,7 +184,7 @@ public class SampleAppTest {
         test_importRegistration();
         onView(withId(R.id.authenticate)).perform(click());
         onView(withText("English")).perform(click());
-        intended(hasComponent(SessionActivity.class.getName()));
+        intended(hasComponent(SessionActivityCameraX.class.getName()));
     }
 
     @Test
@@ -239,7 +231,7 @@ public class SampleAppTest {
         release();
         init();
         onView(withId(R.id.register)).perform(click());
-        intended(hasComponent(SessionActivity.class.getName()));
+        intended(hasComponent(SessionActivityCameraX.class.getName()));
     }
 
     @Test

@@ -9,7 +9,7 @@
 
     <fragment
         android:id="@+id/session_fragment"
-        android:name="com.appliedrec.verid.ui2.VerIDSessionFragment"
+        android:name="com.appliedrec.verid.ui2.VerIDSessionFragmentCameraX"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
