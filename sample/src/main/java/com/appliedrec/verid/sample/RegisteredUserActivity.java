@@ -335,7 +335,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     }
 
     @Override
-    public boolean shallSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
@@ -345,7 +345,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     }
 
     @Override
-    public boolean shallSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false);
     }
 

@@ -34,7 +34,7 @@ public interface VerIDSessionDelegate {
      * @return {@literal true} to let the session display its result to the user or {@literal false} to finish the session without displaying the result to the user
      * @since 2.0.0
      */
-    default boolean shallSessionDisplayResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    default boolean shouldSessionDisplayResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
         return false;
     }
 
@@ -44,7 +44,7 @@ public interface VerIDSessionDelegate {
      * @return {@literal true} to speak the session prompts
      * @since 2.0.0
      */
-    default boolean shallSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+    default boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
         return false;
     }
 
@@ -58,7 +58,7 @@ public interface VerIDSessionDelegate {
         return CameraLocation.FRONT;
     }
 
-    default boolean shallSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
+    default boolean shouldSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
         return false;
     }
 }

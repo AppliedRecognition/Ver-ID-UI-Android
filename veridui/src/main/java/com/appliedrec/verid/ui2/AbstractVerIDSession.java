@@ -169,7 +169,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
      */
     public void setDelegate(@Nullable VerIDSessionDelegate delegate) {
         this.delegateReference = delegate != null ? new WeakReference<>(delegate) : null;
-        if (delegate != null && delegate.shallSessionRecordVideo(this)) {
+        if (delegate != null && delegate.shouldSessionRecordVideo(this)) {
             videoRecorder = new SessionVideoRecorder();
         }
     }
@@ -301,7 +301,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         if (sessionActivity != null) {
             sessionActivity.setFaceDetectionResult(null, null);
         }
-        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shallSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
+        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
             resultToShow.set(result);
             Intent intent = new Intent(sessionActivity, getSessionResultActivityClass(result));
             intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, sessionId);
@@ -376,7 +376,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     }
 
     private Optional<ITextSpeaker> getTextSpeaker() {
-        if (getDelegate().isPresent() && getDelegate().get().shallSessionSpeakPrompts(this)) {
+        if (getDelegate().isPresent() && getDelegate().get().shouldSessionSpeakPrompts(this)) {
             return Optional.ofNullable(textSpeaker);
         }
         return Optional.empty();

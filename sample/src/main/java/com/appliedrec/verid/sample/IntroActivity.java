@@ -177,7 +177,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public boolean shallSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
