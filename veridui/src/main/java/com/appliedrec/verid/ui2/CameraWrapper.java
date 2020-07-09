@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.util.Pair;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
@@ -32,7 +33,9 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -130,21 +133,25 @@ class CameraWrapper implements DefaultLifecycleObserver {
                         throw new Exception("Cannot get video sizes");
                     }
                     int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
-                    imageReader = ImageReader.newInstance(width, height, ImageFormat.YUV_420_888, 2);
-                    imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
 
-                    int w, h;
+                    float desiredAspectRatio;
                     if (rotation % 180 == 0) {
-                        w = width;
-                        h = height;
+                        desiredAspectRatio = (float)width/(float)height;
                     } else {
-                        w = height;
-                        h = width;
+                        desiredAspectRatio = (float)height/(float)width;
                     }
 
-                    Size previewSize = chooseOptimalSize(map.getOutputSizes(previewSurfaceClass), w, h);
+                    Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
+                    Size[] previewSizes = map.getOutputSizes(previewSurfaceClass);
+                    Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
+                    Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, desiredAspectRatio);
+                    Size previewSize = sizes[0];
+
+                    imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
+                    imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
+
                     getSessionVideoRecorder().ifPresent(videoRecorder -> {
-                        Size videoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+                        Size videoSize = sizes[2];
                         videoRecorder.setup(videoSize, rotation);
                     });
                     getListener().ifPresent(listener -> {
@@ -309,6 +316,55 @@ class CameraWrapper implements DefaultLifecycleObserver {
 
     private Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
         return Optional.ofNullable(videoRecorder);
+    }
+
+    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float preferredAspectRatio) {
+        HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
+        HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
+        HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
+        HashMap<Float,Size[]> candidates = new HashMap<>();
+        Comparator<Size> sizeComparator = (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight();
+        for (float ratio : previewAspectRatios.keySet()) {
+            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(ratio, imageReaderAspectRatios);
+            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(ratio, videoAspectRatios);
+            if (imageReaderCandidates.isEmpty() || videoCandidates.isEmpty()) {
+                continue;
+            }
+            Size[] sizes = new Size[3];
+            sizes[0] = Collections.max(previewAspectRatios.get(ratio), sizeComparator);
+            sizes[1] = Collections.min(imageReaderCandidates, sizeComparator);
+            sizes[2] = Collections.min(videoCandidates, sizeComparator);
+            candidates.put(ratio, sizes);
+        }
+        if (candidates.isEmpty()) {
+            return new Size[]{previewSizes[0],imageReaderSizes[0],videoSizes[0]};
+        }
+        float ratio = Collections.min(candidates.keySet(), (lhs, rhs) -> Math.abs(lhs - preferredAspectRatio) < Math.abs(rhs - preferredAspectRatio) ? -1 : 1);
+        return candidates.get(ratio);
+    }
+
+    private HashMap<Float,ArrayList<Size>> getAspectRatioSizes(Size[] sizes) {
+        HashMap<Float,ArrayList<Size>> aspectRatios = new HashMap<>();
+        for (Size size : sizes) {
+            float aspectRatio = (float)size.getWidth()/(float)size.getHeight();
+            if (!aspectRatios.containsKey(aspectRatio)) {
+                aspectRatios.put(aspectRatio, new ArrayList<>());
+            }
+            //noinspection ConstantConditions
+            aspectRatios.get(aspectRatio).add(size);
+        }
+        return aspectRatios;
+    }
+
+    private ArrayList<Size> getSizesMatchingAspectRatio(float aspectRatio, HashMap<Float,ArrayList<Size>> candidates) {
+        float aspectRatioTolerance = 0.01f;
+        ArrayList<Size> sizes = new ArrayList<>();
+        for (float ratio : candidates.keySet()) {
+            if (Math.abs(ratio - aspectRatio) < aspectRatioTolerance) {
+                sizes.addAll(candidates.get(ratio));
+            }
+        }
+        return sizes;
     }
 
     private Size chooseOptimalSize(Size[] choices, int width, int height) {
