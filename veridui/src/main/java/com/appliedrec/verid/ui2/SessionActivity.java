@@ -136,7 +136,9 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         if (hasCameraPermission()) {
-            cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+            if (cameraWrapper != null) {
+                cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+            }
             startCamera();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA_PERMISSION);
