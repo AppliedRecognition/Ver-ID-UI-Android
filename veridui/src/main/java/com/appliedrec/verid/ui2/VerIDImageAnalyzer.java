@@ -38,6 +38,7 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
     private AtomicReference<Throwable> failure = new AtomicReference<>();
     private Thread subscribeThread;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
+    private AtomicBoolean useMLKit = new AtomicBoolean(false);
 
     private interface IImage {
         int getRowStride(int plane);
@@ -57,34 +58,78 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
             if (image == null || !isStarted.get()) {
                 return;
             }
-            IImage imageImpl = new IImage() {
-                @Override
-                public int getRowStride(int plane) {
-                    return image.getPlanes()[plane].getRowStride();
-                }
+            VerIDImage verIDImage;
+            if (useMLKit.get()) {
+                verIDImage = new VerIDImage(image, exifOrientation.get());
+            } else {
+                IImage imageImpl = new IImage() {
+                    @Override
+                    public int getRowStride(int plane) {
+                        return image.getPlanes()[plane].getRowStride();
+                    }
 
-                @Override
-                public ByteBuffer getBuffer(int plane) {
-                    return image.getPlanes()[plane].getBuffer();
-                }
+                    @Override
+                    public ByteBuffer getBuffer(int plane) {
+                        return image.getPlanes()[plane].getBuffer();
+                    }
 
-                @Override
-                public int getWidth() {
-                    return image.getWidth();
-                }
+                    @Override
+                    public int getWidth() {
+                        return image.getWidth();
+                    }
 
-                @Override
-                public int getHeight() {
-                    return image.getHeight();
-                }
-            };
-            VerIDImage verIDImage = verIDImageFromImage(imageImpl);
+                    @Override
+                    public int getHeight() {
+                        return image.getHeight();
+                    }
+                };
+                verIDImage = verIDImageFromImage(imageImpl);
+            }
             try {
                 imageQueue.put(verIDImage);
             } catch (InterruptedException ignore) {
             }
         }
     }
+
+    public void setUseMLKit(boolean useMLKit) {
+        this.useMLKit.set(useMLKit);
+    }
+
+    //    @Override
+//    public void onImageAvailable(ImageReader imageReader) {
+//        try (Image image = imageReader.acquireLatestImage()) {
+//            if (image == null || !isStarted.get()) {
+//                return;
+//            }
+//            IImage imageImpl = new IImage() {
+//                @Override
+//                public int getRowStride(int plane) {
+//                    return image.getPlanes()[plane].getRowStride();
+//                }
+//
+//                @Override
+//                public ByteBuffer getBuffer(int plane) {
+//                    return image.getPlanes()[plane].getBuffer();
+//                }
+//
+//                @Override
+//                public int getWidth() {
+//                    return image.getWidth();
+//                }
+//
+//                @Override
+//                public int getHeight() {
+//                    return image.getHeight();
+//                }
+//            };
+//            VerIDImage verIDImage = verIDImageFromImage(imageImpl);
+//            try {
+//                imageQueue.put(verIDImage);
+//            } catch (InterruptedException ignore) {
+//            }
+//        }
+//    }
 
     public void fail(Throwable throwable) {
         this.failure.set(throwable);
@@ -218,6 +263,21 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
             srcBuffer.position(i);
             srcBuffer.get(row, 0, width);
             dstBuffer.put(row);
+        }
+    }
+
+    private int getRotationCompensation() {
+        switch (exifOrientation.get()) {
+            case ExifInterface.ORIENTATION_NORMAL:
+                return 0;
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                return 90;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                return 180;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                return 270;
+            default:
+                return 0;
         }
     }
 
