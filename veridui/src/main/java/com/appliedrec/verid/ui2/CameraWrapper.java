@@ -134,17 +134,20 @@ class CameraWrapper implements DefaultLifecycleObserver {
                     }
                     int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
 
-                    float desiredAspectRatio;
+                    int w;
+                    int h;
                     if (rotation % 180 == 0) {
-                        desiredAspectRatio = (float)width/(float)height;
+                        w = width;
+                        h = height;
                     } else {
-                        desiredAspectRatio = (float)height/(float)width;
+                        w = height;
+                        h = width;
                     }
 
                     Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
                     Size[] previewSizes = map.getOutputSizes(previewSurfaceClass);
                     Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                    Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, desiredAspectRatio);
+                    Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, w, h);
                     Size previewSize = sizes[0];
 
                     imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
@@ -318,29 +321,40 @@ class CameraWrapper implements DefaultLifecycleObserver {
         return Optional.ofNullable(videoRecorder);
     }
 
-    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float preferredAspectRatio) {
+    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, int width, int height) {
         HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
         HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
         HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
         HashMap<Float,Size[]> candidates = new HashMap<>();
         Comparator<Size> sizeComparator = (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight();
-        for (float ratio : previewAspectRatios.keySet()) {
-            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(ratio, imageReaderAspectRatios);
-            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(ratio, videoAspectRatios);
+        for (Map.Entry<Float,ArrayList<Size>> entry : previewAspectRatios.entrySet()) {
+            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(entry.getKey(), imageReaderAspectRatios);
+            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(entry.getKey(), videoAspectRatios);
             if (imageReaderCandidates.isEmpty() || videoCandidates.isEmpty()) {
                 continue;
             }
             Size[] sizes = new Size[3];
-            sizes[0] = Collections.max(previewAspectRatios.get(ratio), sizeComparator);
+            sizes[0] = Collections.max(entry.getValue(), sizeComparator);
             sizes[1] = Collections.min(imageReaderCandidates, sizeComparator);
             sizes[2] = Collections.min(videoCandidates, sizeComparator);
-            candidates.put(ratio, sizes);
+            candidates.put(entry.getKey(), sizes);
         }
         if (candidates.isEmpty()) {
             return new Size[]{previewSizes[0],imageReaderSizes[0],videoSizes[0]};
         }
-        float ratio = Collections.min(candidates.keySet(), (lhs, rhs) -> Math.abs(lhs - preferredAspectRatio) < Math.abs(rhs - preferredAspectRatio) ? -1 : 1);
-        return candidates.get(ratio);
+        float viewAspectRatio = (float)width/(float)height;
+        Map.Entry<Float,Size[]> bestEntry = Collections.min(candidates.entrySet(), (lhs, rhs) -> {
+            int lhsWidthDiff = Math.abs(lhs.getValue()[0].getWidth() - width);
+            int rhsWidthDiff = Math.abs(rhs.getValue()[0].getWidth() - width);
+            if (lhsWidthDiff == rhsWidthDiff) {
+                float lhsAspectRatioDiff = Math.abs((float)lhs.getValue()[0].getWidth()/(float)lhs.getValue()[0].getHeight() - viewAspectRatio);
+                float rhsAspectRatioDiff = Math.abs((float)rhs.getValue()[0].getWidth()/(float)rhs.getValue()[0].getHeight() - viewAspectRatio);
+                return (int)(lhsAspectRatioDiff - rhsAspectRatioDiff);
+            } else {
+                return lhsWidthDiff - rhsWidthDiff;
+            }
+        });
+        return bestEntry.getValue();
     }
 
     private HashMap<Float,ArrayList<Size>> getAspectRatioSizes(Size[] sizes) {
