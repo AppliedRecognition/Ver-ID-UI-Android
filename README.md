@@ -80,8 +80,8 @@ To build this project and to run the sample app you will need a computer with th
         }
     }
     dependencies {
-        coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.7'
-	    implementation 'com.appliedrec.verid:ui:2.0.0-alpha.01'
+        coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
+	    implementation 'com.appliedrec.verid:ui:2.0.0-beta.01'
     }
     ~~~
 		
@@ -135,7 +135,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     //region Ver-ID factory delegate
     
     @Override
-    public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
+    public void onVerIDCreated(VerIDFactory verIDFactory, VerID verID) {
         // You can now start a Ver-ID session
         LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
         VerIDSession<LivenessDetectionSessionSettings> session = new VerIDSession<>(verID, settings);
@@ -144,7 +144,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     }
     
     @Override
-    public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+    public void onVerIDCreationFailed(VerIDFactory verIDFactory, Exception e) {
         // Failed to create an instance of Ver-ID
     }
     
@@ -153,7 +153,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     //region Ver-ID session delegate
     
     @Override
-    public void sessionDidFinishWithResult(AbstractVerIDSession<?,?,?> session, VerIDSessionResult result) {
+    public void onSessionFinished(AbstractVerIDSession<?,?,?> session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             // Session succeeded
         } else {
@@ -164,12 +164,12 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     // The following four delegate methods are optional
     
     @Override
-    public void sessionWasCanceled(AbstractVerIDSession<?,?,?> session) {
+    public void onSessionCanceled(AbstractVerIDSession<?,?,?> session) {
         // Implement this method if you need to handle the case where the user cancels the session.
     }
     
     @Override
-    public boolean shouldSessionShowResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public boolean shouldSessionDisplayResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
         // Here you can decide whether to show the result of the session to the user.
         // For example, if you have your own way of showing a successful result but you want Ver-ID
         // to handle showing failures you may do something like this:
@@ -177,16 +177,22 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     }
     
     @Override
-    public boolean shouldSpeakPromptsInSession(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
         // Return true to let the device use speech synthesis to speak the prompts during the session.
         return false;
     }
     
     @Override
-    public CameraLens getCameraLensForSession(AbstractVerIDSession<?, ?, ?> session) {
-        // Return CameraLens.FACING_BACK to use the device's back camera. 
+    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
+        // Return CameraLocation.BACK to use the device's back camera. 
         // The default is to use the front-facing (selfie) camera.
-        return CameraLens.FACING_FRONT;
+        return CameraLocation.FRONT;
+    }
+    
+    @Override
+    public boolean shouldSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
+        // Return true if you want to record a video of the session.
+        return false;
     }
     
     //endregion
