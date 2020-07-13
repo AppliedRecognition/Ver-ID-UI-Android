@@ -1,10 +1,29 @@
-![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui/maven-metadata.xml.svg)
+![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui2/maven-metadata.xml.svg)
 
 # Ver-ID UI for Android
 
-This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-ID-Core-Android) replace the [legacy Ver-ID SDK](https://github.com/AppliedRecognition/Ver-ID-Android). The new API is not compatible with the legacy SDK. Please refer to the [migration instructions](./MigratingFromLegacySDK.md).
+## What's new in Ver-ID 2.0
 
-## Prerequisites
+Version 2 of the Ver-ID SDK brings a number of improvements:
+
+- Simpler API
+    - Consumers no longer have to parse session results in activities' `onActivityResult`.
+    - Session result is passed to the session delegate.
+    - Instead of aligning the Android and iOS APIs, we decided to use platform conventions. For example, `veridSessionDidFinishWithResult` became `onSessionFinished` on Android.
+    - Introduced reactive stream implementations in some classes. For example `VerIDFactory` now extends [`RxJava.Single`](http://reactivex.io/documentation/single.html).
+- Improved performance
+    - Faster camera preview due to the use of surface views.
+    - Face capture images are no longer written to files, saving disk space and eliminating unwanted cached files.
+    - Results are passed directly to the session delegate without having to be marshalled into parcels.
+- Less ambiguity
+    - Better defined error codes – Ver-ID methods and sessions throw or return one of the pre-defined exceptions with clearly-defined error codes.
+    - Using Java 8 optionals – cleaner and less ambiguous than `null` checks.
+
+Please note that Ver-ID 2.+ is not compatible with Ver-ID 1.+. You will need to migrate to the new SDK. 
+
+We opted to separate the new API to its own packages so both Ver-ID 1.+ and Ver-ID 2.+ can co-exist in the same project.
+
+## Requirements
 
 To build this project and to run the sample app you will need a computer with these applications:
 
@@ -93,12 +112,12 @@ Prior to running Ver-ID sessions you will need to create an instance of Ver-ID.
 ~~~java
 VerIDFactory verIDFactory = new VerIDFactory(getContext(), new VerIDFactoryDelegate() {
     @Override
-    public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
+    public void onVerIDCreated(VerIDFactory verIDFactory, VerID verID) {
         // You can now use the VerID instance
     }
 
     @Override
-    public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+    public void onVerIDCreationFailed(VerIDFactory verIDFactory, Exception e) {
         // Failed to create an instance of Ver-ID
     }
 });
@@ -202,13 +221,13 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
 ### Controlling Liveness Detection
 If you run a Ver-ID session with `LivenessDetectionSessionSettings` or its subclass `AuthenticationSessionSettings` you can control how Ver-ID detects liveness.
 
-To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.VerIDSessionSettings.html#setNumberOfFacesToCapture(int)) to `1`.
+To disable liveness detection set the session's [face capture count](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.VerIDSessionSettings.html#setFaceCaptureCount(int)) to `1`.
 
 To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
 
 ~~~java
 LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-settings.setNumberOfFacesToCapture(3); // 1 straight plus 2 other poses
+settings.setFaceCaptureCount(3); // 1 straight plus 2 other poses
 settings.setBearings(EnumSet.of(Bearing.STRAIGHT, Bearing.LEFT, Bearing.RIGHT)); // Limit the poses to left and right
 ~~~
 The session result will contain 3 faces: 1 looking straight at the camera and 2 in random poses.

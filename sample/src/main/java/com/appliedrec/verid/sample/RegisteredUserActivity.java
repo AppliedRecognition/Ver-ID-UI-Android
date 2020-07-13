@@ -118,6 +118,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             case R.id.action_export_registration:
                 exportRegistration();
                 return true;
+            case R.id.action_kiosk_demo:
+                startActivity(new Intent(this, ContinuousLivenessActivity.class));
+                return true;
         }
         return false;
     }

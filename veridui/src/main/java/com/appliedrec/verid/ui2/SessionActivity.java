@@ -18,6 +18,7 @@ import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -35,6 +36,9 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
         viewBinding = ActivitySessionBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
         sessionFragment = (VerIDSessionFragment) getSupportFragmentManager().findFragmentById(R.id.session_fragment);
+        getImageAnalyzer().setUseMLKit(true);
+//        // Uncomment the following line to plot the face landmarks in the camera preview
+//        Objects.requireNonNull(sessionFragment).setPlotFaceLandmarks(true);
         cameraWrapper = new CameraWrapper(this, getCameraLocation(), getImageAnalyzer(), getSessionVideoRecorder().orElse(null));
         cameraWrapper.setListener(this);
         drawFaces();

@@ -245,8 +245,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
                 .setFaceDetectionCallback(getFaceDetectionCallback())
                 .setFaceCaptureCallback(sessionActivity)
                 .bindToLifecycle(sessionActivity.getLifecycle())
-                .setSuccessCallback(this::finishWithResult)
-                .setErrorCallback(this::finishWithError)
+                .setFinishCallback(this::finishWithResult)
                 .build();
     }
 
@@ -321,11 +320,6 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             sessionDisposable.dispose();
         }
         sessionDisposable = null;
-    }
-
-    @UiThread
-    private void finishWithError(@NonNull Throwable throwable) {
-        finishWithResult(new VerIDSessionResult(new VerIDSessionException(throwable), System.currentTimeMillis(), System.currentTimeMillis(), null));
     }
 
     @UiThread

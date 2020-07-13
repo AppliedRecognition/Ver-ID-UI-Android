@@ -1,4 +1,5 @@
 com.appliedrec.verid.core2
 com.appliedrec.verid.core2.auth
+com.appliedrec.verid.core2.serialization
 com.appliedrec.verid.core2.session
 com.appliedrec.verid.ui2

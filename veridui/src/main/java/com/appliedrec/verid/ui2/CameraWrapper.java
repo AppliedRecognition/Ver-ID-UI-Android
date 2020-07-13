@@ -23,7 +23,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.util.Pair;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
@@ -34,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -43,9 +41,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-class CameraWrapper implements DefaultLifecycleObserver {
+public class CameraWrapper implements DefaultLifecycleObserver {
 
-    interface Listener {
+    public interface Listener {
         void onPreviewSize(int width, int height, int sensorOrientation);
     }
 
@@ -66,7 +64,7 @@ class CameraWrapper implements DefaultLifecycleObserver {
     private Handler cameraPreviewHandler;
     private Class<?> previewSurfaceClass;
 
-    CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder) {
+    public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder) {
         activityWeakReference = new WeakReference<>(activity);
         this.cameraLocation = cameraLocation;
         this.imageAnalyzer = imageAnalyzer;
@@ -77,104 +75,100 @@ class CameraWrapper implements DefaultLifecycleObserver {
         activity.getLifecycle().addObserver(this);
     }
 
-    void setPreviewSurface(Surface surface, Class<?> surfaceClass) {
+    public void setPreviewSurface(Surface surface, Class<?> surfaceClass) {
         previewSurface = surface;
         previewSurfaceClass = surfaceClass;
     }
 
-    void setListener(Listener listener) {
+    public void setListener(Listener listener) {
         this.listener = listener;
     }
 
-    void start(int width, int height, int displayRotation) {
+    public void start(int width, int height, int displayRotation) {
         startBackgroundThread();
-        getActivity().ifPresent(context -> {
-            runInBackground(() -> {
-                try {
-                    CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-                    if (manager == null) {
-                        throw new Exception("Camera manager unavailable");
+        getActivity().ifPresent(context -> runInBackground(() -> {
+            try {
+                CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+                if (manager == null) {
+                    throw new Exception("Camera manager unavailable");
+                }
+                if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
+                    throw new TimeoutException("Time out waiting to acquire camera lock.");
+                }
+                String[] cameras = manager.getCameraIdList();
+                cameraId = null;
+                int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
+                if (cameraLocation == CameraLocation.BACK) {
+                    requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
+                }
+                for (String camId : cameras) {
+                    Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
+                    if (lensFacing != null && lensFacing == requestedLensFacing) {
+                        cameraId = camId;
+                        break;
                     }
-                    if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
-                        throw new TimeoutException("Time out waiting to acquire camera lock.");
-                    }
-                    String[] cameras = manager.getCameraIdList();
-                    cameraId = null;
-                    int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
-                    if (cameraLocation == CameraLocation.BACK) {
-                        requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
-                    }
+                }
+                if (cameraId == null) {
                     for (String camId : cameras) {
                         Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
-                        if (lensFacing != null && lensFacing == requestedLensFacing) {
+                        if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
                             cameraId = camId;
                             break;
                         }
                     }
                     if (cameraId == null) {
-                        for (String camId : cameras) {
-                            Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
-                            if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
-                                cameraId = camId;
-                                break;
-                            }
-                        }
-                        if (cameraId == null) {
-                            throw new Exception("Camera not available");
-                        }
+                        throw new Exception("Camera not available");
                     }
-
-                    // Choose the sizes for camera preview and video recording
-                    CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
-                    StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                    Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-                    int sensorOrientation = (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
-                    if (map == null) {
-                        throw new Exception("Cannot get video sizes");
-                    }
-                    int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
-
-                    int w;
-                    int h;
-                    if (rotation % 180 == 0) {
-                        w = width;
-                        h = height;
-                    } else {
-                        w = height;
-                        h = width;
-                    }
-
-                    Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
-                    Size[] previewSizes = map.getOutputSizes(previewSurfaceClass);
-                    Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                    Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, w, h);
-                    Size previewSize = sizes[0];
-
-                    imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
-                    imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
-
-                    getSessionVideoRecorder().ifPresent(videoRecorder -> {
-                        Size videoSize = sizes[2];
-                        videoRecorder.setup(videoSize, rotation);
-                    });
-                    getListener().ifPresent(listener -> {
-                        listener.onPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation);
-                    });
-                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                        imageAnalyzer.fail(new Exception("Missing camera permission"));
-                        return;
-                    }
-                    manager.openCamera(cameraId, stateCallback, cameraProcessingHandler);
-                } catch (Exception e) {
-                    imageAnalyzer.fail(e);
-                } finally {
-                    cameraOpenCloseLock.release();
                 }
-            });
-        });
+
+                // Choose the sizes for camera preview and video recording
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+                int sensorOrientation = (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
+                if (map == null) {
+                    throw new Exception("Cannot get video sizes");
+                }
+                int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
+
+                int w;
+                int h;
+                if (rotation % 180 == 0) {
+                    w = width;
+                    h = height;
+                } else {
+                    w = height;
+                    h = width;
+                }
+
+                Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
+                Size[] previewSizes = map.getOutputSizes(previewSurfaceClass);
+                Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
+                Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, w, h);
+                Size previewSize = sizes[0];
+
+                imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
+                imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
+
+                getSessionVideoRecorder().ifPresent(videoRecorder -> {
+                    Size videoSize = sizes[2];
+                    videoRecorder.setup(videoSize, rotation);
+                });
+                getListener().ifPresent(listener -> listener.onPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation));
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    imageAnalyzer.fail(new Exception("Missing camera permission"));
+                    return;
+                }
+                manager.openCamera(cameraId, stateCallback, cameraProcessingHandler);
+            } catch (Exception e) {
+                imageAnalyzer.fail(e);
+            } finally {
+                cameraOpenCloseLock.release();
+            }
+        }));
     }
 
-    void stop() {
+    public void stop() {
         runInBackground(() -> {
             try {
                 if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
@@ -194,7 +188,7 @@ class CameraWrapper implements DefaultLifecycleObserver {
         });
     }
 
-    Optional<Listener> getListener() {
+    public Optional<Listener> getListener() {
         return Optional.ofNullable(listener);
     }
 
@@ -373,58 +367,12 @@ class CameraWrapper implements DefaultLifecycleObserver {
     private ArrayList<Size> getSizesMatchingAspectRatio(float aspectRatio, HashMap<Float,ArrayList<Size>> candidates) {
         float aspectRatioTolerance = 0.01f;
         ArrayList<Size> sizes = new ArrayList<>();
-        for (float ratio : candidates.keySet()) {
-            if (Math.abs(ratio - aspectRatio) < aspectRatioTolerance) {
-                sizes.addAll(candidates.get(ratio));
+        for (Map.Entry<Float,ArrayList<Size>> entry : candidates.entrySet()) {
+            if (Math.abs(entry.getKey() - aspectRatio) < aspectRatioTolerance) {
+                sizes.addAll(entry.getValue());
             }
         }
         return sizes;
-    }
-
-    private Size chooseOptimalSize(Size[] choices, int width, int height) {
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<>();
-        for (Size option : choices) {
-            if (option.getWidth() >= width && option.getHeight() >= height) {
-                bigEnough.add(option);
-            }
-        }
-
-        // Pick the smallest of those, assuming we found any
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, (lhs, rhs) -> Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight()));
-        } else {
-            return choices[0];
-        }
-    }
-
-
-    private Comparator<Size> videoSizeComparator = new Comparator<Size>() {
-
-        private boolean is4x3(Size size) {
-            return size.getWidth() == size.getHeight() * 4 / 3;
-        }
-        @Override
-        public int compare(Size s1, Size s2) {
-            if (is4x3(s1) != is4x3(s2)) {
-                return is4x3(s1) ? -1 : 1;
-            }
-            return Math.abs(s1.getWidth()-640) < Math.abs(s2.getWidth()-640) ? -1 : 1;
-        }
-    };
-
-    private Size chooseVideoSize(Size[] choices) {
-        ArrayList<Size> sizes = new ArrayList<>();
-        for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
-                sizes.add(size);
-            }
-        }
-        if (sizes.isEmpty()) {
-            return choices[choices.length-1];
-        }
-        Collections.sort(sizes, videoSizeComparator);
-        return sizes.get(0);
     }
 
     private @VerIDImageAnalyzer.ExifOrientation int getExifOrientation(int rotationDegrees) {

@@ -85,6 +85,7 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
                 };
                 verIDImage = verIDImageFromImage(imageImpl);
             }
+            verIDImage.setIsMirrored(isMirrored.get());
             try {
                 imageQueue.put(verIDImage);
             } catch (InterruptedException ignore) {
@@ -95,41 +96,6 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
     public void setUseMLKit(boolean useMLKit) {
         this.useMLKit.set(useMLKit);
     }
-
-    //    @Override
-//    public void onImageAvailable(ImageReader imageReader) {
-//        try (Image image = imageReader.acquireLatestImage()) {
-//            if (image == null || !isStarted.get()) {
-//                return;
-//            }
-//            IImage imageImpl = new IImage() {
-//                @Override
-//                public int getRowStride(int plane) {
-//                    return image.getPlanes()[plane].getRowStride();
-//                }
-//
-//                @Override
-//                public ByteBuffer getBuffer(int plane) {
-//                    return image.getPlanes()[plane].getBuffer();
-//                }
-//
-//                @Override
-//                public int getWidth() {
-//                    return image.getWidth();
-//                }
-//
-//                @Override
-//                public int getHeight() {
-//                    return image.getHeight();
-//                }
-//            };
-//            VerIDImage verIDImage = verIDImageFromImage(imageImpl);
-//            try {
-//                imageQueue.put(verIDImage);
-//            } catch (InterruptedException ignore) {
-//            }
-//        }
-//    }
 
     public void fail(Throwable throwable) {
         this.failure.set(throwable);
@@ -200,6 +166,7 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
             }
         };
         VerIDImage verIDImage = verIDImageFromImage(imageImpl);
+        verIDImage.setIsMirrored(isMirrored.get());
         try {
             imageQueue.put(verIDImage);
         } catch (InterruptedException ignore) {
