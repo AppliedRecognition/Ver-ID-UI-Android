@@ -15,7 +15,7 @@ import androidx.preference.PreferenceScreen;
 import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
 
-class SecuritySettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
+public class SecuritySettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {

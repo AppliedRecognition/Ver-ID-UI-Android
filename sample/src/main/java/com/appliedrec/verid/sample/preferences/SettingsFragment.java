@@ -20,7 +20,7 @@ import com.appliedrec.verid.core.VerID;
 import com.appliedrec.verid.sample.IntroActivity;
 import com.appliedrec.verid.sample.R;
 
-class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {

@@ -14,7 +14,7 @@ import androidx.preference.PreferenceScreen;
 
 import com.appliedrec.verid.sample.R;
 
-class FaceDetectionSettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
+public class FaceDetectionSettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
 
     private String[] presets;
     private String[] presetsIncCustom;
