@@ -21,8 +21,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,12 +31,12 @@ import io.reactivex.rxjava3.core.FlowableEmitter;
 public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowable, ImageReader.OnImageAvailableListener, DefaultLifecycleObserver {
 
     private final SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
-    private AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
-    private AtomicBoolean isMirrored = new AtomicBoolean(false);
-    private AtomicReference<Throwable> failure = new AtomicReference<>();
+    private final AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
+    private final AtomicBoolean isMirrored = new AtomicBoolean(false);
+    private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private Thread subscribeThread;
-    private AtomicBoolean isStarted = new AtomicBoolean(false);
-    private AtomicBoolean useMLKit = new AtomicBoolean(false);
+    private final AtomicBoolean isStarted = new AtomicBoolean(false);
+    private final AtomicBoolean useMLKit = new AtomicBoolean(false);
 
     private interface IImage {
         int getRowStride(int plane);

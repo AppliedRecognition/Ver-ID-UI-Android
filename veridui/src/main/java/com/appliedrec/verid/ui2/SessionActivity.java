@@ -9,25 +9,19 @@ import android.view.View;
 import android.widget.LinearLayout;
 
 import androidx.annotation.MainThread;
-import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 
-import com.appliedrec.verid.core2.Size;
-import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
 
-import java.util.Iterator;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragment> implements SurfaceHolder.Callback, CameraWrapper.Listener {
 
-    private static final int REQUEST_CODE_CAMERA_PERMISSION = 0;
     private ActivitySessionBinding viewBinding;
     private VerIDSessionFragment sessionFragment;
-    private AtomicReference<ISessionVideoRecorder> sessionVideoRecorder = new AtomicReference<>();
+    private final AtomicReference<ISessionVideoRecorder> sessionVideoRecorder = new AtomicReference<>();
     private CameraWrapper cameraWrapper;
 
     @Override
@@ -36,7 +30,6 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
         viewBinding = ActivitySessionBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
         sessionFragment = (VerIDSessionFragment) getSupportFragmentManager().findFragmentById(R.id.session_fragment);
-        getImageAnalyzer().setUseMLKit(true);
 //        // Uncomment the following line to plot the face landmarks in the camera preview
 //        Objects.requireNonNull(sessionFragment).setPlotFaceLandmarks(true);
         cameraWrapper = new CameraWrapper(this, getCameraLocation(), getImageAnalyzer(), getSessionVideoRecorder().orElse(null));
@@ -49,10 +42,7 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
         super.onDestroy();
         viewBinding = null;
         sessionFragment = null;
-        if (cameraWrapper != null) {
-            cameraWrapper.stop();
-            cameraWrapper = null;
-        }
+        cameraWrapper = null;
         getSessionVideoRecorder().ifPresent(videoRecorder -> {
             getLifecycle().removeObserver(videoRecorder);
         });
@@ -69,10 +59,6 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
     @Override
     protected void onPause() {
         super.onPause();
-        if (cameraWrapper != null) {
-            cameraWrapper.stop();
-            cameraWrapper = null;
-        }
         getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> {
             surfaceView.getHolder().removeCallback(this);
         });
@@ -139,10 +125,10 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
 
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
+        if (cameraWrapper != null) {
+            cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+        }
         if (hasCameraPermission()) {
-            if (cameraWrapper != null) {
-                cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
-            }
             startCamera();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA_PERMISSION);

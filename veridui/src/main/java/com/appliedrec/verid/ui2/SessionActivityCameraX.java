@@ -4,7 +4,6 @@ import android.Manifest;
 import android.os.Bundle;
 import android.widget.LinearLayout;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
@@ -16,12 +15,9 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.appliedrec.verid.core2.Size;
-import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.ui2.databinding.ActivitySessionCameraxBinding;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;

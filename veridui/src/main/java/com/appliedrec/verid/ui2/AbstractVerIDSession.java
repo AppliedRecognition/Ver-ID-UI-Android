@@ -58,18 +58,18 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private Disposable sessionDisposable;
     private WeakReference<VerIDSessionDelegate> delegateReference;
     private T sessionActivity;
-    private AtomicBoolean isStarted = new AtomicBoolean(false);
-    private AtomicBoolean isIdle = new AtomicBoolean(false);
+    private final AtomicBoolean isStarted = new AtomicBoolean(false);
+    private final AtomicBoolean isIdle = new AtomicBoolean(false);
     private ITextSpeaker textSpeaker;
-    private AtomicReference<VerIDSessionResult> resultToShow = new AtomicReference<>();
-    private AtomicInteger runCount = new AtomicInteger(0);
-    private AtomicReference<Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>>> faceDetectionFunctionSupplier;
-    private AtomicReference<Supplier<Function<FaceDetectionResult, FaceCapture>>> faceDetectionResultEvaluationFunctionSupplier;
+    private final AtomicReference<VerIDSessionResult> resultToShow = new AtomicReference<>();
+    private final AtomicInteger runCount = new AtomicInteger(0);
+    private final AtomicReference<Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>>> faceDetectionFunctionSupplier;
+    private final AtomicReference<Supplier<Function<FaceDetectionResult, FaceCapture>>> faceDetectionResultEvaluationFunctionSupplier;
     private ResourceCallback idlingResourceCallback;
     private final SessionPrompts sessionPrompts;
     private ISessionVideoRecorder videoRecorder;
 
-    private static AtomicLong lastSessionId = new AtomicLong(0);
+    private static final AtomicLong lastSessionId = new AtomicLong(0);
 
     /**
      * Session constructor
@@ -333,6 +333,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     @NonNull
     private Optional<T> sessionActivity(Activity activity) {
         if (getSessionActivityClass().isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
+            //noinspection unchecked
             return Optional.of((T)activity);
         } else {
             return Optional.empty();

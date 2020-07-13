@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
@@ -40,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CameraWrapper implements DefaultLifecycleObserver {
 
@@ -63,6 +65,9 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private HandlerThread cameraPreviewThread;
     private Handler cameraPreviewHandler;
     private Class<?> previewSurfaceClass;
+    private final AtomicInteger viewWidth = new AtomicInteger(0);
+    private final AtomicInteger viewHeight = new AtomicInteger(0);
+    private final AtomicInteger displayRotation = new AtomicInteger(0);
 
     public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder) {
         activityWeakReference = new WeakReference<>(activity);
@@ -86,8 +91,14 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     public void start(int width, int height, int displayRotation) {
         startBackgroundThread();
+        this.viewWidth.set(width);
+        this.viewHeight.set(height);
+        this.displayRotation.set(displayRotation);
         getActivity().ifPresent(context -> runInBackground(() -> {
             try {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
                 CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
                 if (manager == null) {
                     throw new Exception("Camera manager unavailable");
@@ -440,6 +451,13 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             backgroundExecutor.shutdown();
         }
         backgroundExecutor = null;
+    }
+
+    @Override
+    public void onStart(@NonNull LifecycleOwner owner) {
+        if (viewWidth.get() > 0 && viewHeight.get() > 0) {
+            start(viewWidth.get(), viewHeight.get(), displayRotation.get());
+        }
     }
 
     @Override

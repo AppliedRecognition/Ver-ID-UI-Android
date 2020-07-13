@@ -1,8 +1,5 @@
 package com.appliedrec.verid.ui2;
 
-import android.graphics.RectF;
-
-import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 
 /**

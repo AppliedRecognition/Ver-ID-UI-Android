@@ -47,8 +47,8 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
     private final VerIDImageAnalyzer imageAnalyzer = new VerIDImageAnalyzer(this);
     private ExecutorService backgroundExecutor;
     private final ArrayList<Bitmap> faceImages = new ArrayList<>();
-    private SynchronousQueue<Size> viewFinderSizeQueue = new SynchronousQueue<>();
-    private View.OnLayoutChangeListener onLayoutChangeListener = (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+    private final SynchronousQueue<Size> viewFinderSizeQueue = new SynchronousQueue<>();
+    private final View.OnLayoutChangeListener onLayoutChangeListener = (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
         Size newSize = new Size(right-left, bottom-top);
         if (newSize.width > 0 && newSize.height > 0) {
             executeInBackground(() -> {
@@ -120,7 +120,7 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
     }
 
     @Override
-    public void accept(FaceCapture faceCapture) throws Throwable {
+    public void accept(FaceCapture faceCapture) {
         if (sessionSettings instanceof RegistrationSessionSettings) {
             runOnUiThread(() -> {
                 float screenDensity = getResources().getDisplayMetrics().density;

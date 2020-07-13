@@ -8,18 +8,17 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.LifecycleOwner;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class SessionVideoRecorder implements ISessionVideoRecorder, MediaRecorder.OnErrorListener {
 
-    private AtomicReference<MediaRecorder> mediaRecorderRef = new AtomicReference<>();
+    private final AtomicReference<MediaRecorder> mediaRecorderRef = new AtomicReference<>();
     private File videoFile;
-    private AtomicInteger width = new AtomicInteger(0);
-    private AtomicInteger height = new AtomicInteger(0);
-    private AtomicInteger rotation = new AtomicInteger(0);
+    private final AtomicInteger width = new AtomicInteger(0);
+    private final AtomicInteger height = new AtomicInteger(0);
+    private final AtomicInteger rotation = new AtomicInteger(0);
 
     @Override
     public Optional<Surface> getSurface() {

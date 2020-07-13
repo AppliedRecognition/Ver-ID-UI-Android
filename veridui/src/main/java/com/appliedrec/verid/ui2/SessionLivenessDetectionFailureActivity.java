@@ -24,14 +24,13 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
         MEDIUM, HIGH, EXTRA_HIGH
     }
 
-    private ActivityResultErrorBinding activityResultErrorBinding;
     private MediaPlayer mediaPlayer;
     private boolean shouldRetry = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        activityResultErrorBinding = ActivityResultErrorBinding.inflate(getLayoutInflater());
+        com.appliedrec.verid.ui2.databinding.ActivityResultErrorBinding activityResultErrorBinding = ActivityResultErrorBinding.inflate(getLayoutInflater());
         setContentView(activityResultErrorBinding.getRoot());
         Throwable error = getSessionResult().getError().get().getCause();
         if (error == null) {
