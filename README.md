@@ -4,6 +4,10 @@
 
 This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-ID-Core-Android) replace the [legacy Ver-ID SDK](https://github.com/AppliedRecognition/Ver-ID-Android). The new API is not compatible with the legacy SDK. Please refer to the [migration instructions](./MigratingFromLegacySDK.md).
 
+## July 2020 – beta version of Ver-ID UI 2 is now available
+
+Please [check it out](https://github.com/AppliedRecognition/Ver-ID-UI-Android/tree/version2) and let us know what you think.
+
 ## Prerequisites
 
 To build this project and to run the sample app you will need a computer with these applications:
