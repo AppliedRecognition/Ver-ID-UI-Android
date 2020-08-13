@@ -8,10 +8,19 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
+import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.AuthenticationSessionSettingsJsonAdapter;
 import com.appliedrec.verid.core2.session.FaceCapture;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettingsJsonAdapter;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettingsJsonAdapter;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.core2.session.VerIDSessionResultJsonAdapter;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.BuildConfig;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import com.fasterxml.jackson.dataformat.cbor.CBORGenerator;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonWriter;
@@ -20,8 +29,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -55,11 +72,46 @@ public class SessionExport {
     }
 
     @WorkerThread
+    private Uri createCborFile(Context context) throws Exception {
+        File sessionsDir = new File(context.getCacheDir(), "sessions");
+        //noinspection ResultOfMethodCallIgnored
+        sessionsDir.mkdirs();
+        File cborFile = new File(sessionsDir, "Ver-ID session "+ SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.MEDIUM, SimpleDateFormat.MEDIUM).format(new Date()) + ".cbor");
+        try (FileOutputStream fileOutputStream = new FileOutputStream(cborFile)) {
+            CBORGenerator cborGenerator = new CBORFactory().createGenerator(fileOutputStream);
+            cborGenerator.writeStartObject();
+            cborGenerator.writeFieldName("settings");
+            if (sessionSettings instanceof AuthenticationSessionSettings) {
+                new AuthenticationSessionSettingsJsonAdapter().encodeToCbor((AuthenticationSessionSettings)sessionSettings, cborGenerator);
+            } else if (sessionSettings instanceof RegistrationSessionSettings) {
+                new RegistrationSessionSettingsJsonAdapter().encodeToCbor((RegistrationSessionSettings)sessionSettings, cborGenerator);
+            } else if (sessionSettings instanceof LivenessDetectionSessionSettings) {
+                new LivenessDetectionSessionSettingsJsonAdapter().encodeToCbor((LivenessDetectionSessionSettings)sessionSettings, cborGenerator);
+            } else {
+                throw new Exception("Unsupported session settings type");
+            }
+            cborGenerator.writeFieldName("result");
+            new VerIDSessionResultJsonAdapter().encodeToCbor(sessionResult, cborGenerator);
+            cborGenerator.writeFieldName("environment");
+            new EnvironmentSettingsJsonAdapter().encodeToCbor(environmentSettings, cborGenerator);
+            cborGenerator.writeEndObject();
+            cborGenerator.flush();
+            return SampleAppFileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID+".fileprovider", cborFile);
+        }
+    }
+
+    private String getFileName() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.CANADA);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return "Ver-ID session "+ dateFormat.format(sessionResult.getSessionStartTime()) + ".zip";
+    }
+
+    @WorkerThread
     private Uri createZipArchive(Context context) throws Exception {
         File sessionsDir = new File(context.getCacheDir(), "sessions");
         //noinspection ResultOfMethodCallIgnored
         sessionsDir.mkdirs();
-        File zipFile = new File(sessionsDir, "Ver-ID session "+ SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.MEDIUM, SimpleDateFormat.MEDIUM).format(new Date()) + ".zip");
+        File zipFile = new File(sessionsDir, getFileName());
         try (FileOutputStream fileOutputStream = new FileOutputStream(zipFile)) {
             try (ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
                 sessionResult.getVideoUri().ifPresent(videoUri -> {
@@ -84,11 +136,10 @@ public class SessionExport {
                 for (FaceCapture faceCapture : sessionResult.getFaceCaptures()) {
                     ZipEntry zipEntry = new ZipEntry("image" + (i++) + ".jpg");
                     zipOutputStream.putNextEntry(zipEntry);
-                    faceCapture.getImage().compress(Bitmap.CompressFormat.JPEG, 95, zipOutputStream);
+                    faceCapture.getImage().compress(Bitmap.CompressFormat.JPEG, 80, zipOutputStream);
                     zipOutputStream.closeEntry();
                 }
                 Gson gson = new GsonBuilder()
-                        .registerTypeAdapter(VerIDSessionSettings.class, new SessionSettingsDataJsonAdapter())
                         .registerTypeAdapter(VerIDSessionResult.class, new SessionResultDataJsonAdapter())
                         .create();
                 try (OutputStreamWriter outputStreamWriter = new OutputStreamWriter(zipOutputStream)) {

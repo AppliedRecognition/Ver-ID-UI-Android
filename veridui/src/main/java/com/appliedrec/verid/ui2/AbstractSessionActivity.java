@@ -116,7 +116,7 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
 
     @Override
     public IImageFlowable getImageFlowable() {
-        return imageAnalyzer;
+        return getImageAnalyzer();
     }
 
     @Override

@@ -18,13 +18,9 @@ import androidx.test.espresso.IdlingResource;
 import com.appliedrec.verid.core2.AntiSpoofingException;
 import com.appliedrec.verid.core2.FacePresenceException;
 import com.appliedrec.verid.core2.VerID;
-import com.appliedrec.verid.core2.VerIDImage;
-import com.appliedrec.verid.core2.session.FaceBounds;
-import com.appliedrec.verid.core2.session.FaceCapture;
-import com.appliedrec.verid.core2.session.FaceDetection;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
-import com.appliedrec.verid.core2.session.FaceDetectionResultEvaluation;
 import com.appliedrec.verid.core2.session.Session;
+import com.appliedrec.verid.core2.session.SessionFunctions;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
@@ -35,12 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Consumer;
-import io.reactivex.rxjava3.functions.Function;
 
 /**
  * Abstract Ver-ID session class
@@ -63,8 +56,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private ITextSpeaker textSpeaker;
     private final AtomicReference<VerIDSessionResult> resultToShow = new AtomicReference<>();
     private final AtomicInteger runCount = new AtomicInteger(0);
-    private final AtomicReference<Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>>> faceDetectionFunctionSupplier;
-    private final AtomicReference<Supplier<Function<FaceDetectionResult, FaceCapture>>> faceDetectionResultEvaluationFunctionSupplier;
+    private final AtomicReference<SessionFunctions> sessionFunctions;
     private ResourceCallback idlingResourceCallback;
     private final SessionPrompts sessionPrompts;
     private ISessionVideoRecorder videoRecorder;
@@ -93,8 +85,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         this.settings = settings;
         this.stringTranslator = stringTranslator;
         this.sessionId = lastSessionId.getAndIncrement();
-        this.faceDetectionFunctionSupplier = new AtomicReference<>(() -> new FaceDetection(verID, settings));
-        this.faceDetectionResultEvaluationFunctionSupplier = new AtomicReference<>(() -> new FaceDetectionResultEvaluation(verID, settings));
+        this.sessionFunctions = new AtomicReference<>(new SessionFunctions(verID, settings));
         this.sessionPrompts = new SessionPrompts(stringTranslator);
         verID.getContext().ifPresent(context -> this.textSpeaker = new TextSpeaker(context));
     }
@@ -195,39 +186,12 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     @NonNull
     protected abstract Class<? extends U> getSessionResultActivityClass(@NonNull VerIDSessionResult sessionResult);
 
-    /**
-     * @return Face detection function supplier
-     * @since 2.0.0
-     */
-    public Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>> getFaceDetectionFunctionSupplier() {
-        return faceDetectionFunctionSupplier.get();
+    public SessionFunctions getSessionFunctions() {
+        return sessionFunctions.get();
     }
 
-    /**
-     * Set instance that supplies the face detection function
-     * @param faceDetectionFunctionSupplier Face detection function supplier
-     * @since 2.0.0
-     */
-    public void setFaceDetectionFunctionSupplier(@NonNull Supplier<BiFunction<VerIDImage, FaceBounds, FaceDetectionResult>> faceDetectionFunctionSupplier) {
-        this.faceDetectionFunctionSupplier.set(faceDetectionFunctionSupplier);
-    }
-
-    /**
-     * Set instance that supplies the face result evaluation function
-     * @param faceDetectionResultEvaluationFunction Face result evaluation function supplier
-     * @since 2.0.0
-     */
-    public void setFaceDetectionResultEvaluationFunctionSupplier(@NonNull Supplier<Function<FaceDetectionResult, FaceCapture>> faceDetectionResultEvaluationFunction) {
-        this.faceDetectionResultEvaluationFunctionSupplier.set(faceDetectionResultEvaluationFunction);
-    }
-
-    /**
-     * @return Face detection function supplier
-     * @since 2.0.0
-     */
-    @NonNull
-    public Supplier<Function<FaceDetectionResult, FaceCapture>> getFaceDetectionResultEvaluationFunctionSupplier() {
-        return faceDetectionResultEvaluationFunctionSupplier.get();
+    public void setSessionFunctions(@NonNull SessionFunctions sessionFunctions) {
+        this.sessionFunctions.set(sessionFunctions);
     }
 
     /**
@@ -240,8 +204,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     private Session<Settings> createCoreSession(T sessionActivity) {
         return new Session.Builder<>(verID, settings, sessionActivity.getImageFlowable(), sessionActivity)
-                .setFaceDetectionFunctionSupplier(getFaceDetectionFunctionSupplier())
-                .setFaceDetectionResultEvaluationFunctionSupplier(getFaceDetectionResultEvaluationFunctionSupplier())
+                .setSessionFunctions(sessionFunctions.get())
                 .setFaceDetectionCallback(getFaceDetectionCallback())
                 .setFaceCaptureCallback(sessionActivity)
                 .bindToLifecycle(sessionActivity.getLifecycle())
@@ -396,6 +359,10 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             tipsActivity.setStringTranslator(stringTranslator);
             getTextSpeaker().ifPresent(tipsActivity::setTextSpeaker);
         });
+    }
+
+    @Override
+    public void onActivityPostCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
     }
 
     @Override

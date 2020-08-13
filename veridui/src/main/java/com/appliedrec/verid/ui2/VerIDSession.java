@@ -9,6 +9,8 @@ import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Ver-ID session that uses {@link SessionActivityCameraX} and {@link SessionResultActivity}
  *
@@ -35,6 +37,8 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
  */
 public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
+    private AtomicBoolean useCameraX = new AtomicBoolean(true);
+
     /**
      * Session constructor
      * @param verID Instance of VerID to use for face detection, recognition and user management
@@ -56,10 +60,22 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
         super(verID, settings, stringTranslator);
     }
 
+    public void setUseCameraX(boolean useCameraX) {
+        this.useCameraX.set(useCameraX);
+    }
+
+    public boolean getUseCameraX() {
+        return useCameraX.get();
+    }
+
     @NonNull
     @Override
     protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
-        return SessionActivity.class;
+        if (useCameraX.get()) {
+            return SessionActivityCameraX.class;
+        } else {
+            return SessionActivity.class;
+        }
     }
 
     @NonNull

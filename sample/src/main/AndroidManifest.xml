@@ -33,6 +33,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".sharing.AWSS3UploadActivity" android:label="@string/send_to_applied_recognition">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <data android:mimeType="application/zip" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <meta-data
             android:name="com.appliedrec.verid.password"

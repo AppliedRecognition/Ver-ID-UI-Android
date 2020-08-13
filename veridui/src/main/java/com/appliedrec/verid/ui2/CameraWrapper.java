@@ -16,8 +16,10 @@ import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Size;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -42,6 +44,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class CameraWrapper implements DefaultLifecycleObserver {
 
@@ -52,7 +55,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private final WeakReference<AppCompatActivity> activityWeakReference;
     private final CameraLocation cameraLocation;
     private final VerIDImageAnalyzer imageAnalyzer;
-    private Surface previewSurface;
     private String cameraId;
     private ImageReader imageReader;
     private final ISessionVideoRecorder videoRecorder;
@@ -64,7 +66,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private ExecutorService backgroundExecutor;
     private HandlerThread cameraPreviewThread;
     private Handler cameraPreviewHandler;
-    private Class<?> previewSurfaceClass;
+    private final AtomicReference<SurfaceHolder> surfaceHolderRef = new AtomicReference<>(null);
     private final AtomicInteger viewWidth = new AtomicInteger(0);
     private final AtomicInteger viewHeight = new AtomicInteger(0);
     private final AtomicInteger displayRotation = new AtomicInteger(0);
@@ -80,9 +82,8 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         activity.getLifecycle().addObserver(this);
     }
 
-    public void setPreviewSurface(Surface surface, Class<?> surfaceClass) {
-        previewSurface = surface;
-        previewSurfaceClass = surfaceClass;
+    public void setPreviewSurfaceHolder(SurfaceHolder surfaceHolder) {
+        surfaceHolderRef.set(surfaceHolder);
     }
 
     public void setListener(Listener listener) {
@@ -131,6 +132,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                         throw new Exception("Camera not available");
                     }
                 }
+//                if (manager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) == CameraMetadata.IN
 
                 // Choose the sizes for camera preview and video recording
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
@@ -153,10 +155,23 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 }
 
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
-                Size[] previewSizes = map.getOutputSizes(previewSurfaceClass);
+                Size[] previewSizes = map.getOutputSizes(SurfaceHolder.class);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
                 Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, w, h);
                 Size previewSize = sizes[0];
+
+                SurfaceHolder surfaceHolder = surfaceHolderRef.get();
+                if (surfaceHolder != null) {
+                    int previewWidth, previewHeight;
+                    if (rotation % 180 == 0) {
+                        previewWidth = previewSize.getWidth();
+                        previewHeight = previewSize.getHeight();
+                    } else {
+                        previewWidth = previewSize.getHeight();
+                        previewHeight = previewSize.getWidth();
+                    }
+                    new Handler(Looper.getMainLooper()).post(() -> surfaceHolder.setFixedSize(previewWidth, previewHeight));
+                }
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
                 imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
@@ -276,9 +291,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             ArrayList<Surface> surfaces = new ArrayList<>();
             CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
-            if (previewSurface != null) {
-                previewBuilder.addTarget(previewSurface);
-                surfaces.add(previewSurface);
+            SurfaceHolder surfaceHolder = surfaceHolderRef.get();
+            if (surfaceHolder != null) {
+                previewBuilder.addTarget(surfaceHolder.getSurface());
+                surfaces.add(surfaceHolder.getSurface());
             }
 
             imageReader.setOnImageAvailableListener(imageAnalyzer, cameraProcessingHandler);

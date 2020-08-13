@@ -2,14 +2,21 @@ package com.appliedrec.verid.ui2;
 
 import android.Manifest;
 import android.os.Bundle;
+import android.renderscript.Allocation;
+import android.renderscript.AllocationAdapter;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.Type;
 import android.widget.LinearLayout;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
+import androidx.camera.core.SurfaceRequest;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
@@ -77,6 +84,17 @@ public class SessionActivityCameraX extends AbstractSessionActivity<VerIDSession
             try {
                 ProcessCameraProvider cameraProvider = processCameraFuture.get();
                 Preview cameraPreview = new Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build();
+//                Preview previewAnalysis = new Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build();
+//                previewAnalysis.setSurfaceProvider(imageProcessingExecutor, new Preview.SurfaceProvider() {
+//                    @Override
+//                    public void onSurfaceRequested(@NonNull SurfaceRequest request) {
+//                        RenderScript rs = RenderScript.create(SessionActivityCameraX.this);
+//                        Allocation allocation = Allocation.createTyped(rs, Type.createXY(rs, Element.YUV(rs), 640, 480), Allocation.USAGE_IO_INPUT);
+//                        request.provideSurface(allocation.getSurface(), imageProcessingExecutor, result -> {
+//                            System.out.println(result.getResultCode()+"");
+//                        });
+//                    }
+//                });
                 int lensFacing = CameraSelector.LENS_FACING_FRONT;
                 if (getCameraLocation() == CameraLocation.BACK) {
                     lensFacing = CameraSelector.LENS_FACING_BACK;
@@ -85,17 +103,15 @@ public class SessionActivityCameraX extends AbstractSessionActivity<VerIDSession
                         .requireLensFacing(lensFacing)
                         .build();
                 cameraProvider.unbindAll();
-                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build();
+                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
                 imageAnalysis.setAnalyzer(imageProcessingExecutor, getImageAnalyzer());
                 Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, cameraPreview, imageAnalysis);
                 int rotation = camera.getCameraInfo().getSensorRotationDegrees(cameraPreview.getTargetRotation());
                 getImageAnalyzer().setExifOrientation(getExifOrientation(rotation));
-                if (sessionFragment != null) {
-                    sessionFragment.getViewFinder().ifPresent(viewFinder -> {
-                        viewFinder.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
-                        cameraPreview.setSurfaceProvider(viewFinder.createSurfaceProvider());
-                    });
-                }
+                getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(viewFinder -> {
+                    viewFinder.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
+                    cameraPreview.setSurfaceProvider(viewFinder.createSurfaceProvider());
+                });
             } catch (Exception e) {
                 getImageAnalyzer().fail(e);
             }

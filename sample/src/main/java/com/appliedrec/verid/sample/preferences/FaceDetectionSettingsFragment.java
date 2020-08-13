@@ -11,6 +11,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.SwitchPreferenceCompat;
 
 import com.appliedrec.verid.sample.R;
 
@@ -115,6 +116,7 @@ public class FaceDetectionSettingsFragment extends PreferenceFragmentCompat impl
             String extractionThreshold = String.format("%.01f", faceDetectionSettings.getFaceTemplateExtractionThreshold());
             ListPreference confidencePref = findPreference(PreferenceKeys.CONFIDENCE_THRESHOLD);
             ListPreference extractionQualityPref = findPreference(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD);
+            SwitchPreferenceCompat useMLKitPref = findPreference(PreferenceKeys.USE_MLKIT);
             if (confidencePref != null) confidencePref.setValue(confidenceThreshold);
             if (extractionQualityPref != null) extractionQualityPref.setValue(extractionThreshold);
 

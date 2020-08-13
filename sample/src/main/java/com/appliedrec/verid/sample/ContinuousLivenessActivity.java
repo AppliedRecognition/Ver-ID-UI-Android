@@ -383,7 +383,8 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         if (hasCameraPermission()) {
             if (cameraWrapper != null) {
-                cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+                cameraWrapper.setPreviewSurfaceHolder(surfaceHolder);
+//                cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
             }
             startCamera();
         } else {

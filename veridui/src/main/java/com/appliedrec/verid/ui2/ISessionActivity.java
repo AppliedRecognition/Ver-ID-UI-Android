@@ -18,4 +18,7 @@ public interface ISessionActivity extends Consumer<FaceCapture>, Iterable<FaceBo
 
     default void setVideoRecorder(ISessionVideoRecorder videoRecorder) {
     }
+
+    default void setUseMLKitForFaceDetection(boolean useMLKit) {
+    }
 }

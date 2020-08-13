@@ -35,7 +35,7 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     private static final int REQUEST_CODE_SHARE = 1;
     private VerIDSessionResult sessionResult;
     private VerIDSessionSettings sessionSettings;
-    private EnvironmentSettings environmentSettings;
+    protected EnvironmentSettings environmentSettings;
     private Disposable createIntentDisposable;
 
     @Override
@@ -130,7 +130,10 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         shareIntent -> {
-                            startActivityForResult(Intent.createChooser(shareIntent, "Share session"), REQUEST_CODE_SHARE);
+                            Intent chooser = Intent.createChooser(shareIntent, "Share session");
+                            if (shareIntent.resolveActivity(getPackageManager()) != null) {
+                                startActivityForResult(chooser, REQUEST_CODE_SHARE);
+                            }
                         },
                         error -> {
                             Toast.makeText(this, "Failed to create session archive", Toast.LENGTH_SHORT).show();

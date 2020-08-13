@@ -11,6 +11,7 @@ import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Parcel;
 
+import androidx.core.util.Pair;
 import androidx.test.espresso.Espresso;
 import androidx.test.espresso.IdlingRegistry;
 import androidx.test.espresso.IdlingResource;
@@ -23,18 +24,28 @@ import com.appliedrec.verid.core2.AntiSpoofingException;
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.EulerAngle;
 import com.appliedrec.verid.core2.RecognizableFace;
+import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
+import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.FaceAlignmentDetection;
+import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.FaceDetectionStatus;
+import com.appliedrec.verid.core2.session.FaceExtents;
+import com.appliedrec.verid.core2.session.FacePresenceDetection;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.SessionFaceTracking;
+import com.appliedrec.verid.core2.session.SessionFunctions;
+import com.appliedrec.verid.core2.session.SpoofingDetection;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
+import com.appliedrec.verid.ui2.SessionActivity;
 import com.appliedrec.verid.ui2.SessionActivityCameraX;
 import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
@@ -47,7 +58,6 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.function.Supplier;
 
 import io.reactivex.rxjava3.functions.Function;
 
@@ -67,11 +77,9 @@ import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withParent;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -184,15 +192,13 @@ public class SampleAppTest {
         test_importRegistration();
         onView(withId(R.id.authenticate)).perform(click());
         onView(withText("English")).perform(click());
-        intended(hasComponent(SessionActivityCameraX.class.getName()));
+        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityCameraX.class.getName())));
     }
 
     @Test
     public void test_authenticateWithWrongFace_fails() throws Exception {
         AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        runSession(sessionSettings, () -> faceDetection -> {
-            throw new VerIDSessionException(new VerIDCoreException(VerIDCoreException.Code.AUTHENTICATION_SCORE_TOO_LOW), VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
-        });
+        runSession(sessionSettings, new VerIDSessionException(new VerIDCoreException(VerIDCoreException.Code.AUTHENTICATION_SCORE_TOO_LOW), VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR));
         intended(hasComponent(SessionResultActivity.class.getName()));
         onView(allOf(withId(R.id.value), withText("No"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
@@ -200,9 +206,7 @@ public class SampleAppTest {
     @Test
     public void test_registerWithFailure_showsFailurePage() {
         RegistrationSessionSettings sessionSettings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        runSession(sessionSettings, () -> faceDetectionResult -> {
-            throw new VerIDSessionException(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR);
-        });
+        runSession(sessionSettings, new VerIDSessionException(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR));
         intended(hasComponent(SessionResultActivity.class.getName()));
         onView(allOf(withId(R.id.value), withText("No"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
@@ -210,7 +214,7 @@ public class SampleAppTest {
     @Test
     public void test_authenticate_showsResult() throws Exception {
         AuthenticationSessionSettings sessionSettings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        runSession(sessionSettings, () -> faceDetectionResult -> createFaceCapture());
+        runSession(sessionSettings, null);
         intended(hasComponent(SessionResultActivity.class.getName()));
         onView(allOf(withId(R.id.value), withText("Yes"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
@@ -231,7 +235,7 @@ public class SampleAppTest {
         release();
         init();
         onView(withId(R.id.register)).perform(click());
-        intended(hasComponent(SessionActivityCameraX.class.getName()));
+        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityCameraX.class.getName())));
     }
 
     @Test
@@ -254,26 +258,70 @@ public class SampleAppTest {
 
     @Test
     public void test_runSuccessfulSession_showsSuccessActivity() {
-        runSession(getLivenessDetectionSessionSettings(true, 2), () -> faceDetectionResult -> createFaceCapture());
+        runSession(getLivenessDetectionSessionSettings(true, 2), null);
         intended(hasComponent(SessionResultActivity.class.getName()));
         onView(allOf(withId(R.id.value), withText("Yes"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
 
     @Test
     public void test_runSessionWithAntiSpoofingFailure_showsRetryActivity() {
-        VerIDSession<LivenessDetectionSessionSettings> session = runSession(getLivenessDetectionSessionSettings(true, 1), () -> faceDetectionResult -> {
-            throw new VerIDSessionException(new AntiSpoofingException(AntiSpoofingException.Code.MOVED_OPPOSITE, Bearing.STRAIGHT), VerIDSessionException.Code.LIVENESS_FAILURE);
-        });
+        VerIDSession<LivenessDetectionSessionSettings> session = runSession(getLivenessDetectionSessionSettings(true, 1), new VerIDSessionException(new AntiSpoofingException(AntiSpoofingException.Code.MOVED_OPPOSITE, Bearing.STRAIGHT), VerIDSessionException.Code.LIVENESS_FAILURE));
         intended(hasComponent(SessionLivenessDetectionFailureActivity.class.getName()));
     }
 
-    private <T extends VerIDSessionSettings> VerIDSession<T> runSession(T settings, Supplier<Function<FaceDetectionResult, FaceCapture>> faceDetectionResultEvaluationFunctionSupplier) {
+    private <T extends VerIDSessionSettings> VerIDSession<T> runSession(T settings, VerIDSessionException exception) {
         VerID verID = getSampleAppVerID();
         registeredUserActivityIntentsTestRule.launchActivity(null);
         VerIDSession<T> session = new VerIDSession<>(verID, settings);
+        SessionFunctions sessionFunctions = new SessionFunctions(verID, settings) {
+            @Override
+            public Function<Pair<VerIDImage, FaceBounds>, SessionFaceTracking> getSessionFaceTrackingAccumulator() {
+                return imageFaceBoundsPair -> {
+                    getSessionFaceTracking().image = imageFaceBoundsPair.first;
+                    getSessionFaceTracking().defaultFaceBounds = imageFaceBoundsPair.second;
+                    return getSessionFaceTracking();
+                };
+            }
+
+            @Override
+            public Function<SessionFaceTracking, FacePresenceDetection> getFacePresenceDetectionAccumulator() {
+                return sessionFaceTracking -> {
+                    getFacePresenceDetection().setStatus(FacePresenceDetection.Status.FOUND);
+                    return getFacePresenceDetection();
+                };
+            }
+
+            @Override
+            public Function<FacePresenceDetection, FaceAlignmentDetection> getFaceAlignmentDetectionAccumulator() {
+                return facePresenceDetection -> {
+                    getFaceAlignmentDetection().setStatus(FaceAlignmentDetection.Status.ALIGNED);
+                    return getFaceAlignmentDetection();
+                };
+            }
+
+            @Override
+            public Function<FaceAlignmentDetection, SpoofingDetection> getSpoofingDetectionAccumulator() {
+                return faceAlignmentDetection -> getSpoofingDetection();
+            }
+
+            @Override
+            public FaceDetectionResult createFaceDetectionResult(SpoofingDetection spoofingDetection) {
+                FaceDetectionResult faceDetectionResult = new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, getSessionFaceTracking().requestedBearing);
+                faceDetectionResult.setDefaultFaceBounds(new FaceBounds(new Size(120, 160), FaceExtents.DEFAULT));
+                return faceDetectionResult;
+            }
+
+            @Override
+            public FaceCapture createFaceCapture(FaceDetectionResult faceDetectionResult) throws VerIDSessionException {
+                if (exception != null) {
+                    throw exception;
+                } else {
+                    return SampleAppTest.this.createFaceCapture();
+                }
+            }
+        };
         session.setDelegate(registeredUserActivityIntentsTestRule.getActivity());
-        session.setFaceDetectionFunctionSupplier(() -> image -> new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, Bearing.STRAIGHT));
-        session.setFaceDetectionResultEvaluationFunctionSupplier(faceDetectionResultEvaluationFunctionSupplier);
+        session.setSessionFunctions(sessionFunctions);
         session.start();
         IdlingRegistry.getInstance().register(session);
         Espresso.onIdle();

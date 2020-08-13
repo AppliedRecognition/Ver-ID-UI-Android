@@ -14,6 +14,7 @@ import androidx.core.app.ActivityCompat;
 
 import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -32,6 +33,8 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
         sessionFragment = (VerIDSessionFragment) getSupportFragmentManager().findFragmentById(R.id.session_fragment);
 //        // Uncomment the following line to plot the face landmarks in the camera preview
 //        Objects.requireNonNull(sessionFragment).setPlotFaceLandmarks(true);
+//        // Uncomment to use MLKit for face detection
+//        getImageAnalyzer().setUseMLKit(true);
         cameraWrapper = new CameraWrapper(this, getCameraLocation(), getImageAnalyzer(), getSessionVideoRecorder().orElse(null));
         cameraWrapper.setListener(this);
         drawFaces();
@@ -126,7 +129,8 @@ public class SessionActivity extends AbstractSessionActivity<VerIDSessionFragmen
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         if (cameraWrapper != null) {
-            cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+            cameraWrapper.setPreviewSurfaceHolder(surfaceHolder);
+//            cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
         }
         if (hasCameraPermission()) {
             startCamera();

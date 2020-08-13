@@ -189,6 +189,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                         authenticationSession = new VerIDSession<>(verID, settings);
                     }
                     authenticationSession.setDelegate(this);
+                    if (preferences != null) {
+                        authenticationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, true));
+                    }
                     authenticationSession.start();
                 })
                 .setTitle("Select language")
@@ -214,6 +217,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         }
         settings.setSessionDiagnosticsEnabled(true);
         VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
+        if (preferences != null) {
+            registrationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, true));
+        }
         registrationSession.setDelegate(this);
         registrationSession.start();
     }
