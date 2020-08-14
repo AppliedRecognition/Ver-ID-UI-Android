@@ -230,7 +230,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private void startSessionActivity(@NonNull Context context) {
         if (sessionActivity == null) {
             Intent intent = new Intent(context, getSessionActivityClass());
-            intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, sessionId);
+            intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, sessionId);
             if (!(context instanceof Activity)) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             }
@@ -266,7 +266,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
             resultToShow.set(result);
             Intent intent = new Intent(sessionActivity, getSessionResultActivityClass(result));
-            intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, sessionId);
+            intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, sessionId);
             sessionActivity.startActivity(intent);
         } else {
             if (isStarted.getAndSet(false)) {
@@ -295,7 +295,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<T> sessionActivity(Activity activity) {
-        if (getSessionActivityClass().isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (getSessionActivityClass().isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
             //noinspection unchecked
             return Optional.of((T)activity);
         } else {
@@ -305,7 +305,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<ISessionResultActivity> sessionResultActivity(Activity activity) {
-        if (resultToShow.get() != null && getSessionResultActivityClass(resultToShow.get()).isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (resultToShow.get() != null && getSessionResultActivityClass(resultToShow.get()).isInstance(activity) && activity.getIntent() != null && activity.getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
             return Optional.of((ISessionResultActivity)activity);
         } else {
             return Optional.empty();
@@ -314,7 +314,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
 
     @NonNull
     private Optional<TipsActivity> tipsActivity(Activity activity) {
-        if (activity instanceof TipsActivity && activity.getIntent() != null && activity.getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1) == sessionId) {
+        if (activity instanceof TipsActivity && activity.getIntent() != null && activity.getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1) == sessionId) {
             TipsActivity tipsActivity = (TipsActivity)activity;
             return Optional.of(tipsActivity);
         } else {

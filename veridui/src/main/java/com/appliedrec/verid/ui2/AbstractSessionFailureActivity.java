@@ -19,7 +19,7 @@ public abstract class AbstractSessionFailureActivity extends SessionResultActivi
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.action_tips) {
             Intent intent = new Intent(this, TipsActivity.class);
-            intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1));
+            intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1));
             startActivity(intent);
             return true;
         }

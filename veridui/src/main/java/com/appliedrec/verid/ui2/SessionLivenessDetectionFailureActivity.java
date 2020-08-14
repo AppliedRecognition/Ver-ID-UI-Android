@@ -116,7 +116,7 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
 
     private void onShowTips(View view) {
         Intent intent = new Intent(this, TipsActivity.class);
-        intent.putExtra(SessionActivityCameraX.EXTRA_SESSION_ID, getIntent().getLongExtra(SessionActivityCameraX.EXTRA_SESSION_ID, -1));
+        intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1));
         startActivity(intent);
     }
 

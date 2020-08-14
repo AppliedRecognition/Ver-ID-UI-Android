@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 public class SessionActivityCameraX extends AbstractSessionActivity<VerIDSessionFragmentCameraX> {
 
-    public static final String EXTRA_SESSION_ID = "com.appliedrec.verid.EXTRA_SESSION_ID";
     private ThreadPoolExecutor imageProcessingExecutor;
     private VerIDSessionFragmentCameraX sessionFragment;
     private ActivitySessionCameraxBinding viewBinding;

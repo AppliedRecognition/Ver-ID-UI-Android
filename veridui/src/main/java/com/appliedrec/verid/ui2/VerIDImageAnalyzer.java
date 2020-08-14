@@ -1,8 +1,7 @@
 package com.appliedrec.verid.ui2;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.media.Image;
 import android.media.ImageReader;
@@ -18,6 +17,7 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
 import com.appliedrec.verid.core2.VerIDImage;
+import com.appliedrec.verid.core2.VerIDImageNV21;
 import com.appliedrec.verid.core2.session.IImage;
 import com.appliedrec.verid.core2.session.IImageFlowable;
 import com.appliedrec.verid.core2.session.YUVToRGBConverter;
@@ -169,25 +169,17 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         }
     }
 
-    @SuppressLint("UnsafeExperimentalUsageError")
-    private void queueImage(IImage image) {
+    private void queueImage(IImage<?> image) {
+        int pixelCount = image.getCropRect().width() * image.getCropRect().height();
+        int pixelSizeBits = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888);
         try {
-            Bitmap bitmap = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
-            yuvToRGBConverter.imageToBitmap(image, bitmap);
-            VerIDImage verIDImage = new VerIDImage(bitmap, exifOrientation.get());
+            byte[] imageBytes = new byte[pixelCount * pixelSizeBits / 8];
+            imageToNV21ByteArray(image, imageBytes);
+            VerIDImage verIDImage = new VerIDImageNV21(imageBytes, image.getWidth(), image.getHeight(), exifOrientation.get(), yuvToRGBConverter);
             verIDImage.setIsMirrored(isMirrored.get());
-            if (image.getSourceImage() instanceof Image) {
-                verIDImage.setMediaImage((Image)image.getSourceImage());
-            } else if (image.getSourceImage() instanceof ImageProxy) {
-                verIDImage.setMediaImage(((ImageProxy)image.getSourceImage()).getImage());
-            }
-            verIDImage.setMediaImageExifOrientation(exifOrientation.get());
-            try {
-                imageQueue.put(verIDImage);
-            } catch (InterruptedException ignore) {
-            }
+            imageQueue.put(verIDImage);
         } catch (Exception e) {
-            return;
+            e.printStackTrace();
         }
     }
 
@@ -240,6 +232,65 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         }
         queueImage(new ImageProxyImage(image));
         image.close();
+    }
+
+    void imageToNV21ByteArray(IImage<?> image, byte[] buffer) throws Exception {
+        int pixelCount = image.getCropRect().width() * image.getCropRect().height();
+        for (int i=0; i<image.getPlaneCount(); i++) {
+            ByteBuffer planeBuffer = image.getBufferOfPlane(i);
+            int rowStride = image.getRowStrideOfPlane(i);
+            int pixelStride = image.getPixelStrideOfPlane(i);
+            int outputStride;
+            int outputOffset;
+            switch (i) {
+                case 0:
+                    outputStride = 1;
+                    outputOffset = 0;
+                    break;
+                case 1:
+                    outputStride = 2;
+                    outputOffset = pixelCount + 1;
+                    break;
+                case 2:
+                    outputStride = 2;
+                    outputOffset = pixelCount;
+                    break;
+                default:
+                    throw new Exception();
+            }
+            Rect planeRect;
+            if (i == 0) {
+                planeRect = image.getCropRect();
+            } else {
+                planeRect = new Rect(
+                        image.getCropRect().left / 2,
+                        image.getCropRect().top / 2,
+                        image.getCropRect().right / 2,
+                        image.getCropRect().bottom / 2
+                );
+            }
+            int planeWidth = planeRect.width();
+            int planeHeight = planeRect.height();
+            byte[] rowBuffer = new byte[rowStride];
+            int rowLength = pixelStride == 1 && outputStride == 1 ? planeWidth : (planeWidth - 1) * pixelStride + 1;
+            for (int row = 0; row < planeHeight; row ++) {
+                planeBuffer.position((row + planeRect.top) * rowStride + planeRect.left * pixelStride);
+
+                if (pixelStride == 1 && outputStride == 1) {
+                    // When there is a single stride value for pixel and output, we can just copy
+                    // the entire row in a single step
+                    planeBuffer.get(buffer, outputOffset, rowLength);
+                    outputOffset += rowLength;
+                } else {
+                    // When either pixel or output have a stride > 1 we must copy pixel by pixel
+                    planeBuffer.get(rowBuffer, 0, rowLength);
+                    for (int col = 0; col < planeWidth; col ++) {
+                        buffer[outputOffset] = rowBuffer[col * pixelStride];
+                        outputOffset += outputStride;
+                    }
+                }
+            }
+        }
     }
 
 //    private VerIDImage verIDImageFromImage(IImage image) {

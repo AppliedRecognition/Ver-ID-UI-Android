@@ -24,6 +24,7 @@ import androidx.exifinterface.media.ExifInterface;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.Size;
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
@@ -41,6 +42,7 @@ import java.util.concurrent.SynchronousQueue;
 
 public abstract class AbstractSessionActivity<SessionFragment extends AbstractSessionFragment<?>> extends AppCompatActivity implements ISessionActivity, Iterable<FaceBounds>, Iterator<FaceBounds> {
 
+    public static final String EXTRA_SESSION_ID = "com.appliedrec.verid.EXTRA_SESSION_ID";
     protected static final int REQUEST_CODE_CAMERA_PERMISSION = 10;
     private VerIDSessionSettings sessionSettings;
     private CameraLocation cameraLocation;

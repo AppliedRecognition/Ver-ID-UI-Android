@@ -1,5 +1,6 @@
 package com.appliedrec.verid.ui2;
 
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
@@ -17,8 +18,5 @@ public interface ISessionActivity extends Consumer<FaceCapture>, Iterable<FaceBo
     IImageFlowable getImageFlowable();
 
     default void setVideoRecorder(ISessionVideoRecorder videoRecorder) {
-    }
-
-    default void setUseMLKitForFaceDetection(boolean useMLKit) {
     }
 }
