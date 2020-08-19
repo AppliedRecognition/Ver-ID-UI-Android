@@ -29,18 +29,20 @@ public class ProfilePhotoHelper {
 
     @WorkerThread
     public void setProfilePhotoFromUri(Uri imageUri, RectF cropRect) throws IOException {
-        Bitmap bitmap = BitmapFactory.decodeFile(imageUri.getPath());
-        if (bitmap != null) {
-            if (cropRect != null) {
-                Rect crop = new Rect();
-                cropRect.round(crop);
-                crop.left = Math.max(crop.left,0);
-                crop.top = Math.max(crop.top,0);
-                crop.right = Math.min(crop.right,bitmap.getWidth());
-                crop.bottom = Math.min(crop.bottom,bitmap.getHeight());
-                bitmap = Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.width(), crop.height());
+        try (InputStream inputStream = context.getContentResolver().openInputStream(imageUri)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            if (bitmap != null) {
+                if (cropRect != null) {
+                    Rect crop = new Rect();
+                    cropRect.round(crop);
+                    crop.left = Math.max(crop.left, 0);
+                    crop.top = Math.max(crop.top, 0);
+                    crop.right = Math.min(crop.right, bitmap.getWidth());
+                    crop.bottom = Math.min(crop.bottom, bitmap.getHeight());
+                    bitmap = Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.width(), crop.height());
+                }
+                setProfilePhoto(bitmap);
             }
-            setProfilePhoto(bitmap);
         }
     }
 

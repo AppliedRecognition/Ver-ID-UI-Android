@@ -30,6 +30,9 @@ import com.appliedrec.verid.core.RegistrationSessionSettings;
 import com.appliedrec.verid.core.VerIDSessionResult;
 import com.appliedrec.verid.core.VerIDSessionSettings;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 
 public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
@@ -96,44 +99,47 @@ public class VerIDRegistrationSessionFragment extends VerIDSessionFragment {
                 if (imageUri != null) {
                     final Face face = attachments[i].getFace();
                     AsyncTask.execute(() -> {
-                        Bitmap bitmap = BitmapFactory.decodeFile(imageUri.getPath());
-                        if (bitmap != null) {
-                            Rect rect = new Rect();
-                            face.getBounds().round(rect);
-                            rect.bottom = Math.min(rect.bottom, bitmap.getHeight());
-                            rect.top = Math.max(rect.top, 0);
-                            rect.right = Math.min(rect.right, bitmap.getWidth());
-                            rect.left = Math.max(rect.left, 0);
-                            bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
-                            if (sessionSettings.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.FRONT) {
-                                Matrix matrix = new Matrix();
-                                matrix.setScale(-1, 1);
-                                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                            }
-                            if (faceViewSize != null && faceViewSize.x > 0 && faceViewSize.y > 0) {
-                                double viewAspectRatio = (double)faceViewSize.x/(double)faceViewSize.y;
-                                double imageAspectRatio = (double)bitmap.getWidth()/(double)bitmap.getHeight();
-                                int width;
-                                int height;
-                                if (viewAspectRatio > imageAspectRatio) {
-                                    width = faceViewSize.x;
-                                    height = (int)((double)faceViewSize.x / imageAspectRatio);
-                                } else {
-                                    height = faceViewSize.y;
-                                    width = (int)((double)faceViewSize.y * imageAspectRatio);
+                        try (InputStream inputStream = requireContext().getContentResolver().openInputStream(imageUri)) {
+                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                            if (bitmap != null) {
+                                Rect rect = new Rect();
+                                face.getBounds().round(rect);
+                                rect.bottom = Math.min(rect.bottom, bitmap.getHeight());
+                                rect.top = Math.max(rect.top, 0);
+                                rect.right = Math.min(rect.right, bitmap.getWidth());
+                                rect.left = Math.max(rect.left, 0);
+                                bitmap = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height());
+                                if (sessionSettings.getFacingOfCameraLens() == VerIDSessionSettings.LensFacing.FRONT) {
+                                    Matrix matrix = new Matrix();
+                                    matrix.setScale(-1, 1);
+                                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
                                 }
-                                bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
-                            }
-                            final RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
-                            runOnUIThread(() -> {
-                                if (isAdded() && !isRemoving()) {
-                                    int cornerRadius = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
-                                    drawable.setCornerRadius(cornerRadius);
-                                    imageView.setImageDrawable(drawable);
-                                    imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                                    imageView.setAlpha(1.0f);
+                                if (faceViewSize != null && faceViewSize.x > 0 && faceViewSize.y > 0) {
+                                    double viewAspectRatio = (double) faceViewSize.x / (double) faceViewSize.y;
+                                    double imageAspectRatio = (double) bitmap.getWidth() / (double) bitmap.getHeight();
+                                    int width;
+                                    int height;
+                                    if (viewAspectRatio > imageAspectRatio) {
+                                        width = faceViewSize.x;
+                                        height = (int) ((double) faceViewSize.x / imageAspectRatio);
+                                    } else {
+                                        height = faceViewSize.y;
+                                        width = (int) ((double) faceViewSize.y * imageAspectRatio);
+                                    }
+                                    bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
                                 }
-                            });
+                                final RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+                                runOnUIThread(() -> {
+                                    if (isAdded() && !isRemoving()) {
+                                        int cornerRadius = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
+                                        drawable.setCornerRadius(cornerRadius);
+                                        imageView.setImageDrawable(drawable);
+                                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                                        imageView.setAlpha(1.0f);
+                                    }
+                                });
+                            }
+                        } catch (IOException ignore) {
                         }
                     });
                 }
