@@ -230,18 +230,14 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
     //region Camera permissions
 
     private void requestCameraPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-            new CameraPermissionConfirmationDialog().show(getSupportFragmentManager(), FRAGMENT_DIALOG);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-        }
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                new CameraPermissionErrorDialog().show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+                finishWithError(new Exception("Camera access denied"));
             } else if (sessionFragment != null) {
                 sessionFragment.startCamera();
                 startSessionTask();
