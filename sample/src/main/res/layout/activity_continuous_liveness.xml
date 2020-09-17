@@ -8,9 +8,13 @@
 
     <fragment
         android:id="@+id/sessionFragment"
-        android:name="com.appliedrec.verid.ui2.VerIDSessionFragment"
+        android:name="com.appliedrec.verid.ui2.VerIDSessionFragmentWithTextureView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sessionResult"

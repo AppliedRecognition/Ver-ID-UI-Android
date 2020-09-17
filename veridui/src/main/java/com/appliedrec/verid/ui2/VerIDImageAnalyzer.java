@@ -1,7 +1,5 @@
 package com.appliedrec.verid.ui2;
 
-import android.content.Context;
-import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.media.Image;
 import android.media.ImageReader;
@@ -16,11 +14,10 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDImage;
-import com.appliedrec.verid.core2.VerIDImageNV21;
 import com.appliedrec.verid.core2.session.IImage;
 import com.appliedrec.verid.core2.session.IImageFlowable;
-import com.appliedrec.verid.core2.session.YUVToRGBConverter;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -35,20 +32,23 @@ import io.reactivex.rxjava3.core.FlowableEmitter;
 
 public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowable, ImageReader.OnImageAvailableListener, DefaultLifecycleObserver {
 
-    private final SynchronousQueue<VerIDImage> imageQueue = new SynchronousQueue<>();
+    private final SynchronousQueue<VerIDImage<?>> imageQueue = new SynchronousQueue<>();
     private final AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
     private final AtomicBoolean isMirrored = new AtomicBoolean(false);
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private Thread subscribeThread;
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
-    private YUVToRGBConverter yuvToRGBConverter;
+    private VerID verID;
+    private final Object veridLock = new Object();
 
     private static class MediaImageImage implements IImage<Image> {
 
         private final Image mediaImage;
+        private final int exifOrientation;
 
-        public MediaImageImage(Image mediaImage) {
+        public MediaImageImage(Image mediaImage, int exifOrientation) {
             this.mediaImage = mediaImage;
+            this.exifOrientation = exifOrientation;
         }
 
         @Override
@@ -92,6 +92,11 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         }
 
         @Override
+        public int getExifOrientation() {
+            return exifOrientation;
+        }
+
+        @Override
         public void close() {
             mediaImage.close();
         }
@@ -100,9 +105,11 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
     private static class ImageProxyImage implements IImage<ImageProxy> {
 
         private final ImageProxy imageProxy;
+        private final int exifOrientation;
 
-        ImageProxyImage(ImageProxy imageProxy) {
+        ImageProxyImage(ImageProxy imageProxy, int exifOrientation) {
             this.imageProxy = imageProxy;
+            this.exifOrientation = exifOrientation;
         }
 
         @Override
@@ -146,6 +153,11 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         }
 
         @Override
+        public int getExifOrientation() {
+            return exifOrientation;
+        }
+
+        @Override
         public void close() {
             imageProxy.close();
         }
@@ -154,9 +166,6 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
     public VerIDImageAnalyzer(AppCompatActivity lifecycleOwner) {
         lifecycleOwner.getLifecycle().addObserver(this);
         isStarted.set(lifecycleOwner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED));
-        if (isStarted.get()) {
-            yuvToRGBConverter = new YUVToRGBConverter(lifecycleOwner);
-        }
     }
 
     @Override
@@ -165,17 +174,25 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
             if (image == null || !isStarted.get()) {
                 return;
             }
-            queueImage(new MediaImageImage(image));
+            queueImage(new MediaImageImage(image, exifOrientation.get()));
+        }
+    }
+
+    public void setVerID(VerID verID) {
+        synchronized (veridLock) {
+            this.verID = verID;
+            veridLock.notifyAll();
         }
     }
 
     private void queueImage(IImage<?> image) {
-        int pixelCount = image.getCropRect().width() * image.getCropRect().height();
-        int pixelSizeBits = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888);
         try {
-            byte[] imageBytes = new byte[pixelCount * pixelSizeBits / 8];
-            imageToNV21ByteArray(image, imageBytes);
-            VerIDImage verIDImage = new VerIDImageNV21(imageBytes, image.getWidth(), image.getHeight(), exifOrientation.get(), yuvToRGBConverter);
+            synchronized (veridLock) {
+                while (verID == null) {
+                    veridLock.wait();
+                }
+            }
+            VerIDImage<?> verIDImage = verID.getFaceDetection().createVerIDImage(image);
             verIDImage.setIsMirrored(isMirrored.get());
             imageQueue.put(verIDImage);
         } catch (Exception e) {
@@ -230,104 +247,12 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
             image.close();
             return;
         }
-        queueImage(new ImageProxyImage(image));
+        queueImage(new ImageProxyImage(image, exifOrientation.get()));
         image.close();
     }
 
-    void imageToNV21ByteArray(IImage<?> image, byte[] buffer) throws Exception {
-        int pixelCount = image.getCropRect().width() * image.getCropRect().height();
-        for (int i=0; i<image.getPlaneCount(); i++) {
-            ByteBuffer planeBuffer = image.getBufferOfPlane(i);
-            int rowStride = image.getRowStrideOfPlane(i);
-            int pixelStride = image.getPixelStrideOfPlane(i);
-            int outputStride;
-            int outputOffset;
-            switch (i) {
-                case 0:
-                    outputStride = 1;
-                    outputOffset = 0;
-                    break;
-                case 1:
-                    outputStride = 2;
-                    outputOffset = pixelCount + 1;
-                    break;
-                case 2:
-                    outputStride = 2;
-                    outputOffset = pixelCount;
-                    break;
-                default:
-                    throw new Exception();
-            }
-            Rect planeRect;
-            if (i == 0) {
-                planeRect = image.getCropRect();
-            } else {
-                planeRect = new Rect(
-                        image.getCropRect().left / 2,
-                        image.getCropRect().top / 2,
-                        image.getCropRect().right / 2,
-                        image.getCropRect().bottom / 2
-                );
-            }
-            int planeWidth = planeRect.width();
-            int planeHeight = planeRect.height();
-            byte[] rowBuffer = new byte[rowStride];
-            int rowLength = pixelStride == 1 && outputStride == 1 ? planeWidth : (planeWidth - 1) * pixelStride + 1;
-            for (int row = 0; row < planeHeight; row ++) {
-                planeBuffer.position((row + planeRect.top) * rowStride + planeRect.left * pixelStride);
-
-                if (pixelStride == 1 && outputStride == 1) {
-                    // When there is a single stride value for pixel and output, we can just copy
-                    // the entire row in a single step
-                    planeBuffer.get(buffer, outputOffset, rowLength);
-                    outputOffset += rowLength;
-                } else {
-                    // When either pixel or output have a stride > 1 we must copy pixel by pixel
-                    planeBuffer.get(rowBuffer, 0, rowLength);
-                    for (int col = 0; col < planeWidth; col ++) {
-                        buffer[outputOffset] = rowBuffer[col * pixelStride];
-                        outputOffset += outputStride;
-                    }
-                }
-            }
-        }
-    }
-
-//    private VerIDImage verIDImageFromImage(IImage image) {
-//        int yRowStride = image.getRowStride(0);
-//        int uRowStride = image.getRowStride(1);
-//        int vRowStride = image.getRowStride(2);
-//        int width = image.getWidth();
-//        int height = image.getHeight();
-//
-//        ByteBuffer yBuffer = image.getBuffer(0); // Y
-//        ByteBuffer uBuffer = image.getBuffer(1); // U
-//        ByteBuffer vBuffer = image.getBuffer(2); // V
-//
-//        ByteBuffer uCropped = ByteBuffer.allocateDirect(width/2*height/2);
-//        ByteBuffer vCropped = ByteBuffer.allocateDirect(width/2*height/2);
-//
-//        ByteBuffer nv21Buffer = ByteBuffer.allocateDirect(width*height+width*height/2);
-//
-//        cropByteBufferToSize(yBuffer, nv21Buffer, width, height, yRowStride);
-//        cropByteBufferToSize(uBuffer, uCropped, width / 2, height / 2, uRowStride);
-//        cropByteBufferToSize(vBuffer, vCropped, width / 2, height / 2, vRowStride);
-//
-//        for (int i=0; i<uCropped.capacity(); i++) {
-//            nv21Buffer.put(vCropped.get(i)).put(uCropped.get(i));
-//        }
-//        byte[] nv21 = new byte[nv21Buffer.capacity()];
-//        nv21Buffer.rewind();
-//        nv21Buffer.get(nv21);
-//
-//        YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
-//        VerIDImage verIDImage = new VerIDImage(yuvImage, exifOrientation.get());
-//        verIDImage.setIsMirrored(isMirrored.get());
-//        return verIDImage;
-//    }
-
     @Override
-    public void subscribe(@io.reactivex.rxjava3.annotations.NonNull FlowableEmitter<VerIDImage> emitter) {
+    public void subscribe(@io.reactivex.rxjava3.annotations.NonNull FlowableEmitter<VerIDImage<?>> emitter) {
         subscribeThread = Thread.currentThread();
         while (!emitter.isCancelled()) {
             if (getFailure().isPresent()) {
@@ -335,7 +260,7 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
                 return;
             }
             try {
-                VerIDImage image = imageQueue.take();
+                VerIDImage<?> image = imageQueue.take();
                 emitter.onNext(image);
             } catch (InterruptedException ignore) {
             }
@@ -370,18 +295,11 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
     @Override
     public void onStart(@NonNull LifecycleOwner owner) {
         isStarted.set(true);
-        if (yuvToRGBConverter == null && owner instanceof Context) {
-            yuvToRGBConverter = new YUVToRGBConverter((Context)owner);
-        }
     }
 
     @Override
     public void onStop(@NonNull LifecycleOwner owner) {
         isStarted.set(false);
-        if (yuvToRGBConverter != null) {
-            yuvToRGBConverter.dispose();
-            yuvToRGBConverter = null;
-        }
     }
 
     @Override

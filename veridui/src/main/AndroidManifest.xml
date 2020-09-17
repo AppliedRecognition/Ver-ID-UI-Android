@@ -12,6 +12,9 @@
         <activity
             android:name=".SessionActivityCameraX"
             android:theme="@style/CameraActivityTheme" />
+        <activity
+            android:name=".SessionActivityWithTextureView"
+            android:theme="@style/CameraActivityTheme" />
         <activity android:name=".SessionSuccessActivity" />
         <activity android:name=".SessionResultActivity" />
         <activity android:name=".SessionFailureActivity" />

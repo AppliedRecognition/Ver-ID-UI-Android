@@ -16,9 +16,12 @@ package com.appliedrec.verid.sample;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.Toast;
 
@@ -30,9 +33,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.appliedrec.verid.core2.Face;
+import com.appliedrec.verid.core2.FaceDetectionImage;
 import com.appliedrec.verid.core2.IFaceTracking;
 import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
@@ -45,9 +50,10 @@ import com.appliedrec.verid.ui2.CameraWrapper;
 import com.appliedrec.verid.ui2.SessionPrompts;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDImageAnalyzer;
-import com.appliedrec.verid.ui2.VerIDSessionFragment;
+import com.appliedrec.verid.ui2.VerIDSessionFragmentWithTextureView;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +61,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
@@ -64,7 +71,7 @@ import io.reactivex.rxjava3.functions.Action;
 import io.reactivex.rxjava3.functions.Predicate;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
-public class ContinuousLivenessActivity extends AppCompatActivity implements IVerIDLoadObserver, Iterable<FaceBounds>, Iterator<FaceBounds>, SurfaceHolder.Callback, CameraWrapper.Listener {
+public class ContinuousLivenessActivity extends AppCompatActivity implements IVerIDLoadObserver, Iterable<FaceBounds>, Iterator<FaceBounds>, TextureView.SurfaceTextureListener, CameraWrapper.Listener {
 
     private static final int REQUEST_CODE_CAMERA_PERMISSION = 0;
     ActivityContinuousLivenessBinding viewBinding;
@@ -74,7 +81,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     private Session<LivenessDetectionSessionSettings> session;
     private Disposable faceDetectionDisposable;
     private final LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
-    private VerIDSessionFragment sessionFragment;
+    private VerIDSessionFragmentWithTextureView sessionFragment;
     private VerID verID;
     private SessionPrompts sessionPrompts;
     private SynchronousQueue<Size> viewFinderSizeQueue = new SynchronousQueue<>();
@@ -90,6 +97,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         }
     };
     private CameraWrapper cameraWrapper;
+    private AtomicBoolean isSessionRunning = new AtomicBoolean(false);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,12 +114,16 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         viewBinding.retryButton.setOnClickListener(view -> startSession());
         viewBinding.idle.setVisibility(View.VISIBLE);
         viewBinding.sessionResult.setVisibility(View.VISIBLE);
-        sessionFragment = (VerIDSessionFragment)getSupportFragmentManager().findFragmentById(R.id.sessionFragment);
+        sessionFragment = (VerIDSessionFragmentWithTextureView)getSupportFragmentManager().findFragmentById(R.id.sessionFragment);
 
-        cameraWrapper = new CameraWrapper(this, CameraLocation.FRONT, imageAnalyzer, null);
+        cameraWrapper = new CameraWrapper(this, CameraLocation.FRONT, imageAnalyzer, null, SurfaceTexture.class);
         cameraWrapper.setListener(this);
 
-        session.getFaceDetectionLiveData().observe(this, faceDetectionResult -> sessionFragment.accept(faceDetectionResult, sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null)));
+        session.getFaceDetectionLiveData().observe(this, faceDetectionResult -> {
+            if (isSessionRunning.get()) {
+                sessionFragment.accept(faceDetectionResult, sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null));
+            }
+        });
         session.getSessionResultLiveData().observe(this, this::onSessionResult);
         runFaceDetectionUntil(hasFace -> hasFace, this::startSession);
     }
@@ -136,9 +148,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     @Override
     protected void onResumeFragments() {
         super.onResumeFragments();
-        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> {
-            surfaceView.getHolder().addCallback(this);
-        });
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> textureView.setSurfaceTextureListener(this));
     }
 
     @Override
@@ -148,9 +158,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
             cameraWrapper.stop();
             cameraWrapper = null;
         }
-        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> {
-            surfaceView.getHolder().removeCallback(this);
-        });
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> textureView.setSurfaceTextureListener(null));
     }
 
     @Override
@@ -191,7 +199,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private Optional<VerIDSessionFragment> getSessionFragment() {
+    private Optional<VerIDSessionFragmentWithTextureView> getSessionFragment() {
         return Optional.ofNullable(sessionFragment);
     }
 
@@ -215,6 +223,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     @Override
     public void onVerIDLoaded(VerID verid) {
         verID = verid;
+        imageAnalyzer.setVerID(verID);
         session = new Session.Builder<>(verid, sessionSettings, imageAnalyzer, this).bindToLifecycle(this.getLifecycle()).build();
     }
 
@@ -227,10 +236,11 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         if (faceDetectionDisposable != null && !faceDetectionDisposable.isDisposed()) {
             faceDetectionDisposable.dispose();
         }
-        IFaceTracking faceTracking = verID.getFaceDetection().startFaceTracking();
+        IFaceTracking<FaceDetectionImage> faceTracking = startFaceTracking();
         faceDetectionDisposable = Flowable.create(imageAnalyzer, BackpressureStrategy.LATEST)
                 .map(image -> {
-                    Face face = faceTracking.trackFaceInImage(image);
+                    VerIDImage<FaceDetectionImage> verIDImage = (VerIDImage<FaceDetectionImage>)image;
+                    Face face = faceTracking.trackFaceInImage(verIDImage.createFaceDetectionImage());
                     return face != null;
                 })
                 .takeUntil(predicate)
@@ -240,27 +250,34 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
                 .subscribe(
                         onComplete,
                         error -> {
-
+                            Log.e("Ver-ID", Objects.requireNonNull(error.getLocalizedMessage()));
                         }
                 );
     }
 
+    private <DetectionImage> IFaceTracking<DetectionImage> startFaceTracking() {
+        return (IFaceTracking<DetectionImage>) verID.getFaceDetection().startFaceTracking();
+    }
+
     private void startSession() {
-        if (faceDetectionDisposable != null && !faceDetectionDisposable.isDisposed()) {
-            faceDetectionDisposable.dispose();
-        }
-        faceDetectionDisposable = null;
-        if (viewBinding == null) {
-            return;
-        }
-        viewBinding.sessionResult.setVisibility(View.GONE);
-        if (session != null) {
-            session.start();
-        }
+        runOnUiThread(() -> {
+            if (faceDetectionDisposable != null && !faceDetectionDisposable.isDisposed()) {
+                faceDetectionDisposable.dispose();
+            }
+            faceDetectionDisposable = null;
+            if (viewBinding == null) {
+                return;
+            }
+            viewBinding.sessionResult.setVisibility(View.GONE);
+            if (session != null && isSessionRunning.compareAndSet(false, true)) {
+                session.start();
+            }
+        });
     }
 
     private void onSessionResult(VerIDSessionResult sessionResult) {
         getSessionFragment().ifPresent(sessionFragment -> sessionFragment.accept(null, null));
+        isSessionRunning.set(false);
         if (viewBinding == null) {
             return;
         }
@@ -380,11 +397,10 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     //region Surface callback
 
     @Override
-    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+    public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
         if (hasCameraPermission()) {
             if (cameraWrapper != null) {
-                cameraWrapper.setPreviewSurfaceHolder(surfaceHolder);
-//                cameraWrapper.setPreviewSurface(surfaceHolder.getSurface(), SurfaceHolder.class);
+                cameraWrapper.setPreviewSurface(new Surface(surfaceTexture));
             }
             startCamera();
         } else {
@@ -393,16 +409,22 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
 
     }
 
     @Override
-    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
         if (cameraWrapper != null) {
             cameraWrapper.stop();
             cameraWrapper = null;
         }
+        return false;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+
     }
 
     //endregion

@@ -116,7 +116,7 @@ public class FaceDetectionSettingsFragment extends PreferenceFragmentCompat impl
             String extractionThreshold = String.format("%.01f", faceDetectionSettings.getFaceTemplateExtractionThreshold());
             ListPreference confidencePref = findPreference(PreferenceKeys.CONFIDENCE_THRESHOLD);
             ListPreference extractionQualityPref = findPreference(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD);
-            SwitchPreferenceCompat useMLKitPref = findPreference(PreferenceKeys.USE_MLKIT);
+
             if (confidencePref != null) confidencePref.setValue(confidenceThreshold);
             if (extractionQualityPref != null) extractionQualityPref.setValue(extractionThreshold);
 

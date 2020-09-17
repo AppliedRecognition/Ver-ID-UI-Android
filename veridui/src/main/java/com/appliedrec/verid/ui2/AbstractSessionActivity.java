@@ -31,6 +31,7 @@ import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.IImageFlowable;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.ArrayList;
@@ -40,9 +41,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 
+/**
+ * The type Abstract session activity.
+ *
+ * @param <SessionFragment> the type parameter
+ */
 public abstract class AbstractSessionActivity<SessionFragment extends AbstractSessionFragment<?>> extends AppCompatActivity implements ISessionActivity, Iterable<FaceBounds>, Iterator<FaceBounds> {
 
+    /**
+     * The constant EXTRA_SESSION_ID.
+     */
     public static final String EXTRA_SESSION_ID = "com.appliedrec.verid.EXTRA_SESSION_ID";
+    /**
+     * The constant REQUEST_CODE_CAMERA_PERMISSION.
+     */
     protected static final int REQUEST_CODE_CAMERA_PERMISSION = 10;
     private VerIDSessionSettings sessionSettings;
     private CameraLocation cameraLocation;
@@ -117,6 +129,11 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
     }
 
     @Override
+    public void setVerID(VerID verID) {
+        this.imageAnalyzer.setVerID(verID);
+    }
+
+    @Override
     public IImageFlowable getImageFlowable() {
         return getImageAnalyzer();
     }
@@ -144,6 +161,12 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
 
     //endregion
 
+    /**
+     * Gets exif orientation.
+     *
+     * @param rotationDegrees the rotation degrees
+     * @return the exif orientation
+     */
     protected final @VerIDImageAnalyzer.ExifOrientation int getExifOrientation(int rotationDegrees) {
         int exifOrientation;
         switch (rotationDegrees) {
@@ -178,30 +201,63 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
         return exifOrientation;
     }
 
+    /**
+     * Execute in background.
+     *
+     * @param runnable the runnable
+     */
     protected final void executeInBackground(Runnable runnable) {
         if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
             backgroundExecutor.execute(runnable);
         }
     }
 
+    /**
+     * Gets image analyzer.
+     *
+     * @return the image analyzer
+     */
     protected final VerIDImageAnalyzer getImageAnalyzer() {
         return imageAnalyzer;
     }
 
+    /**
+     * Gets camera location.
+     *
+     * @return the camera location
+     */
     protected final CameraLocation getCameraLocation() {
         return cameraLocation;
     }
 
+    /**
+     * Gets default face extents.
+     *
+     * @return the default face extents
+     */
     protected final FaceExtents getDefaultFaceExtents() {
         return sessionSettings.getExpectedFaceExtents();
     }
 
     //region Abstract methods
 
+    /**
+     * Gets session fragment.
+     *
+     * @return the session fragment
+     */
     protected abstract Optional<SessionFragment> getSessionFragment();
 
+    /**
+     * Gets face images view.
+     *
+     * @return the face images view
+     */
     protected abstract Optional<LinearLayout> getFaceImagesView();
 
+    /**
+     * Start camera.
+     */
     protected abstract void startCamera();
 
     //endregion
@@ -259,6 +315,9 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
         }
     }
 
+    /**
+     * Draw faces.
+     */
     @MainThread
     protected void drawFaces() {
         getFaceImagesView().ifPresent(faceImagesView -> {
@@ -312,17 +371,27 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
     //region Camera permissions
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public final void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CODE_CAMERA_PERMISSION) {
-            if (hasCameraPermission()) {
-                startCamera();
-            } else {
-                Toast.makeText(this, "Failed to obtain camera permission", Toast.LENGTH_SHORT).show();
+            for (int i=0; i<permissions.length; i++) {
+                if (Manifest.permission.CAMERA.equals(permissions[i])) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        startCamera();
+                    } else {
+                        imageAnalyzer.fail(new VerIDSessionException(VerIDSessionException.Code.CAMERA_ACCESS_DENIED));
+                    }
+                    return;
+                }
             }
         }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
+    /**
+     * Has camera permission boolean.
+     *
+     * @return the boolean
+     */
     protected final boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }

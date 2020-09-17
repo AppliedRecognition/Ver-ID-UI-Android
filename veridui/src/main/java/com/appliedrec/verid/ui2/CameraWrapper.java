@@ -23,6 +23,7 @@ import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CameraWrapper implements DefaultLifecycleObserver {
 
     public interface Listener {
+        @UiThread
         void onPreviewSize(int width, int height, int sensorOrientation);
     }
 
@@ -66,24 +68,26 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private ExecutorService backgroundExecutor;
     private HandlerThread cameraPreviewThread;
     private Handler cameraPreviewHandler;
-    private final AtomicReference<SurfaceHolder> surfaceHolderRef = new AtomicReference<>(null);
+    private final AtomicReference<Surface> surfaceRef = new AtomicReference<>(null);
     private final AtomicInteger viewWidth = new AtomicInteger(0);
     private final AtomicInteger viewHeight = new AtomicInteger(0);
     private final AtomicInteger displayRotation = new AtomicInteger(0);
+    private final Class<?> previewClass;
 
-    public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder) {
+    public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder, Class<?> previewClass) {
         activityWeakReference = new WeakReference<>(activity);
         this.cameraLocation = cameraLocation;
         this.imageAnalyzer = imageAnalyzer;
         this.videoRecorder = videoRecorder;
+        this.previewClass = previewClass;
         if (activity.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
             throw new IllegalStateException();
         }
         activity.getLifecycle().addObserver(this);
     }
 
-    public void setPreviewSurfaceHolder(SurfaceHolder surfaceHolder) {
-        surfaceHolderRef.set(surfaceHolder);
+    public void setPreviewSurface(Surface surface) {
+        surfaceRef.set(surface);
     }
 
     public void setListener(Listener listener) {
@@ -144,34 +148,13 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 }
                 int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
 
-                int w;
-                int h;
-                if (rotation % 180 == 0) {
-                    w = width;
-                    h = height;
-                } else {
-                    w = height;
-                    h = width;
-                }
+                float aspectRatio = sensorOrientation % 180 == 0 ? 3f/4f : 4f/3f;
 
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
-                Size[] previewSizes = map.getOutputSizes(SurfaceHolder.class);
+                Size[] previewSizes = map.getOutputSizes(previewClass);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, w, h);
+                Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
                 Size previewSize = sizes[0];
-
-                SurfaceHolder surfaceHolder = surfaceHolderRef.get();
-                if (surfaceHolder != null) {
-                    int previewWidth, previewHeight;
-                    if (rotation % 180 == 0) {
-                        previewWidth = previewSize.getWidth();
-                        previewHeight = previewSize.getHeight();
-                    } else {
-                        previewWidth = previewSize.getHeight();
-                        previewHeight = previewSize.getWidth();
-                    }
-                    new Handler(Looper.getMainLooper()).post(() -> surfaceHolder.setFixedSize(previewWidth, previewHeight));
-                }
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
                 imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
@@ -180,7 +163,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                     Size videoSize = sizes[2];
                     videoRecorder.setup(videoSize, rotation);
                 });
-                getListener().ifPresent(listener -> listener.onPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation));
+
+                getListener().ifPresent(listener -> {
+                    new Handler(Looper.getMainLooper()).post(() -> listener.onPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation));
+                });
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     imageAnalyzer.fail(new Exception("Missing camera permission"));
                     return;
@@ -291,10 +277,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             ArrayList<Surface> surfaces = new ArrayList<>();
             CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
-            SurfaceHolder surfaceHolder = surfaceHolderRef.get();
-            if (surfaceHolder != null) {
-                previewBuilder.addTarget(surfaceHolder.getSurface());
-                surfaces.add(surfaceHolder.getSurface());
+            Surface previewSurface = surfaceRef.get();
+            if (previewSurface != null) {
+                previewBuilder.addTarget(previewSurface);
+                surfaces.add(previewSurface);
             }
 
             imageReader.setOnImageAvailableListener(imageAnalyzer, cameraProcessingHandler);
@@ -342,7 +328,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         return Optional.ofNullable(videoRecorder);
     }
 
-    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, int width, int height) {
+    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {
         HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
         HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
         HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
@@ -363,17 +349,31 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         if (candidates.isEmpty()) {
             return new Size[]{previewSizes[0],imageReaderSizes[0],videoSizes[0]};
         }
-        float viewAspectRatio = (float)width/(float)height;
         Map.Entry<Float,Size[]> bestEntry = Collections.min(candidates.entrySet(), (lhs, rhs) -> {
-            int lhsWidthDiff = Math.abs(lhs.getValue()[0].getWidth() - width);
-            int rhsWidthDiff = Math.abs(rhs.getValue()[0].getWidth() - width);
-            if (lhsWidthDiff == rhsWidthDiff) {
-                float lhsAspectRatioDiff = Math.abs((float)lhs.getValue()[0].getWidth()/(float)lhs.getValue()[0].getHeight() - viewAspectRatio);
-                float rhsAspectRatioDiff = Math.abs((float)rhs.getValue()[0].getWidth()/(float)rhs.getValue()[0].getHeight() - viewAspectRatio);
-                return (int)(lhsAspectRatioDiff - rhsAspectRatioDiff);
-            } else {
-                return lhsWidthDiff - rhsWidthDiff;
-            }
+            float lhsAspectRatioDiff = Math.abs(lhs.getKey() - aspectRatio);
+            float rhsAspectRatioDiff = Math.abs(rhs.getKey() - aspectRatio);
+            return (int)(lhsAspectRatioDiff * 1000f - rhsAspectRatioDiff * 1000f);
+
+//            int lhsw = lhs.getValue()[0].getWidth();
+//            int lhsh = lhs.getValue()[0].getHeight();
+//            int rhsw = rhs.getValue()[0].getWidth();
+//            int rhsh = rhs.getValue()[0].getHeight();
+//
+//            int lhsAreaDiff = Math.abs(lhsw * lhsh - viewArea);
+//            int rhsAreaDiff = Math.abs(rhsw * rhsh - viewArea);
+//
+//            if (lhsAreaDiff == rhsAreaDiff) {
+//                float lhsAspectRatioDiff = Math.abs(lhs.getKey() - viewAspectRatio);
+//                float rhsAspectRatioDiff = Math.abs(rhs.getKey() - viewAspectRatio);
+//                float ratioDiff = lhsAspectRatioDiff - rhsAspectRatioDiff;
+//                if (ratioDiff == 0) {
+//                    int lhsHeightDiff = Math.abs(lhsh - height);
+//                    int rhsHeightDiff = Math.abs(rhsh - height);
+//                    return lhsHeightDiff - rhsHeightDiff;
+//                }
+//                return (int)(ratioDiff * 100f);
+//            }
+//            return lhsAreaDiff - rhsAreaDiff;
         });
         return bestEntry.getValue();
     }

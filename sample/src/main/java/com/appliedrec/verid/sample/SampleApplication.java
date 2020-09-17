@@ -15,7 +15,6 @@ import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.FaceDetectionRecognitionFactory;
 import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
-import com.appliedrec.verid.core2.MLKitFaceDetectionFactory;
 import com.appliedrec.verid.core2.UserManagementFactory;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDFactory;
@@ -64,11 +63,11 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, null, faceDetectionRecognitionSettings);
         VerIDFactory verIDFactory = new VerIDFactory(this, (VerIDFactoryDelegate)this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_MLKIT, false)) {
-            verIDFactory.setFaceDetectionFactory(new MLKitFaceDetectionFactory());
-        } else {
+//        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_MLKIT, false)) {
+//            verIDFactory.setFaceDetectionFactory(new MLKitFaceDetectionFactory(this));
+//        } else {
             verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
-        }
+//        }
         verIDFactory.setFaceRecognitionFactory(faceDetectionRecognitionFactory);
         verIDFactory.createVerID();
     }
@@ -81,7 +80,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
             }
             return;
         }
-        if (key.equals(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD) || key.equals(PreferenceKeys.CONFIDENCE_THRESHOLD) || key.equals(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION) || key.equals(PreferenceKeys.USE_MLKIT)) {
+        if (key.equals(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD) || key.equals(PreferenceKeys.CONFIDENCE_THRESHOLD) || key.equals(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION)) {
             // Wait 100 ms in case more preferences were changed at the same time
             mainHandler.removeCallbacks(reloadRunnable);
             mainHandler.postDelayed(reloadRunnable, 100);

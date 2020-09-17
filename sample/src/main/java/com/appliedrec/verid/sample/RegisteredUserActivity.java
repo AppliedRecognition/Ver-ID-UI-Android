@@ -190,7 +190,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                     }
                     authenticationSession.setDelegate(this);
                     if (preferences != null) {
-                        authenticationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, true));
+                        authenticationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, false));
+                        authenticationSession.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
                     }
                     authenticationSession.start();
                 })
@@ -218,7 +219,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         settings.setSessionDiagnosticsEnabled(true);
         VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
         if (preferences != null) {
-            registrationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, true));
+            registrationSession.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, false));
+            registrationSession.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
         }
         registrationSession.setDelegate(this);
         registrationSession.start();

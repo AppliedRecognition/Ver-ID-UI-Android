@@ -1,11 +1,9 @@
 package com.appliedrec.verid.ui2;
 
-import android.view.SurfaceView;
-
-public class VerIDSessionFragment extends AbstractSessionFragment<SurfaceView> {
+public class VerIDSessionFragment extends AbstractSessionFragment<CameraSurfaceView> {
 
     @Override
-    protected SurfaceView createPreviewView() {
-        return new SurfaceView(requireContext());
+    protected CameraSurfaceView createPreviewView() {
+        return new CameraSurfaceView(requireContext());
     }
 }

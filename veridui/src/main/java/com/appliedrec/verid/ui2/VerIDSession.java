@@ -1,5 +1,7 @@
 package com.appliedrec.verid.ui2;
 
+import android.os.Build;
+
 import androidx.annotation.NonNull;
 
 import com.appliedrec.verid.core2.AntiSpoofingException;
@@ -38,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
     private AtomicBoolean useCameraX = new AtomicBoolean(true);
+    private AtomicBoolean preferSurfaceView = new AtomicBoolean(false);
 
     /**
      * Session constructor
@@ -68,13 +71,23 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
         return useCameraX.get();
     }
 
+    public boolean getPreferSurfaceView() {
+        return preferSurfaceView.get();
+    }
+
+    public void setPreferSurfaceView(boolean preferSurfaceView) {
+        this.preferSurfaceView.set(preferSurfaceView);
+    }
+
     @NonNull
     @Override
     protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
         if (useCameraX.get()) {
             return SessionActivityCameraX.class;
-        } else {
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && preferSurfaceView.get()) {
             return SessionActivity.class;
+        } else {
+            return SessionActivityWithTextureView.class;
         }
     }
 

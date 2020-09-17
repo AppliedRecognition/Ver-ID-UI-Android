@@ -14,6 +14,9 @@ public class SessionPrompts {
     }
 
     public Optional<String> promptFromFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
+        if (faceDetectionResult == null) {
+            return Optional.empty();
+        }
         switch (faceDetectionResult.getStatus()) {
             case FACE_FIXED:
             case FACE_ALIGNED:

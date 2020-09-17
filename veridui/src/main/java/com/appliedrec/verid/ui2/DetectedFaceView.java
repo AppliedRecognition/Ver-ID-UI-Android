@@ -7,10 +7,12 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
 
 /**
  * Created by jakub on 16/02/2018.
@@ -20,6 +22,7 @@ public class
 DetectedFaceView extends View {
 
     private Paint strokePaint;
+//    private Paint strokeBackgroundPaint;
     private Paint faceTemplatePaint;
     private Paint landmarkPaint;
     private RectF faceRect;
@@ -32,6 +35,7 @@ DetectedFaceView extends View {
     private final Path path = new Path();
     private final Path arrowPath = new Path();
     private final Path templatePath = new Path();
+    private float screenDensity;
 
     public DetectedFaceView(Context context) {
         super(context);
@@ -45,19 +49,28 @@ DetectedFaceView extends View {
 
     private void init(Context context) {
         setWillNotDraw(false);
-        float screenDensity = context.getResources().getDisplayMetrics().density;
-        strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        int paintFlag = 0;//Build.VERSION.SDK_INT >= Build.VERSION_CODES.N ? Paint.ANTI_ALIAS_FLAG : 0;
+
+        screenDensity = context.getResources().getDisplayMetrics().density;
+        strokePaint = new Paint(paintFlag);
         strokePaint.setStyle(Paint.Style.STROKE);
         strokePaint.setStrokeWidth(screenDensity * 8f);
         strokePaint.setStrokeCap(Paint.Cap.ROUND);
 
-        faceTemplatePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+//        strokeBackgroundPaint = new Paint(paintFlag);
+//        strokeBackgroundPaint.setStyle(Paint.Style.STROKE);
+//        strokeBackgroundPaint.setStrokeWidth(screenDensity * 9f);
+//        strokeBackgroundPaint.setStrokeCap(Paint.Cap.ROUND);
+//        strokeBackgroundPaint.setColor(Color.DKGRAY);
+
+        faceTemplatePaint = new Paint(paintFlag);
         faceTemplatePaint.setStyle(Paint.Style.FILL);
-        faceTemplatePaint.setColor(Color.argb(128, 0, 0, 0));
+        faceTemplatePaint.setColor(0x80000000);
 
         templatePath.setFillType(Path.FillType.EVEN_ODD);
 
-        landmarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        landmarkPaint = new Paint(paintFlag);
         landmarkPaint.setStyle(Paint.Style.FILL);
         landmarkPaint.setColor(Color.CYAN);
     }
@@ -80,7 +93,10 @@ DetectedFaceView extends View {
         if (faceRect != null) {
             landmarkRadius = faceRect.width() * 0.01f;
             strokePaint.setStrokeWidth(faceRect.width() * 0.038f);
-            strokePaint.setShadowLayer(15, 0, 0, Color.argb(0x33, 0, 0, 0));
+//            strokeBackgroundPaint.setStrokeWidth(strokePaint.getStrokeWidth()+screenDensity*2);
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                strokePaint.setShadowLayer(15, 0, 0, Color.argb(0x33, 0, 0, 0));
+//            }
             path.addOval(faceRect, Path.Direction.CW);
             canvas.drawPath(path, strokePaint);
             if (angle != null && distance != null) {
@@ -98,11 +114,13 @@ DetectedFaceView extends View {
         }
     }
 
+    @UiThread
     public void setFaceLandmarks(PointF[] landmarks) {
         this.landmarks = landmarks;
-        postInvalidate();
+        invalidate();
     }
 
+    @UiThread
     public void setFaceRect(RectF faceRect, RectF templateRect, int faceRectColour, int faceBackgroundColour, Double angle, Double distance) {
         this.faceRect = faceRect;
         this.templateRect = templateRect;
@@ -110,7 +128,7 @@ DetectedFaceView extends View {
         this.faceTemplatePaint.setColor(faceBackgroundColour);
         this.angle = angle;
         this.distance = distance;
-        postInvalidate();
+        invalidate();
     }
 
     private void drawArrow(Canvas canvas, double angle, double distance) {
@@ -134,6 +152,7 @@ DetectedFaceView extends View {
         arrowPath.moveTo(arrowTipX, arrowTipY);
         arrowPath.lineTo(arrowStartX, arrowStartY);
 
+//        canvas.drawPath(arrowPath, strokeBackgroundPaint);
         canvas.drawPath(arrowPath, strokePaint);
     }
 }

@@ -8,6 +8,7 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RoundRectShape;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -51,7 +52,7 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         viewBinding = FragmentVeridSessionBinding.inflate(inflater, container, false);
         viewFinder = createPreviewView();
-        ConstraintLayout.LayoutParams viewFinderLayoutParams = new ConstraintLayout.LayoutParams(0, 0);
+        ConstraintLayout.LayoutParams viewFinderLayoutParams = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         viewFinderLayoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
         viewFinderLayoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
         viewFinderLayoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
@@ -88,6 +89,11 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
     @UiThread
     public Optional<Preview> getViewFinder() {
         return Optional.ofNullable(viewFinder);
+    }
+
+    @UiThread
+    public Optional<DetectedFaceView> getDetectedFaceView() {
+        return Optional.ofNullable(viewBinding).map(fragmentVeridSessionBinding -> fragmentVeridSessionBinding.detectedFaceView);
     }
 
     //region Appearance

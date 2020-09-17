@@ -215,6 +215,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
     private void startSessionWithActivity(T sessionActivity) {
         this.sessionActivity = sessionActivity;
         sessionActivity.setSessionSettings(settings, getCameraLens());
+        sessionActivity.setVerID(verID);
         getVideoRecorder().ifPresent(sessionActivity::setVideoRecorder);
         createCoreSession(sessionActivity).start();
     }
