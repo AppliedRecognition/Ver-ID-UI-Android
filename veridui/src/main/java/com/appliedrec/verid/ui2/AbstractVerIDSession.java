@@ -406,12 +406,13 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         }
         if (sessionResultActivity(activity).isPresent()) {
             if (activity.isFinishing()) {
-                if (sessionResultActivity(activity).get().didTapRetryButtonInSessionResultActivity()) {
+                ISessionResultActivity resultActivity = sessionResultActivity(activity).get();
+                if (resultActivity.didTapRetryButtonInSessionResultActivity()) {
                     startSessionActivity(activity);
                     return;
                 }
                 VerIDSessionResult result = resultToShow.getAndSet(null);
-                if (result != null) {
+                if (result != null && !resultActivity.didCancelSession()) {
                     isStarted.set(false);
                     getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result));
                 }

@@ -11,4 +11,6 @@ public interface ISessionResultActivity {
     default boolean didTapRetryButtonInSessionResultActivity() {
         return false;
     }
+
+    default boolean didCancelSession() { return false; }
 }

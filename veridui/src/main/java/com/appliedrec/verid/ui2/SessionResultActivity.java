@@ -10,6 +10,7 @@ public abstract class SessionResultActivity extends AppCompatActivity implements
 
     private IStringTranslator stringTranslator;
     private VerIDSessionResult sessionResult;
+    private boolean didCancel = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,5 +36,16 @@ public abstract class SessionResultActivity extends AppCompatActivity implements
             return stringTranslator.getTranslatedString(original, args);
         }
         return String.format(original, args);
+    }
+
+    @Override
+    public void onBackPressed() {
+        didCancel = true;
+        super.onBackPressed();
+    }
+
+    @Override
+    public boolean didCancelSession() {
+        return didCancel;
     }
 }
