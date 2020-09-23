@@ -98,7 +98,7 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
             return SessionSuccessActivity.class;
         } else {
             VerIDSessionException error = sessionResult.getError().get();
-            if (error.getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && error.getCause() != null && (error.getCause() instanceof AntiSpoofingException || error.getCause() instanceof FacePresenceException) && getRunCount() <= getSettings().getMaxRetryCount()) {
+            if (error.getCode() == VerIDSessionException.Code.FACE_IS_COVERED || (error.getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && error.getCause() != null && (error.getCause() instanceof AntiSpoofingException || error.getCause() instanceof FacePresenceException)) && getRunCount() <= getSettings().getMaxRetryCount()) {
                 return SessionLivenessDetectionFailureActivity.class;
             } else {
                 return SessionFailureActivity.class;

@@ -264,7 +264,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
         if (sessionActivity != null) {
             sessionActivity.setFaceDetectionResult(null, null);
         }
-        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))) {
+        if (sessionActivity != null && ((getDelegate().isPresent() && getDelegate().get().shouldSessionDisplayResult(this, result)) || runCount <= settings.getMaxRetryCount() && result.getError().isPresent() && (result.getError().get().getCode() == VerIDSessionException.Code.FACE_IS_COVERED || (result.getError().get().getCode() == VerIDSessionException.Code.LIVENESS_FAILURE && result.getError().get().getCause() != null && (result.getError().get().getCause() instanceof AntiSpoofingException || result.getError().get().getCause() instanceof FacePresenceException))))) {
             resultToShow.set(result);
             Intent intent = new Intent(sessionActivity, getSessionResultActivityClass(result));
             intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, sessionId);
