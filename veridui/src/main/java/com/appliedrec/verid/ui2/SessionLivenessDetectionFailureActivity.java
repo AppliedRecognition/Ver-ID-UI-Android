@@ -50,21 +50,18 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
         Bearing requestedBearing = null;
         String message = null;
         int videoResourceId = -1;
-        if (exception instanceof VerIDSessionException) {
-            VerIDSessionException sessionException = (VerIDSessionException)exception;
-            if (sessionException.getCode() == VerIDSessionException.Code.FACE_IS_COVERED) {
-                message = translate("Please remove face coverings");
-                switch (screenDensity) {
-                    case EXTRA_HIGH:
-                        videoResourceId = R.raw.face_mask_off_3;
-                        break;
-                    case HIGH:
-                        videoResourceId = R.raw.face_mask_off_2;
-                        break;
-                    case MEDIUM:
-                        videoResourceId = R.raw.face_mask_off_1;
-                        break;
-                }
+        if (exception.getCode() == VerIDSessionException.Code.FACE_IS_COVERED) {
+            message = translate("Please remove face coverings");
+            switch (screenDensity) {
+                case EXTRA_HIGH:
+                    videoResourceId = R.raw.face_mask_off_3;
+                    break;
+                case HIGH:
+                    videoResourceId = R.raw.face_mask_off_2;
+                    break;
+                case MEDIUM:
+                    videoResourceId = R.raw.face_mask_off_1;
+                    break;
             }
         } else if (exception.getCause() instanceof AntiSpoofingException) {
             AntiSpoofingException antiSpoofingException = (AntiSpoofingException)exception.getCause();
