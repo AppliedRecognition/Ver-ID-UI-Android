@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
-    private AtomicBoolean useCameraX = new AtomicBoolean(true);
+    private AtomicBoolean useCameraX = new AtomicBoolean(false);
     private AtomicBoolean preferSurfaceView = new AtomicBoolean(false);
 
     /**

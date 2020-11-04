@@ -27,4 +27,5 @@ public class PreferenceKeys {
     public static final String RECORD_SESSION_VIDEO = "record_session_video";
     public static final String USE_CAMERAX = "use_camerax";
     public static final String PREFER_SURFACE_VIEW = "prefer_surface_view";
+    public static final String ENABLE_MASK_DETECTION = "enable_mask_detection";
 }

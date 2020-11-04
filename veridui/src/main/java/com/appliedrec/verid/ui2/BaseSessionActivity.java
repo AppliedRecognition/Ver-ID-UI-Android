@@ -2,6 +2,7 @@ package com.appliedrec.verid.ui2;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Surface;
 import android.view.View;
 

@@ -1,0 +1,5 @@
+buildscript {
+    dependencies {
+        classpath files("./buildSrc/src/main/java/com/appliedrec/Dependency.java")
+    }
+}

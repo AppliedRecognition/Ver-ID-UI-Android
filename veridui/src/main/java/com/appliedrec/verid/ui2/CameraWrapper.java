@@ -19,7 +19,6 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Size;
 import android.view.Surface;
-import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

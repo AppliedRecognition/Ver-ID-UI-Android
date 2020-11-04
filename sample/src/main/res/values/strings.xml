@@ -108,4 +108,9 @@
     <string name="face_template_extraction_threshold">Face template extraction threshold</string>
     <string name="verid_failed_to_load">Ver-ID failed to load</string>
     <string name="record_session_video">Record session video</string>
+    <string name="use_camerax_api">Use CameraX API</string>
+    <string name="send_to_applied_recognition">Submit to Applied Recognition</string>
+    <string name="use_mlkit">Use ML Kit for face detection</string>
+    <string name="prefer_surface_view">Prefer surface view for camera preview</string>
+    <string name="enable_face_covering_detection">Enable face covering detection</string>
 </resources>

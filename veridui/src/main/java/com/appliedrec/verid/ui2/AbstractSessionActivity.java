@@ -10,7 +10,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.MainThread;
@@ -99,11 +98,14 @@ public abstract class AbstractSessionActivity<SessionFragment extends AbstractSe
     }
 
     @Override
+    protected void onStop() {
+        getSessionFragment().flatMap(sessionFragment -> Optional.ofNullable(sessionFragment.getView())).ifPresent(view -> view.removeOnLayoutChangeListener(onLayoutChangeListener));
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        getSessionFragment().flatMap(sessionFragment -> Optional.ofNullable(sessionFragment.getView())).ifPresent(view -> {
-            view.removeOnLayoutChangeListener(onLayoutChangeListener);
-        });
         if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
             backgroundExecutor.shutdown();
         }

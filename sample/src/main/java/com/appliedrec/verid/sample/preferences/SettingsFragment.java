@@ -86,11 +86,11 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         faceHeightPref.setFragment(FaceSizeSettingsFragment.class.getName());
         faceHeightPref.setSummary(String.format("%.0f%% of view height", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100));
         faceDetectionCategory.addPreference(faceHeightPref);
-//        SwitchPreferenceCompat useMLKitPref = new SwitchPreferenceCompat(context);
-//        useMLKitPref.setKey(PreferenceKeys.USE_MLKIT);
-//        useMLKitPref.setTitle(R.string.use_mlkit);
-//        useMLKitPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.USE_MLKIT, false));
-//        preferenceScreen.addPreference(useMLKitPref);
+        SwitchPreferenceCompat enableMaskDetectionPref = new SwitchPreferenceCompat(context);
+        enableMaskDetectionPref.setKey(PreferenceKeys.ENABLE_MASK_DETECTION);
+        enableMaskDetectionPref.setTitle(R.string.enable_face_covering_detection);
+        enableMaskDetectionPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, livenessDetectionSessionSettings.isFaceCoveringDetectionEnabled()));
+        preferenceScreen.addPreference(enableMaskDetectionPref);
 
         // REGISTRATION
         PreferenceCategory registrationCategory = new PreferenceCategory(context);

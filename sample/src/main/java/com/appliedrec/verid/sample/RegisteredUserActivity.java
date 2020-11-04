@@ -7,6 +7,7 @@ import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewTreeObserver;
@@ -66,6 +67,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         viewBinding.removeButton.setOnClickListener(v -> unregisterUser());
         viewBinding.authenticate.setOnClickListener(v -> authenticate());
         viewBinding.register.setOnClickListener(v -> registerMoreFaces());
+        viewBinding.identificationDemo.setOnClickListener(v -> startIdentificationDemo());
         viewBinding.authenticate.setEnabled(verID != null);
         viewBinding.register.setEnabled(verID != null);
         viewBinding.importRegistration.setOnClickListener(v -> importRegistration());
@@ -179,6 +181,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                                 preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
                                 preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
                         ));
+                        settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
                     }
                     settings.setSessionDiagnosticsEnabled(true);
                     VerIDSession<AuthenticationSessionSettings> authenticationSession;
@@ -215,6 +218,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                     preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
                     preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
             ));
+            settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
         VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
@@ -296,6 +300,15 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                 }
             }
         });
+    }
+
+    //endregion
+
+    //region Identification demo
+
+    private void startIdentificationDemo() {
+        Intent intent = new Intent(this, IdentificationDemoActivity.class);
+        startActivity(intent);
     }
 
     //endregion

@@ -123,6 +123,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
                     preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
                     preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
             ));
+            settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
         if (preferences != null) {

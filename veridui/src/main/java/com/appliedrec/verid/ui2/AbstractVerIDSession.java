@@ -271,7 +271,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             sessionActivity.startActivity(intent);
         } else {
             if (isStarted.getAndSet(false)) {
-                getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result));
+                new Handler(Looper.getMainLooper()).post(() -> getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result)));
             }
             disposeSession();
             unregisterActivityCallbacks();
@@ -399,7 +399,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
             if (activity.isFinishing() && resultToShow.get() == null) {
                 if (isStarted.getAndSet(false)) {
                     onSessionFinished();
-                    getDelegate().ifPresent(listener -> listener.onSessionCanceled(this));
+                    new Handler(Looper.getMainLooper()).post(() -> getDelegate().ifPresent(listener -> listener.onSessionCanceled(this)));
                 }
                 unregisterActivityCallbacks();
             }
@@ -414,7 +414,7 @@ public abstract class AbstractVerIDSession<Settings extends VerIDSessionSettings
                 VerIDSessionResult result = resultToShow.getAndSet(null);
                 if (result != null && !resultActivity.didCancelSession()) {
                     isStarted.set(false);
-                    getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result));
+                    new Handler(Looper.getMainLooper()).post(() -> getDelegate().ifPresent(listener -> listener.onSessionFinished(this, result)));
                 }
                 unregisterActivityCallbacks();
             }
