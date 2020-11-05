@@ -194,6 +194,26 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
         this.plotFaceLandmarks = plotFaceLandmarks;
     }
 
+    protected int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
+        switch (faceDetectionStatus) {
+            case FACE_FIXED:
+            case FACE_ALIGNED:
+                return getOvalColorHighlighted();
+            default:
+                return getOvalColor();
+        }
+    }
+
+    protected int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
+        switch (faceDetectionStatus) {
+            case FACE_FIXED:
+            case FACE_ALIGNED:
+                return getTextColorHighlighted();
+            default:
+                return getTextColor();
+        }
+    }
+
     //endregion
 
     /**
@@ -285,26 +305,6 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
     }
 
     //region Private methods
-
-    private int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
-        switch (faceDetectionStatus) {
-            case FACE_FIXED:
-            case FACE_ALIGNED:
-                return getOvalColorHighlighted();
-            default:
-                return getOvalColor();
-        }
-    }
-
-    private int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
-        switch (faceDetectionStatus) {
-            case FACE_FIXED:
-            case FACE_ALIGNED:
-                return getTextColorHighlighted();
-            default:
-                return getTextColor();
-        }
-    }
 
     @UiThread
     private void setTextViewColour(int background, int text) {
