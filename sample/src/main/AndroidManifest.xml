@@ -11,6 +11,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
+        android:extractNativeLibs="true"
         tools:replace="android:theme">
         <activity android:name=".IdentificationDemoActivity" />
         <activity android:name=".MainActivity">

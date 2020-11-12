@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.2"
+    compileSdkVersion rootProject.compileSdkVersion
+    buildToolsVersion rootProject.buildToolsVersion
 
     defaultConfig {
         applicationId "com.appliedrec.verid.sample"
         minSdkVersion rootProject.minSdkVersion
-        targetSdkVersion 30
+        targetSdkVersion rootProject.targetSdkVersion
         versionCode rootProject.generateVersionCode()
         versionName rootProject.generateVersionName()
 
@@ -64,13 +64,10 @@ dependencies {
     for (dep in sampledependencies) {
         implementation dep.toString()
     }
-
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.3.0'
-    androidTestImplementation 'androidx.test:runner:1.3.1-alpha02'
-    androidTestImplementation 'androidx.test:rules:1.3.1-alpha02'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-    androidTestUtil 'androidx.test:orchestrator:1.3.0'
+    for (dep in sampleAndroidTestDependencies) {
+        androidTestImplementation dep.toString()
+    }
+    androidTestUtil "androidx.test:orchestrator:${rootProject.androidTestVersion}"
 
     annotationProcessor "androidx.room:room-compiler:${rootProject.roomVersion}"
 }

@@ -3,7 +3,6 @@ package com.appliedrec.verid.sample;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
