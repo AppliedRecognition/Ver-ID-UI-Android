@@ -13,7 +13,7 @@ import androidx.appcompat.app.AlertDialog;
 /**
  * Shows an error message dialog.
  */
-class CameraPermissionErrorDialog extends DialogFragment {
+public class CameraPermissionErrorDialog extends DialogFragment {
 
     private IStringTranslator translator;
 
