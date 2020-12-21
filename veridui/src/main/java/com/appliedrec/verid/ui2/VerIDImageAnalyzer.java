@@ -7,8 +7,6 @@ import android.media.ImageReader;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageProxy;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
@@ -30,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.reactivex.rxjava3.core.FlowableEmitter;
 
-public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowable, ImageReader.OnImageAvailableListener, DefaultLifecycleObserver {
+public class VerIDImageAnalyzer implements IImageFlowable, ImageReader.OnImageAvailableListener, DefaultLifecycleObserver {
 
     private final SynchronousQueue<VerIDImage<?>> imageQueue = new SynchronousQueue<>();
     private final AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
@@ -99,67 +97,6 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         @Override
         public void close() {
             mediaImage.close();
-        }
-    }
-
-    private static class ImageProxyImage implements IImage<ImageProxy> {
-
-        private final ImageProxy imageProxy;
-        private final int exifOrientation;
-
-        ImageProxyImage(ImageProxy imageProxy, int exifOrientation) {
-            this.imageProxy = imageProxy;
-            this.exifOrientation = exifOrientation;
-        }
-
-        @Override
-        public ImageProxy getSourceImage() {
-            return imageProxy;
-        }
-
-        @Override
-        public Rect getCropRect() {
-            return imageProxy.getCropRect();
-        }
-
-        @Override
-        public int getPlaneCount() {
-            return imageProxy.getPlanes().length;
-        }
-
-        @Override
-        public ByteBuffer getBufferOfPlane(int plane) {
-            return imageProxy.getPlanes()[plane].getBuffer();
-        }
-
-        @Override
-        public int getRowStrideOfPlane(int plane) {
-            return imageProxy.getPlanes()[plane].getRowStride();
-        }
-
-        @Override
-        public int getPixelStrideOfPlane(int plane) {
-            return imageProxy.getPlanes()[plane].getPixelStride();
-        }
-
-        @Override
-        public int getWidth() {
-            return imageProxy.getWidth();
-        }
-
-        @Override
-        public int getHeight() {
-            return imageProxy.getHeight();
-        }
-
-        @Override
-        public int getExifOrientation() {
-            return exifOrientation;
-        }
-
-        @Override
-        public void close() {
-            imageProxy.close();
         }
     }
 
@@ -239,16 +176,6 @@ public class VerIDImageAnalyzer implements ImageAnalysis.Analyzer, IImageFlowabl
         }
         this.exifOrientation.set(exifOrientation);
         this.isMirrored.set(isMirrored);
-    }
-
-    @Override
-    public void analyze(@NonNull ImageProxy image) {
-        if (!isStarted.get()) {
-            image.close();
-            return;
-        }
-        queueImage(new ImageProxyImage(image, exifOrientation.get()));
-        image.close();
     }
 
     @Override
