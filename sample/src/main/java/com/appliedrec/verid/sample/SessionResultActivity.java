@@ -2,6 +2,7 @@ package com.appliedrec.verid.sample;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,12 +19,18 @@ import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
-import com.appliedrec.verid.sample.sharing.EnvironmentSettings;
-import com.appliedrec.verid.sample.sharing.SessionExport;
+import com.appliedrec.verid.sample.sharing.SampleAppFileProvider;
+import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
@@ -33,19 +40,30 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     public static final String EXTRA_SETTINGS = "com.appliedrec.verid.EXTRA_SETTINGS";
 
     private static final int REQUEST_CODE_SHARE = 1;
-    private VerIDSessionResult sessionResult;
-    private VerIDSessionSettings sessionSettings;
-    protected EnvironmentSettings environmentSettings;
     private Disposable createIntentDisposable;
+    private VerID verID;
+    private SessionResultPackage sessionResultPackage;
+    private boolean areViewsAdded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_session_result);
-        sessionResult = getIntent().getParcelableExtra(EXTRA_RESULT);
-        sessionSettings = getIntent().getParcelableExtra(EXTRA_SETTINGS);
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        if (sessionResult != null) {
+        prepareSharing();
+    }
+
+    private void prepareSharing() {
+        if (areViewsAdded) {
+            return;
+        }
+        VerIDSessionResult sessionResult = getIntent().getParcelableExtra(EXTRA_RESULT);
+        VerIDSessionSettings sessionSettings = getIntent().getParcelableExtra(EXTRA_SETTINGS);
+        if (verID == null || sessionResult == null || sessionSettings == null) {
+            return;
+        }
+        try {
+            sessionResultPackage = new SessionResultPackage(verID, sessionSettings, sessionResult);
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
             sessionResult.getVideoUri().ifPresent(videoUri -> transaction.add(R.id.content, SessionVideoFragment.newInstance(videoUri)));
             if (sessionResult.getFaceCaptures().length > 0) {
                 transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Faces"));
@@ -59,8 +77,7 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Started", sessionResult.getSessionStartTime().toString()));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format("%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
             sessionResult.getSessionDiagnostics().ifPresent(diagnostics -> transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format("%.01f faces/second", (float)diagnostics.getDiagnosticImages().length/(float)sessionResult.getSessionDuration(TimeUnit.MILLISECONDS)*1000f))));
-        }
-        if (sessionSettings != null) {
+
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Settings"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format("%d seconds", sessionSettings.getMaxDuration(TimeUnit.SECONDS))));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Number of results to collect", String.format("%d", sessionSettings.getFaceCaptureCount())));
@@ -72,20 +89,25 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Required initial face height", String.format("%.0f %%", sessionSettings.getExpectedFaceExtents().getProportionOfViewHeight() * 100)));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Pause duration", String.format("%.01f seconds", (float)sessionSettings.getPauseDuration(TimeUnit.MILLISECONDS)/1000f)));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face buffer size", String.format("%d", sessionSettings.getFaceCaptureFaceCount())));
+
+            if (sessionResultPackage != null) {
+                transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Environment"));
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Ver-ID version", sessionResultPackage.getEnvironmentSettings().getVeridVersion()));
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Authentication threshold", String.format("%.01f", sessionResultPackage.getEnvironmentSettings().getAuthenticationThreshold())));
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template extraction threshold", String.format("%.01f", sessionResultPackage.getEnvironmentSettings().getFaceTemplateExtractionThreshold())));
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Confidence threshold", String.format("%.01f", sessionResultPackage.getEnvironmentSettings().getConfidenceThreshold())));
+            }
+            transaction.commit();
+            areViewsAdded = true;
+            invalidateOptionsMenu();
+        } catch (Exception ignore) {
         }
-        if (environmentSettings != null) {
-            transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Environment"));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Ver-ID version", environmentSettings.getVeridVersion()));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Authentication threshold", String.format("%.01f", environmentSettings.getAuthenticationThreshold())));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template extraction threshold", String.format("%.01f", environmentSettings.getFaceTemplateExtractionThreshold())));
-            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Confidence threshold", String.format("%.01f", environmentSettings.getConfidenceThreshold())));
-        }
-        transaction.commit();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        areViewsAdded = false;
         if (createIntentDisposable != null && !createIntentDisposable.isDisposed()) {
             createIntentDisposable.dispose();
         }
@@ -96,6 +118,12 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.session_result, menu);
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        menu.findItem(R.id.action_share).setEnabled(sessionResultPackage != null);
+        return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
@@ -111,34 +139,60 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     public void onVerIDLoaded(VerID verid) {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         FaceDetectionRecognitionSettings defaultSettings = new FaceDetectionRecognitionSettings(null);
-        environmentSettings = new EnvironmentSettings(
-                Float.parseFloat(preferences.getString(PreferenceKeys.CONFIDENCE_THRESHOLD, Float.toString(defaultSettings.getConfidenceThreshold()))),
-                Float.parseFloat(preferences.getString(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD, Float.toString(defaultSettings.getFaceExtractQualityThreshold()))),
-                verid.getFaceRecognition().getAuthenticationThreshold(),
-                VerID.getVersion());
+        verID = verid;
+        prepareSharing();
     }
 
     @Override
     public void onVerIDUnloaded() {
+        verID = null;
+    }
 
+    private void createSessionResultPackage(VerIDSessionSettings sessionSettings, VerIDSessionResult sessionResult) {
+        if (verID != null && sessionSettings != null && sessionResult != null) {
+            try {
+                sessionResultPackage = new SessionResultPackage(verID, sessionSettings, sessionResult);
+            } catch (Exception ignore) {
+            }
+        }
+        invalidateOptionsMenu();
     }
 
     private void shareSession() {
-        SessionExport sessionExport = new SessionExport(sessionSettings, sessionResult, environmentSettings);
-        createIntentDisposable = sessionExport.createShareIntent(this)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        shareIntent -> {
-                            Intent chooser = Intent.createChooser(shareIntent, "Share session");
-                            if (shareIntent.resolveActivity(getPackageManager()) != null) {
-                                startActivityForResult(chooser, REQUEST_CODE_SHARE);
-                            }
-                        },
-                        error -> {
-                            Toast.makeText(this, "Failed to create session archive", Toast.LENGTH_SHORT).show();
-                        }
-                );
+        Consumer<String> onFailure = message -> {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        };
+        try {
+            createIntentDisposable = Single.<Intent>create(emitter -> {
+                try {
+                    File shareFile = new File(getCacheDir(), "sessions");
+                    shareFile.mkdirs();
+                    String fileName = new StringBuilder("Ver-ID session ").append(new SimpleDateFormat("yyyy-MM-dd HH-mm-ss").format(sessionResultPackage.getResult().getSessionStartTime())).append(".zip").toString();
+                    Uri shareUri = SampleAppFileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID+".fileprovider", new File(shareFile, fileName));
+                    try (OutputStream outputStream = getContentResolver().openOutputStream(shareUri)) {
+                        sessionResultPackage.archiveToStream(outputStream);
+                        Intent intent = new Intent(Intent.ACTION_SEND);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        intent.setDataAndType(shareUri, getContentResolver().getType(shareUri));
+                        intent.putExtra(Intent.EXTRA_STREAM, shareUri);
+                        emitter.onSuccess(intent);
+                    }
+                } catch (IOException e) {
+                    emitter.onError(e);
+                }
+            }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(intent -> {
+                Intent chooser = Intent.createChooser(intent, "Share session");
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivityForResult(chooser, REQUEST_CODE_SHARE);
+                } else {
+                    onFailure.accept("None of your applications can handle the shared session file");
+                }
+            }, error -> {
+                onFailure.accept("Failed to create session archive");
+            });
+        } catch (Exception e) {
+            onFailure.accept("Failed to create session package");
+        }
     }
 
     @Override

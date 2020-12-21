@@ -1,4 +1,4 @@
-package com.appliedrec.verid.sample.sharing;
+package com.appliedrec.verid.ui2.sharing;
 
 import com.google.gson.annotations.JsonAdapter;
 

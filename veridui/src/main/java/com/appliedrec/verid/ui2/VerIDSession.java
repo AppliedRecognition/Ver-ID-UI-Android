@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
-    private AtomicBoolean useCameraX = new AtomicBoolean(false);
     private AtomicBoolean preferSurfaceView = new AtomicBoolean(false);
 
     /**
@@ -63,14 +62,6 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
         super(verID, settings, stringTranslator);
     }
 
-    public void setUseCameraX(boolean useCameraX) {
-        this.useCameraX.set(useCameraX);
-    }
-
-    public boolean getUseCameraX() {
-        return useCameraX.get();
-    }
-
     public boolean getPreferSurfaceView() {
         return preferSurfaceView.get();
     }
@@ -82,9 +73,7 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
     @NonNull
     @Override
     protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
-        if (useCameraX.get()) {
-            return SessionActivityCameraX.class;
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && preferSurfaceView.get()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && preferSurfaceView.get()) {
             return SessionActivity.class;
         } else {
             return SessionActivityWithTextureView.class;

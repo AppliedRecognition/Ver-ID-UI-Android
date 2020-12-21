@@ -5,7 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
-    android:clipChildren="false">
+    android:clipChildren="false"
+    android:id="@+id/sessionFragmentContainer">
 
     <com.appliedrec.verid.ui2.DetectedFaceView
         android:id="@+id/detectedFaceView"

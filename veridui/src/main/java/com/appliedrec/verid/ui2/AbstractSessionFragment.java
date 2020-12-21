@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core2.EulerAngle;
@@ -52,12 +53,8 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         viewBinding = FragmentVeridSessionBinding.inflate(inflater, container, false);
         viewFinder = createPreviewView();
-        ConstraintLayout.LayoutParams viewFinderLayoutParams = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        viewFinderLayoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
-        viewFinderLayoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
-        viewFinderLayoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-        viewFinderLayoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
-        viewBinding.getRoot().addView(viewFinder, 0, viewFinderLayoutParams);
+        viewFinder.setId(View.generateViewId());
+        viewBinding.getRoot().addView(viewFinder, 0);
         return viewBinding.getRoot();
     }
 

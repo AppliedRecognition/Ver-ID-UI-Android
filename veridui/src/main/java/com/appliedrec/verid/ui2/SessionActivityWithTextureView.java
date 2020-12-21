@@ -9,6 +9,7 @@ import android.view.TextureView;
 import android.widget.LinearLayout;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
 
 import com.appliedrec.verid.ui2.databinding.ActivitySessionWithTextureViewBinding;
@@ -67,7 +68,7 @@ public class SessionActivityWithTextureView extends BaseSessionActivity<Activity
             cameraWrapper.stop();
             setCameraWrapper(null);
         });
-        return false;
+        return true;
     }
 
     @Override
@@ -107,26 +108,39 @@ public class SessionActivityWithTextureView extends BaseSessionActivity<Activity
                 }
                 int scaledWidth = (int) (scale * w);
                 int scaledHeight = (int) (scale * h);
-                ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(textureView.getLayoutParams());
-                Matrix matrix = new Matrix();
-                layoutParams.width = scaledWidth;
-                layoutParams.height = scaledHeight;
-                layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
-                layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
-                layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-                layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
-                textureView.setLayoutParams(layoutParams);
 
-                RectF textureRect = new RectF(0, 0, scaledWidth, scaledHeight);
-                float centerX = textureRect.centerX();
-                float centerY = textureRect.centerY();
+                ConstraintLayout fragmentView = (ConstraintLayout)getSessionFragment().get().getView();
+
+                ConstraintSet constraintSet = new ConstraintSet();
+                constraintSet.clone(fragmentView);
+                constraintSet.constrainWidth(textureView.getId(), scaledWidth);
+                constraintSet.constrainHeight(textureView.getId(), scaledHeight);
+                constraintSet.setTranslation(textureView.getId(), viewRect.width()/2f-scaledWidth/2f, viewRect.height()/2f-scaledHeight/2f);
+                constraintSet.setDimensionRatio(textureView.getId(), String.format("%d:%d",scaledWidth, scaledHeight));
+                constraintSet.centerVertically(textureView.getId(), ConstraintSet.PARENT_ID);
+                constraintSet.centerHorizontally(textureView.getId(), ConstraintSet.PARENT_ID);
+                constraintSet.applyTo(fragmentView);
+
+                ConstraintSet faceConstraintSet = new ConstraintSet();
+                faceConstraintSet.clone(fragmentView);
+                faceConstraintSet.constrainWidth(detectedFaceView.getId(), scaledWidth);
+                faceConstraintSet.constrainHeight(detectedFaceView.getId(), scaledHeight);
+                faceConstraintSet.setTranslation(detectedFaceView.getId(), viewRect.width()/2f-scaledWidth/2f, viewRect.height()/2f-scaledHeight/2f);
+                faceConstraintSet.centerVertically(detectedFaceView.getId(), ConstraintSet.PARENT_ID);
+                faceConstraintSet.centerHorizontally(detectedFaceView.getId(), ConstraintSet.PARENT_ID);
+                faceConstraintSet.applyTo(fragmentView);
+
                 if (rotationDegrees != 0) {
+                    Matrix matrix = new Matrix();
+                    RectF textureRect = new RectF(0, 0, scaledWidth, scaledHeight);
+                    float centerX = textureRect.centerX();
+                    float centerY = textureRect.centerY();
                     if (rotationDegrees % 180 != 0) {
                         matrix.setScale((float) height / (float) width, (float) width / (float) height, centerX, centerY);
                     }
                     matrix.postRotate(0 - rotationDegrees, centerX, centerY);
+                    textureView.setTransform(matrix);
                 }
-                textureView.setTransform(matrix);
             });
         });
     }

@@ -48,7 +48,6 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.SessionActivity;
-import com.appliedrec.verid.ui2.SessionActivityCameraX;
 import com.appliedrec.verid.ui2.SessionActivityWithTextureView;
 import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
@@ -62,7 +61,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
-import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Function;
 
 import static androidx.test.espresso.Espresso.onView;
@@ -197,7 +195,7 @@ public class SampleAppTest {
         test_importRegistration();
         onView(withId(R.id.authenticate)).perform(click());
         onView(withText("English")).perform(click());
-        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName()),hasComponent(SessionActivityCameraX.class.getName())));
+        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName())));
     }
 
     @Test
@@ -246,7 +244,7 @@ public class SampleAppTest {
         release();
         init();
         onView(withId(R.id.register)).perform(click());
-        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName()),hasComponent(SessionActivityCameraX.class.getName())));
+        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName())));
     }
 
     @Test
@@ -323,11 +321,6 @@ public class SampleAppTest {
             @Override
             public FaceCapture createFaceCapture(FaceDetectionResult faceDetectionResult) throws VerIDSessionException {
                 return super.createFaceCapture(faceDetectionResult);
-            }
-
-            @Override
-            public BiFunction<VerIDSessionResult, FaceCapture, VerIDSessionResult> getFaceCaptureAccumulator() {
-                return super.getFaceCaptureAccumulator();
             }
 
             @Override

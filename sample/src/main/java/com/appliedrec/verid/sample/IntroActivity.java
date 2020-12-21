@@ -127,7 +127,6 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         }
         VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
         if (preferences != null) {
-            session.setUseCameraX(preferences.getBoolean(PreferenceKeys.USE_CAMERAX, false));
             session.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
         }
         session.setDelegate(this);

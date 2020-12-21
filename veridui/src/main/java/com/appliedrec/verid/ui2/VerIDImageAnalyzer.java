@@ -3,7 +3,6 @@ package com.appliedrec.verid.ui2;
 import android.graphics.Rect;
 import android.media.Image;
 import android.media.ImageReader;
-import android.util.Log;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;

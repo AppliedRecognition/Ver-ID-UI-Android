@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -180,23 +181,21 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     public void stop() {
-        runInBackground(() -> {
-            try {
-                if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
-                    if (imageReader != null) {
-                        imageReader.close();
-                    }
-                    if (cameraDevice != null) {
-                        cameraDevice.close();
-                    }
-                    cameraOpenCloseLock.release();
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } finally {
-                stopBackgroundThread();
+        try {
+            if (imageReader != null) {
+                imageReader.close();
             }
-        });
+            if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+                if (cameraDevice != null) {
+                    cameraDevice.close();
+                }
+                cameraOpenCloseLock.release();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            stopBackgroundThread();
+        }
     }
 
     public Optional<Listener> getListener() {

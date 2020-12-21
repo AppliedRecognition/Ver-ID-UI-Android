@@ -144,23 +144,15 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        SwitchPreferenceCompat useCameraX = new SwitchPreferenceCompat(context);
-        useCameraX.setTitle(R.string.use_camerax_api);
-        useCameraX.setKey(PreferenceKeys.USE_CAMERAX);
-        boolean shouldUseCameraX = sharedPreferences.getBoolean(PreferenceKeys.USE_CAMERAX, false);
-        useCameraX.setChecked(shouldUseCameraX);
-        cameraCategory.addPreference(useCameraX);
         SwitchPreferenceCompat recordSessionVideo = new SwitchPreferenceCompat(context);
         recordSessionVideo.setTitle(R.string.record_session_video);
         recordSessionVideo.setKey(PreferenceKeys.RECORD_SESSION_VIDEO);
-        recordSessionVideo.setChecked(!shouldUseCameraX && sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
-        recordSessionVideo.setEnabled(!shouldUseCameraX);
+        recordSessionVideo.setChecked(sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
         cameraCategory.addPreference(recordSessionVideo);
         SwitchPreferenceCompat preferSurfaceViewPref = new SwitchPreferenceCompat(context);
         preferSurfaceViewPref.setKey(PreferenceKeys.PREFER_SURFACE_VIEW);
         preferSurfaceViewPref.setTitle(R.string.prefer_surface_view);
         preferSurfaceViewPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-        preferSurfaceViewPref.setEnabled(!shouldUseCameraX);
         cameraCategory.addPreference(preferSurfaceViewPref);
         setPreferenceScreen(preferenceScreen);
     }
@@ -190,18 +182,6 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
             Preference preference = findPreference(s);
             if (preference != null) {
                 preference.setSummary(summary);
-            }
-        } else if (s.equals(PreferenceKeys.USE_CAMERAX)) {
-            Preference videoPreference = findPreference(PreferenceKeys.RECORD_SESSION_VIDEO);
-            boolean useCameraX = sharedPreferences.getBoolean(s, false);
-            if (videoPreference != null) {
-                ((SwitchPreferenceCompat)videoPreference).setChecked(!useCameraX && sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
-                videoPreference.setEnabled(!useCameraX);
-            }
-            Preference preferSurfaceView = findPreference(PreferenceKeys.PREFER_SURFACE_VIEW);
-            if (preferSurfaceView != null) {
-                ((SwitchPreferenceCompat)preferSurfaceView).setChecked(!useCameraX && sharedPreferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-                preferSurfaceView.setEnabled(!useCameraX);
             }
         }
     }
