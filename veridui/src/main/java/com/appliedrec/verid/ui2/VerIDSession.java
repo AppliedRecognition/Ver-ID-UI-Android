@@ -73,11 +73,11 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
     @NonNull
     @Override
     protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && preferSurfaceView.get()) {
-            return SessionActivity.class;
-        } else {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//            return SessionActivity.class;
+//        } else {
             return SessionActivityWithTextureView.class;
-        }
+//        }
     }
 
     @NonNull

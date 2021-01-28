@@ -2,11 +2,11 @@ package com.appliedrec.verid.ui2;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Surface;
 import android.view.View;
 
 import androidx.annotation.MainThread;
+import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
 
 import java.util.Optional;
@@ -44,7 +44,7 @@ public abstract class BaseSessionActivity<T extends ViewBinding, U extends View>
         return Optional.ofNullable(cameraWrapper);
     }
 
-    protected final void setCameraWrapper(CameraWrapper cameraWrapper) {
+    protected final void setCameraWrapper(@Nullable CameraWrapper cameraWrapper) {
         this.cameraWrapper = cameraWrapper;
     }
 

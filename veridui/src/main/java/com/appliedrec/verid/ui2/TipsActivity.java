@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 
 public class TipsActivity extends PageViewActivity {
 
+    public static final String EXTRA_TRANSLATOR = "com.appliedrec.verid.EXTRA_TRANSLATOR";
+
     private IStringTranslator stringTranslator;
     private ITextSpeaker textSpeaker;
 
@@ -18,6 +20,13 @@ public class TipsActivity extends PageViewActivity {
         super.onCreate(savedInstanceState);
         if (getIntent() == null) {
             return;
+        }
+        if (getIntent().hasExtra(EXTRA_TRANSLATOR)) {
+            stringTranslator = getIntent().getParcelableExtra(EXTRA_TRANSLATOR);
+        }
+        if (textSpeaker == null) {
+            TextSpeaker.setup(getApplicationContext());
+            textSpeaker = TextSpeaker.getInstance();
         }
         speak(tipText(0), true);
         if (getSupportActionBar() != null) {

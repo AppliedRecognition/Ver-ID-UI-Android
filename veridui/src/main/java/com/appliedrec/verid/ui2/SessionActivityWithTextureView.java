@@ -2,14 +2,15 @@ package com.appliedrec.verid.ui2;
 
 import android.Manifest;
 import android.graphics.Matrix;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.view.Gravity;
 import android.view.Surface;
 import android.view.TextureView;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
 
 import com.appliedrec.verid.ui2.databinding.ActivitySessionWithTextureViewBinding;
@@ -83,7 +84,9 @@ public class SessionActivityWithTextureView extends BaseSessionActivity<Activity
         getSessionFragment().flatMap(AbstractSessionFragment::getDetectedFaceView).ifPresent(detectedFaceView -> {
             getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> {
                 textureView.getSurfaceTexture().setDefaultBufferSize(width, height);
-                RectF viewRect = new RectF(0,0, detectedFaceView.getWidth(), detectedFaceView.getHeight());
+
+                RectF viewRect = new RectF(0,0, textureView.getWidth(), textureView.getHeight());
+
                 float rotationDegrees = 0;
                 try {
                     rotationDegrees = (float)getDisplayRotation();
@@ -100,47 +103,33 @@ public class SessionActivityWithTextureView extends BaseSessionActivity<Activity
                 }
                 float viewAspectRatio = viewRect.width()/viewRect.height();
                 float imageAspectRatio = w/h;
-                final float scale;
-                if (viewAspectRatio > imageAspectRatio) {
-                    scale = viewRect.width()/w;
+                final PointF scale;
+                float faceViewScale;
+                if (viewAspectRatio < imageAspectRatio) {
+                    scale = new PointF((viewRect.height() / viewRect.width()) * ((float) height / (float) width), 1f);
+                    faceViewScale = viewRect.height()/h;
                 } else {
-                    scale = viewRect.height()/h;
+                    scale = new PointF(1f, (viewRect.width() / viewRect.height()) * ((float) width / (float) height));
+                    faceViewScale = viewRect.width()/w;
                 }
-                int scaledWidth = (int) (scale * w);
-                int scaledHeight = (int) (scale * h);
+                if (rotationDegrees % 180 != 0) {
+                    float multiplier = viewAspectRatio < imageAspectRatio ? w/h : h/w;
+                    scale.x *= multiplier;
+                    scale.y *= multiplier;
+                }
 
-                ConstraintLayout fragmentView = (ConstraintLayout)getSessionFragment().get().getView();
+                FrameLayout.LayoutParams detectedFaceViewLayoutParams = new FrameLayout.LayoutParams(detectedFaceView.getLayoutParams());
+                detectedFaceViewLayoutParams.width = (int)(w * faceViewScale);
+                detectedFaceViewLayoutParams.height = (int)(h * faceViewScale);
+                detectedFaceViewLayoutParams.gravity = Gravity.CENTER;
+                detectedFaceView.setLayoutParams(detectedFaceViewLayoutParams);
 
-                ConstraintSet constraintSet = new ConstraintSet();
-                constraintSet.clone(fragmentView);
-                constraintSet.constrainWidth(textureView.getId(), scaledWidth);
-                constraintSet.constrainHeight(textureView.getId(), scaledHeight);
-                constraintSet.setTranslation(textureView.getId(), viewRect.width()/2f-scaledWidth/2f, viewRect.height()/2f-scaledHeight/2f);
-                constraintSet.setDimensionRatio(textureView.getId(), String.format("%d:%d",scaledWidth, scaledHeight));
-                constraintSet.centerVertically(textureView.getId(), ConstraintSet.PARENT_ID);
-                constraintSet.centerHorizontally(textureView.getId(), ConstraintSet.PARENT_ID);
-                constraintSet.applyTo(fragmentView);
-
-                ConstraintSet faceConstraintSet = new ConstraintSet();
-                faceConstraintSet.clone(fragmentView);
-                faceConstraintSet.constrainWidth(detectedFaceView.getId(), scaledWidth);
-                faceConstraintSet.constrainHeight(detectedFaceView.getId(), scaledHeight);
-                faceConstraintSet.setTranslation(detectedFaceView.getId(), viewRect.width()/2f-scaledWidth/2f, viewRect.height()/2f-scaledHeight/2f);
-                faceConstraintSet.centerVertically(detectedFaceView.getId(), ConstraintSet.PARENT_ID);
-                faceConstraintSet.centerHorizontally(detectedFaceView.getId(), ConstraintSet.PARENT_ID);
-                faceConstraintSet.applyTo(fragmentView);
-
+                Matrix matrix = new Matrix();
+                matrix.setScale(scale.x, scale.y, viewRect.centerX(), viewRect.centerY());
                 if (rotationDegrees != 0) {
-                    Matrix matrix = new Matrix();
-                    RectF textureRect = new RectF(0, 0, scaledWidth, scaledHeight);
-                    float centerX = textureRect.centerX();
-                    float centerY = textureRect.centerY();
-                    if (rotationDegrees % 180 != 0) {
-                        matrix.setScale((float) height / (float) width, (float) width / (float) height, centerX, centerY);
-                    }
-                    matrix.postRotate(0 - rotationDegrees, centerX, centerY);
-                    textureView.setTransform(matrix);
+                    matrix.postRotate(0 - rotationDegrees, viewRect.centerX(), viewRect.centerY());
                 }
+                textureView.setTransform(matrix);
             });
         });
     }

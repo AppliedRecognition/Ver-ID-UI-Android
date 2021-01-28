@@ -19,6 +19,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Size;
 import android.view.Surface;
+import android.view.SurfaceView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,6 +34,7 @@ import androidx.lifecycle.LifecycleOwner;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -73,6 +75,23 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private final AtomicInteger viewHeight = new AtomicInteger(0);
     private final AtomicInteger displayRotation = new AtomicInteger(0);
     private final Class<?> previewClass;
+    private CameraManager cameraManager;
+
+    private static final NormalizedSize SIZE_1080P = new NormalizedSize(1920, 1080);
+
+    private static class NormalizedSize {
+        final int shortSide;
+        final int longSide;
+        final int width;
+        final int height;
+
+        NormalizedSize(int width, int height) {
+            this.width = width;
+            this.height = height;
+            longSide = Math.max(width, height);
+            shortSide = Math.min(width, height);
+        }
+    }
 
     public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder, Class<?> previewClass) {
         activityWeakReference = new WeakReference<>(activity);
@@ -104,10 +123,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
-                CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-                if (manager == null) {
-                    throw new Exception("Camera manager unavailable");
-                }
+                CameraManager manager = getCameraManager();
                 if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
                     throw new TimeoutException("Time out waiting to acquire camera lock.");
                 }
@@ -324,6 +340,34 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     private Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
         return Optional.ofNullable(videoRecorder);
+    }
+
+    public CameraManager getCameraManager() throws Exception {
+        if (cameraManager == null) {
+            if (getActivity().isPresent()) {
+                cameraManager = (CameraManager) getActivity().get().getSystemService(Context.CAMERA_SERVICE);
+                if (cameraManager == null) {
+                    throw new Exception("Camera manager unavailable");
+                }
+            } else {
+                throw new Exception("Activity unavailable");
+            }
+        }
+        return cameraManager;
+    }
+
+    private Size getPreviewSize(StreamConfigurationMap configurationMap, NormalizedSize viewSize) throws Exception {
+        boolean isHDSize = viewSize.longSide >= SIZE_1080P.longSide || viewSize.shortSide >= SIZE_1080P.shortSide;
+        NormalizedSize maxSize = isHDSize ? SIZE_1080P : viewSize;
+        Size[] allSizes = configurationMap.getOutputSizes(previewClass);
+        Arrays.sort(allSizes, (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() > rhs.getWidth() * rhs.getHeight() ? -1 : 1);
+        for (Size size : allSizes) {
+            NormalizedSize normalizedSize = new NormalizedSize(size.getWidth(), size.getHeight());
+            if (normalizedSize.longSide <= maxSize.longSide && normalizedSize.shortSide <= maxSize.shortSide) {
+                return new Size(normalizedSize.width, normalizedSize.height);
+            }
+        }
+        throw new Exception("Camera does not provide a fitting preview size");
     }
 
     private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {

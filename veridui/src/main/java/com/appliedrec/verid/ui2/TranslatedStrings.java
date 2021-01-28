@@ -93,7 +93,7 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
             }
             if (translationAssetPath != null) {
                 if (intentLocale == null) {
-                    setLocaleFromPath(translationFilePath);
+                    setLocaleFromPath(translationAssetPath);
                 }
                 new Thread(() -> {
                     try (InputStream inputStream = context.getAssets().open(translationAssetPath)) {

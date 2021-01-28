@@ -8,19 +8,17 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RoundRectShape;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.fragment.app.Fragment;
 
 import com.appliedrec.verid.core2.EulerAngle;
@@ -54,7 +52,7 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
         viewBinding = FragmentVeridSessionBinding.inflate(inflater, container, false);
         viewFinder = createPreviewView();
         viewFinder.setId(View.generateViewId());
-        viewBinding.getRoot().addView(viewFinder, 0);
+        viewBinding.getRoot().addView(viewFinder, 0, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         return viewBinding.getRoot();
     }
 
@@ -272,7 +270,7 @@ public abstract class AbstractSessionFragment<Preview extends View> extends Frag
             viewBinding.instructionTextview.setTextColor(textColour);
             viewBinding.instructionTextview.setBackgroundColor(colour);
 
-            ((ConstraintLayout.LayoutParams)viewBinding.instructionTextview.getLayoutParams()).topMargin = (int) (ovalBounds.top - viewBinding.instructionTextview.getHeight() - getResources().getDisplayMetrics().density * 16f);
+            ((FrameLayout.LayoutParams)viewBinding.instructionTextview.getLayoutParams()).topMargin = (int) (ovalBounds.top - viewBinding.instructionTextview.getHeight() - getResources().getDisplayMetrics().density * 16f);
             setTextViewColour(colour, textColour);
             Double angle = null;
             Double distance = null;

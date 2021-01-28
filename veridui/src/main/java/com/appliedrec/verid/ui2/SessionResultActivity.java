@@ -8,6 +8,8 @@ import com.appliedrec.verid.core2.session.VerIDSessionResult;
 
 public abstract class SessionResultActivity extends AppCompatActivity implements ISessionResultActivity {
 
+    public static final String EXTRA_TRANSLATOR = "com.appliedrec.verid.EXTRA_TRANSLATOR";
+
     private IStringTranslator stringTranslator;
     private VerIDSessionResult sessionResult;
     private boolean didCancel = false;
@@ -15,6 +17,9 @@ public abstract class SessionResultActivity extends AppCompatActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getIntent() != null && getIntent().hasExtra(EXTRA_TRANSLATOR)) {
+            stringTranslator = getIntent().getParcelableExtra(EXTRA_TRANSLATOR);
+        }
     }
 
     @Override

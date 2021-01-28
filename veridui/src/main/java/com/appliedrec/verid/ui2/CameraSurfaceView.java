@@ -9,8 +9,7 @@ import androidx.annotation.UiThread;
 
 public class CameraSurfaceView extends SurfaceView {
 
-    private int fixedWidth = -1;
-    private int fixedHeight = -1;
+    private float aspectRatio = 0;
 
     public CameraSurfaceView(Context context) {
         super(context);
@@ -29,18 +28,33 @@ public class CameraSurfaceView extends SurfaceView {
     }
 
     @UiThread
-    public void setFixedSize(@IntRange(from = 10) int width, @IntRange(from = 10) int height) {
-        fixedWidth = width;
-        fixedHeight = height;
-        invalidate();
+    public void setAspectRatio(@IntRange(from = 1) int width, @IntRange(from = 1) int height) {
+        if (width <= 0 || height <= 0) {
+            throw new RuntimeException("Size of surface view must not be negative");
+        }
+        aspectRatio = (float)width / (float)height;
+        getHolder().setFixedSize(width, height);
+        requestLayout();
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        if (fixedWidth <= 0 || fixedHeight <= 0) {
-            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-            return;
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int width = MeasureSpec.getSize(widthMeasureSpec);
+        int height = MeasureSpec.getSize(heightMeasureSpec);
+        if (aspectRatio == 0) {
+            setMeasuredDimension(width, height);
+        } else {
+            int newWidth, newHeight;
+            float actualRatio = width > height ? aspectRatio : 1f / aspectRatio;
+            if (width < height * actualRatio) {
+                newHeight = height;
+                newWidth = (int)((float)height * actualRatio);
+            } else {
+                newWidth = width;
+                newHeight = (int)((float)width / actualRatio);
+            }
+            setMeasuredDimension(newWidth, newHeight);
         }
-        setMeasuredDimension(fixedWidth, fixedHeight);
     }
 }
