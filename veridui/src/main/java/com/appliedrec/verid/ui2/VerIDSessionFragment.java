@@ -1,9 +1,11 @@
 package com.appliedrec.verid.ui2;
 
-public class VerIDSessionFragment extends AbstractSessionFragment<CameraSurfaceView> {
+import android.view.TextureView;
+
+public class VerIDSessionFragment extends AbstractSessionFragment<TextureView> {
 
     @Override
-    protected CameraSurfaceView createPreviewView() {
-        return new CameraSurfaceView(requireContext());
+    protected TextureView createPreviewView() {
+        return new TextureView(requireContext());
     }
 }

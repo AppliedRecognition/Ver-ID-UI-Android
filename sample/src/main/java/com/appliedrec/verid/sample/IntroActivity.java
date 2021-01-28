@@ -126,9 +126,6 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
-        if (preferences != null) {
-            session.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-        }
         session.setDelegate(this);
         session.start();
     }

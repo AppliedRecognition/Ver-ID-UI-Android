@@ -39,8 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class VerIDSession<Settings extends VerIDSessionSettings> extends AbstractVerIDSession<Settings, AbstractSessionActivity<?>, SessionResultActivity> {
 
-    private AtomicBoolean preferSurfaceView = new AtomicBoolean(false);
-
     /**
      * Session constructor
      * @param verID Instance of VerID to use for face detection, recognition and user management
@@ -62,22 +60,10 @@ public class VerIDSession<Settings extends VerIDSessionSettings> extends Abstrac
         super(verID, settings, stringTranslator);
     }
 
-    public boolean getPreferSurfaceView() {
-        return preferSurfaceView.get();
-    }
-
-    public void setPreferSurfaceView(boolean preferSurfaceView) {
-        this.preferSurfaceView.set(preferSurfaceView);
-    }
-
     @NonNull
     @Override
     protected Class<? extends AbstractSessionActivity<?>> getSessionActivityClass() {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//            return SessionActivity.class;
-//        } else {
-            return SessionActivityWithTextureView.class;
-//        }
+        return SessionActivity.class;
     }
 
     @NonNull

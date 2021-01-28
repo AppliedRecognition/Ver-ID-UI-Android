@@ -48,7 +48,6 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.SessionActivity;
-import com.appliedrec.verid.ui2.SessionActivityWithTextureView;
 import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 
@@ -79,7 +78,6 @@ import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withParent;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.anyOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -195,7 +193,7 @@ public class SampleAppTest {
         test_importRegistration();
         onView(withId(R.id.authenticate)).perform(click());
         onView(withText("English")).perform(click());
-        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName())));
+        intended(hasComponent(SessionActivity.class.getName()));
     }
 
     @Test
@@ -207,7 +205,7 @@ public class SampleAppTest {
     }
 
     @Test
-    public void test_registerWithFailure_showsFailurePage() {
+    public void test_registerWithFailure_showsFailurePage() throws Exception {
         RegistrationSessionSettings sessionSettings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
         runSession(getSampleAppVerID(), sessionSettings, new VerIDSessionException(VerIDSessionException.Code.FACE_DETECTION_EVALUATION_ERROR));
         intended(hasComponent(SessionResultActivity.class.getName()));
@@ -244,7 +242,7 @@ public class SampleAppTest {
         release();
         init();
         onView(withId(R.id.register)).perform(click());
-        intended(anyOf(hasComponent(SessionActivity.class.getName()),hasComponent(SessionActivityWithTextureView.class.getName())));
+        intended(hasComponent(SessionActivity.class.getName()));
     }
 
     @Test
@@ -266,14 +264,14 @@ public class SampleAppTest {
     }
 
     @Test
-    public void test_runSuccessfulSession_showsSuccessActivity() {
+    public void test_runSuccessfulSession_showsSuccessActivity() throws Exception {
         runSession(getSampleAppVerID(), getLivenessDetectionSessionSettings(2), null);
         intended(hasComponent(SessionResultActivity.class.getName()));
         onView(allOf(withId(R.id.value), withText("Yes"), withParent(withChild(allOf(withId(R.id.key),withText("Succeeded")))))).check(matches(isDisplayed()));
     }
 
     @Test
-    public void test_runSessionWithAntiSpoofingFailure_showsRetryActivity() {
+    public void test_runSessionWithAntiSpoofingFailure_showsRetryActivity() throws Exception {
         VerIDSession<LivenessDetectionSessionSettings> session = runSession(getSampleAppVerID(), getLivenessDetectionSessionSettings(1), new VerIDSessionException(new AntiSpoofingException(AntiSpoofingException.Code.MOVED_OPPOSITE, Bearing.STRAIGHT), VerIDSessionException.Code.LIVENESS_FAILURE));
         intended(hasComponent(SessionLivenessDetectionFailureActivity.class.getName()));
     }

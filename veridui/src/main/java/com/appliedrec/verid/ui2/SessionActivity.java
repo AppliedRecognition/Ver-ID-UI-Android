@@ -1,23 +1,23 @@
 package com.appliedrec.verid.ui2;
 
 import android.Manifest;
+import android.graphics.Matrix;
+import android.graphics.PointF;
+import android.graphics.RectF;
+import android.graphics.SurfaceTexture;
 import android.view.Gravity;
-import android.view.SurfaceHolder;
-import android.view.View;
+import android.view.Surface;
+import android.view.TextureView;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 
-import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.ui2.databinding.ActivitySessionBinding;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Optional;
 
-public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,CameraSurfaceView> implements SurfaceHolder.Callback {
+public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,TextureView> implements TextureView.SurfaceTextureListener {
 
     @Override
     protected ActivitySessionBinding inflateLayout() {
@@ -26,19 +26,19 @@ public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,
 
     @Override
     protected Class<?> getPreviewClass() {
-        return SurfaceHolder.class;
+        return SurfaceTexture.class;
     }
 
     @Override
     protected void onResumeFragments() {
         super.onResumeFragments();
-        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> surfaceView.getHolder().addCallback(this));
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> textureView.setSurfaceTextureListener(this));
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(surfaceView -> surfaceView.getHolder().removeCallback(this));
+        getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> textureView.setSurfaceTextureListener(null));
     }
 
     @Override
@@ -46,11 +46,11 @@ public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,
         return getViewBinding().map(viewBinding -> viewBinding.faceImages);
     }
 
-    //region Surface callback
+    //region SurfaceTextureListener
 
     @Override
-    public void surfaceCreated(SurfaceHolder surfaceHolder) {
-        getCameraWrapper().ifPresent(cameraWrapper -> cameraWrapper.setPreviewSurface(surfaceHolder.getSurface()));
+    public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
+        getCameraWrapper().ifPresent(cameraWrapper -> cameraWrapper.setPreviewSurface(new Surface(surfaceTexture)));
         if (hasCameraPermission()) {
             startCamera();
         } else {
@@ -59,33 +59,40 @@ public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
 
     }
 
     @Override
-    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
         getCameraWrapper().ifPresent(cameraWrapper -> {
             cameraWrapper.stop();
             setCameraWrapper(null);
         });
+        return true;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+
     }
 
     //endregion
 
-
     @Override
     public void onPreviewSize(int width, int height, int sensorOrientation) {
-        getSessionFragment().ifPresent(sessionFragment -> {
-            sessionFragment.getViewFinder().ifPresent(cameraSurfaceView -> cameraSurfaceView.setAspectRatio(width, height));
-            sessionFragment.getDetectedFaceView().ifPresent(detectedFaceView -> {
-                View fragmentView = sessionFragment.getView();
-                if (fragmentView == null) {
-                    return;
+        getSessionFragment().flatMap(AbstractSessionFragment::getDetectedFaceView).ifPresent(detectedFaceView -> {
+            getSessionFragment().flatMap(AbstractSessionFragment::getViewFinder).ifPresent(textureView -> {
+                textureView.getSurfaceTexture().setDefaultBufferSize(width, height);
+
+                RectF viewRect = new RectF(0,0, textureView.getWidth(), textureView.getHeight());
+
+                float rotationDegrees = 0;
+                try {
+                    rotationDegrees = (float)getDisplayRotation();
+                } catch (Exception ignored) {
+
                 }
-                float fragmentWidth = fragmentView.getWidth();
-                float fragmentHeight = fragmentView.getHeight();
-                int rotationDegrees = getDisplayRotation();
                 float w, h;
                 if ((sensorOrientation - rotationDegrees) % 180 == 0) {
                     w = width;
@@ -94,60 +101,36 @@ public class SessionActivity extends BaseSessionActivity<ActivitySessionBinding,
                     w = height;
                     h = width;
                 }
-                float viewAspectRatio = fragmentWidth/fragmentHeight;
+                float viewAspectRatio = viewRect.width()/viewRect.height();
                 float imageAspectRatio = w/h;
-                final float scale;
-                if (viewAspectRatio > imageAspectRatio) {
-                    scale = fragmentWidth/w;
+                final PointF scale;
+                float faceViewScale;
+                if (viewAspectRatio < imageAspectRatio) {
+                    scale = new PointF((viewRect.height() / viewRect.width()) * ((float) height / (float) width), 1f);
+                    faceViewScale = viewRect.height()/h;
                 } else {
-                    scale = fragmentHeight/h;
+                    scale = new PointF(1f, (viewRect.width() / viewRect.height()) * ((float) width / (float) height));
+                    faceViewScale = viewRect.width()/w;
                 }
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(detectedFaceView.getLayoutParams());
-                layoutParams.width = (int)(w * scale);
-                layoutParams.height = (int)(h * scale);
-                layoutParams.gravity = Gravity.CENTER;
-                detectedFaceView.setLayoutParams(layoutParams);
+                if (rotationDegrees % 180 != 0) {
+                    float multiplier = viewAspectRatio < imageAspectRatio ? w/h : h/w;
+                    scale.x *= multiplier;
+                    scale.y *= multiplier;
+                }
+
+                FrameLayout.LayoutParams detectedFaceViewLayoutParams = new FrameLayout.LayoutParams(detectedFaceView.getLayoutParams());
+                detectedFaceViewLayoutParams.width = (int)(w * faceViewScale);
+                detectedFaceViewLayoutParams.height = (int)(h * faceViewScale);
+                detectedFaceViewLayoutParams.gravity = Gravity.CENTER;
+                detectedFaceView.setLayoutParams(detectedFaceViewLayoutParams);
+
+                Matrix matrix = new Matrix();
+                matrix.setScale(scale.x, scale.y, viewRect.centerX(), viewRect.centerY());
+                if (rotationDegrees != 0) {
+                    matrix.postRotate(0 - rotationDegrees, viewRect.centerX(), viewRect.centerY());
+                }
+                textureView.setTransform(matrix);
             });
         });
-//
-//        // OLD
-//        getSessionFragment().ifPresent(sessionFragment -> {
-//            View fragmentView = sessionFragment.getView();
-//            if (fragmentView == null) {
-//                return;
-//            }
-//            float fragmentWidth = fragmentView.getWidth();
-//            float fragmentHeight = fragmentView.getHeight();
-//            sessionFragment.getViewFinder().ifPresent(viewFinder -> {
-//                int rotationDegrees = getDisplayRotation();
-//                float w, h;
-//                if ((sensorOrientation - rotationDegrees) % 180 == 0) {
-//                    w = width;
-//                    h = height;
-//                } else {
-//                    w = height;
-//                    h = width;
-//                }
-//                float viewAspectRatio = fragmentWidth/fragmentHeight;
-//                float imageAspectRatio = w/h;
-//                final float scale;
-//                if (viewAspectRatio < imageAspectRatio) {
-//                    scale = fragmentWidth/w;
-//                } else {
-//                    scale = fragmentHeight/h;
-//                }
-//                Size viewSize = new Size((int)(scale * w), (int)(scale * h));
-//                ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(viewFinder.getLayoutParams());
-//                layoutParams.width = viewSize.width;
-//                layoutParams.height = viewSize.height;
-//                layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
-//                layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
-//                layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-//                layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
-//                viewFinder.setLayoutParams(layoutParams);
-//
-//                viewFinder.setAspectRatio(viewSize.width, viewSize.height);
-//            });
-//        });
     }
 }

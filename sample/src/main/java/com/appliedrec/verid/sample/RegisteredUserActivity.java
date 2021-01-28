@@ -192,9 +192,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                         authenticationSession = new VerIDSession<>(verID, settings);
                     }
                     authenticationSession.setDelegate(this);
-                    if (preferences != null) {
-                        authenticationSession.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-                    }
                     authenticationSession.start();
                 })
                 .setTitle("Select language")
@@ -221,9 +218,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         }
         settings.setSessionDiagnosticsEnabled(true);
         VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
-        if (preferences != null) {
-            registrationSession.setPreferSurfaceView(preferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-        }
         registrationSession.setDelegate(this);
         registrationSession.start();
     }

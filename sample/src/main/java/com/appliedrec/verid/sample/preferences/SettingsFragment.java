@@ -149,11 +149,6 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         recordSessionVideo.setKey(PreferenceKeys.RECORD_SESSION_VIDEO);
         recordSessionVideo.setChecked(sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
         cameraCategory.addPreference(recordSessionVideo);
-        SwitchPreferenceCompat preferSurfaceViewPref = new SwitchPreferenceCompat(context);
-        preferSurfaceViewPref.setKey(PreferenceKeys.PREFER_SURFACE_VIEW);
-        preferSurfaceViewPref.setTitle(R.string.prefer_surface_view);
-        preferSurfaceViewPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.PREFER_SURFACE_VIEW, false));
-        cameraCategory.addPreference(preferSurfaceViewPref);
         setPreferenceScreen(preferenceScreen);
     }
 

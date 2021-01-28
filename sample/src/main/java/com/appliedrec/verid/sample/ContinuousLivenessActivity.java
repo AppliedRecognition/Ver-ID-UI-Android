@@ -20,7 +20,6 @@ import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Surface;
-import android.view.SurfaceHolder;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Toast;
@@ -31,7 +30,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentManager;
 
 import com.appliedrec.verid.core2.Face;
 import com.appliedrec.verid.core2.FaceDetectionImage;
@@ -51,7 +49,7 @@ import com.appliedrec.verid.ui2.CameraWrapper;
 import com.appliedrec.verid.ui2.SessionPrompts;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDImageAnalyzer;
-import com.appliedrec.verid.ui2.VerIDSessionFragmentWithTextureView;
+import com.appliedrec.verid.ui2.VerIDSessionFragment;
 
 import java.util.Iterator;
 import java.util.Objects;
@@ -82,7 +80,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     private Session<LivenessDetectionSessionSettings> session;
     private Disposable faceDetectionDisposable;
     private final LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
-    private VerIDSessionFragmentWithTextureView sessionFragment;
+    private VerIDSessionFragment sessionFragment;
     private VerID verID;
     private SessionPrompts sessionPrompts;
     private SynchronousQueue<Size> viewFinderSizeQueue = new SynchronousQueue<>();
@@ -115,7 +113,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         viewBinding.retryButton.setOnClickListener(view -> startSession());
         viewBinding.idle.setVisibility(View.VISIBLE);
         viewBinding.sessionResult.setVisibility(View.VISIBLE);
-        sessionFragment = (VerIDSessionFragmentWithTextureView)getSupportFragmentManager().findFragmentById(R.id.sessionFragment);
+        sessionFragment = (VerIDSessionFragment)getSupportFragmentManager().findFragmentById(R.id.sessionFragment);
 
         cameraWrapper = new CameraWrapper(this, CameraLocation.FRONT, imageAnalyzer, null, SurfaceTexture.class);
         cameraWrapper.setListener(this);
@@ -200,7 +198,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private Optional<VerIDSessionFragmentWithTextureView> getSessionFragment() {
+    private Optional<VerIDSessionFragment> getSessionFragment() {
         return Optional.ofNullable(sessionFragment);
     }
 
