@@ -21,6 +21,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
+import androidx.annotation.IntRange;
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
@@ -43,6 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Default implementation of {@link ISessionView}
  * @since 2.0.0
  */
+@Keep
 public class SessionView extends FrameLayout implements ISessionView, TextureView.SurfaceTextureListener, View.OnLayoutChangeListener {
 
     private TextureView textureView;
@@ -62,26 +65,63 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     private final HashSet<SessionViewListener> listeners = new HashSet<>();
     private final Object listenerLock = new Object();
 
+    /**
+     * Constructor
+     * @param context Context
+     * @since 2.0.0
+     */
+    @Keep
     public SessionView(@NonNull Context context) {
         super(context);
         init();
     }
 
+    /**
+     * Constructor
+     * @param context Context
+     * @param attrs Attribute set
+     * @since 2.0.0
+     */
+    @Keep
     public SessionView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
+    /**
+     * Constructor
+     * @param context Context
+     * @param attrs Attribute set
+     * @param defStyleAttr Style
+     * @since 2.0.0
+     */
+    @Keep
     public SessionView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
+    /**
+     * Constructor
+     * @param context Context
+     * @param attrs Attribute set
+     * @param defStyleAttr Style
+     * @param defStyleRes Style resource
+     * @since 2.0.0
+     */
+    @Keep
     public SessionView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init();
     }
 
+    /**
+     * Get preview class – used to determine camera preview sizes
+     * @return {@code SurfaceTexture.class}
+     * @since 2.0.0
+     */
+    @Keep
+    @Override
     public Class<?> getPreviewClass() {
         return SurfaceTexture.class;
     }
@@ -123,6 +163,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         addView(faceImagesView, faceImagesViewLayoutParams);
     }
 
+    @Keep
     @Override
     public void addListener(SessionViewListener listener) {
         synchronized (listenerLock) {
@@ -133,6 +174,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         }
     }
 
+    @Keep
     @Override
     public void removeListener(SessionViewListener listener) {
         synchronized (listenerLock) {
@@ -144,6 +186,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return {@literal true} if the overlay should include 68 face landmarks (default {@literal false})
      * @since 2.0.0
      */
+    @Keep
     public boolean shouldPlotFaceLandmarks() {
         return plotFaceLandmarks;
     }
@@ -152,6 +195,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param plotFaceLandmarks Set to {@literal true} to render 68 face landmarks in the face overlay
      * @since 2.0.0
      */
+    @Keep
     public void shouldPlotFaceLandmarks(boolean plotFaceLandmarks) {
         this.plotFaceLandmarks = plotFaceLandmarks;
     }
@@ -161,30 +205,37 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         return (int)(density * dp);
     }
 
+    @Keep
     protected TextureView getTextureView() {
         return textureView;
     }
 
+    @Keep
     protected DetectedFaceView getDetectedFaceView() {
         return detectedFaceView;
     }
 
+    @Keep
     protected TextView getInstructionTextView() {
         return instructionTextView;
     }
 
+    @Keep
     protected LinearLayout getFaceImagesView() {
         return faceImagesView;
     }
 
+    @Keep
     public void setDefaultFaceExtents(@NonNull FaceExtents faceExtents) {
         defaultFaceExtents.set(faceExtents);
     }
 
+    @Keep
     public FaceExtents getDefaultFaceExtents() {
         return defaultFaceExtents.get();
     }
 
+    @Keep
     @Override
     public void setFaceDetectionResult(FaceDetectionResult faceDetectionResult, String prompt) {
         post(() -> {
@@ -246,7 +297,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
                     distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
                 }
                 getDetectedFaceView().setFaceRect(ovalBounds, cutoutBounds, colour, getOverlayBackgroundColor(), angle, distance);
-                if (plotFaceLandmarks && faceDetectionResult.getFaceLandmarks() != null && faceDetectionResult.getFaceLandmarks().length > 0) {
+                if (shouldPlotFaceLandmarks() && faceDetectionResult.getFaceLandmarks() != null && faceDetectionResult.getFaceLandmarks().length > 0) {
                     float[] landmarks = new float[faceDetectionResult.getFaceLandmarks().length*2];
                     int i=0;
                     for (PointF pt : faceDetectionResult.getFaceLandmarks()) {
@@ -278,6 +329,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         getInstructionTextView().setTextColor(text);
     }
 
+    @Keep
     @Override
     @UiThread
     public void drawFaces(List<? extends Drawable> faceImages) {
@@ -295,11 +347,14 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         }
     }
 
+    @Keep
     @Override
     public int getCapturedFaceImageHeight() {
         return dpToPx(96);
     }
 
+    @Keep
+    @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
         getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
 
@@ -343,6 +398,14 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
 
     //region Appearance
 
+    /**
+     * Override to change the way the colour of the oval around the detected face is determined from face detection status
+     * @param faceDetectionStatus Face detection status on which to base the oval colour
+     * @return Colour of the face oval stroke
+     * @since 2.0.0
+     */
+    @Keep
+    @ColorInt
     protected int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
         switch (faceDetectionStatus) {
             case FACE_FIXED:
@@ -353,6 +416,14 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         }
     }
 
+    /**
+     * Override to change the way the colour of the session prompt text is determined from face detection status
+     * @param faceDetectionStatus Face detection status on which to base the text colour
+     * @return Colour of the session prompt text
+     * @since 2.0.0
+     */
+    @Keep
+    @ColorInt
     protected int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
         switch (faceDetectionStatus) {
             case FACE_FIXED:
@@ -363,7 +434,14 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         }
     }
 
+    /**
+     * Get display rotation
+     * @return Display rotation in degrees
+     * @since 2.0.0
+     */
+    @Keep
     @Override
+    @IntRange(from = 0, to = 359)
     public int getDisplayRotation() {
         switch (getDisplay().getRotation()) {
             case Surface.ROTATION_0:
@@ -382,6 +460,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return Colour of the background around the detected face overlaid on top of the camera view finder
      * @since 2.0.0
      */
+    @Keep
+    @ColorInt
     public int getOverlayBackgroundColor() {
         return overlayBackgroundColor;
     }
@@ -390,7 +470,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param overlayBackgroundColor Colour of the background around the detected face overlaid on top of the camera view finder
      * @since 2.0.0
      */
-    public void setOverlayBackgroundColor(int overlayBackgroundColor) {
+    @Keep
+    public void setOverlayBackgroundColor(@ColorInt int overlayBackgroundColor) {
         this.overlayBackgroundColor = overlayBackgroundColor;
     }
 
@@ -398,6 +479,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return Colour of the face oval
      * @since 2.0.0
      */
+    @Keep
+    @ColorInt
     public int getOvalColor() {
         return ovalColor;
     }
@@ -406,7 +489,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param ovalColor Colour of the face oval
      * @since 2.0.0
      */
-    public void setOvalColor(int ovalColor) {
+    @Keep
+    public void setOvalColor(@ColorInt int ovalColor) {
         this.ovalColor = ovalColor;
     }
 
@@ -414,6 +498,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return Colour of the face oval when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
      */
+    @Keep
+    @ColorInt
     public int getOvalColorHighlighted() {
         return ovalColorHighlighted;
     }
@@ -422,7 +508,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param ovalColorHighlighted Colour of the face oval when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
      */
-    public void setOvalColorHighlighted(int ovalColorHighlighted) {
+    @Keep
+    public void setOvalColorHighlighted(@ColorInt int ovalColorHighlighted) {
         this.ovalColorHighlighted = ovalColorHighlighted;
     }
 
@@ -430,6 +517,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return Colour of the text that displays prompts
      * @since 2.0.0
      */
+    @Keep
+    @ColorInt
     public int getTextColor() {
         return textColor;
     }
@@ -438,7 +527,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param textColor Colour of the text that displays prompts
      * @since 2.0.0
      */
-    public void setTextColor(int textColor) {
+    @Keep
+    public void setTextColor(@ColorInt int textColor) {
         this.textColor = textColor;
     }
 
@@ -446,6 +536,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @return Colour of the prompt text when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
      */
+    @Keep
+    @ColorInt
     public int getTextColorHighlighted() {
         return textColorHighlighted;
     }
@@ -454,7 +546,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
      * @param textColorHighlighted Colour of the prompt text when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
      */
-    public void setTextColorHighlighted(int textColorHighlighted) {
+    @Keep
+    public void setTextColorHighlighted(@ColorInt int textColorHighlighted) {
         this.textColorHighlighted = textColorHighlighted;
     }
 
