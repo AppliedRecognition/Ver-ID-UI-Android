@@ -6,13 +6,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 
-public abstract class SessionResultActivity extends AppCompatActivity implements ISessionResultActivity {
+public abstract class SessionResultActivity extends AppCompatActivity implements ISessionActivity {
 
     public static final String EXTRA_TRANSLATOR = "com.appliedrec.verid.EXTRA_TRANSLATOR";
 
     private IStringTranslator stringTranslator;
     private VerIDSessionResult sessionResult;
-    private boolean didCancel = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,17 +22,13 @@ public abstract class SessionResultActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void setSessionResult(VerIDSessionResult sessionResult) {
-        this.sessionResult = sessionResult;
+    public void setSessionParameters(SessionParameters sessionParameters) {
+        sessionResult = sessionParameters.getSessionResult().orElseThrow(RuntimeException::new);
+        stringTranslator = sessionParameters.getStringTranslator();
     }
 
     VerIDSessionResult getSessionResult() {
         return sessionResult;
-    }
-
-    @Override
-    public void setTranslator(IStringTranslator stringTranslator) {
-        this.stringTranslator = stringTranslator;
     }
 
     String translate(String original, Object... args) {
@@ -41,16 +36,5 @@ public abstract class SessionResultActivity extends AppCompatActivity implements
             return stringTranslator.getTranslatedString(original, args);
         }
         return String.format(original, args);
-    }
-
-    @Override
-    public void onBackPressed() {
-        didCancel = true;
-        super.onBackPressed();
-    }
-
-    @Override
-    public boolean didCancelSession() {
-        return didCancel;
     }
 }

@@ -5,6 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 
+import androidx.annotation.Keep;
+
 import com.appliedrec.verid.core2.FaceDetection;
 import com.appliedrec.verid.core2.IFaceDetection;
 import com.appliedrec.verid.core2.VerID;
@@ -34,6 +36,7 @@ import java.util.zip.ZipOutputStream;
  * Session Result Package
  * @since 2.0.0
  */
+@Keep
 public class SessionResultPackage {
 
     private final Context context;
@@ -48,6 +51,7 @@ public class SessionResultPackage {
      * @param result Session result
      * @since 2.0.0
      */
+    @Keep
     public SessionResultPackage(VerID verID, VerIDSessionSettings settings, VerIDSessionResult result) throws Exception {
         this.context = verID.getContext().orElseThrow(Exception::new).getApplicationContext();
         this.settings = settings;
@@ -61,14 +65,17 @@ public class SessionResultPackage {
         );
     }
 
+    @Keep
     public VerIDSessionSettings getSettings() {
         return settings;
     }
 
+    @Keep
     public VerIDSessionResult getResult() {
         return result;
     }
 
+    @Keep
     public EnvironmentSettings getEnvironmentSettings() {
         return environmentSettings;
     }
@@ -79,6 +86,7 @@ public class SessionResultPackage {
      * @throws IOException If the write fails
      * @since 2.0.0
      */
+    @Keep
     public void archiveToStream(OutputStream outputStream) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
             result.getVideoUri().ifPresent(videoUri -> {
@@ -134,6 +142,7 @@ public class SessionResultPackage {
         }
     }
 
+    @Keep
     public SessionResultPackage(Context context, InputStream inputStream) throws Exception {
         this.context = context.getApplicationContext();
         try (ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {

@@ -2,6 +2,8 @@ package com.appliedrec.verid.ui2;
 
 import android.os.Bundle;
 
+import androidx.annotation.Keep;
+
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.ui2.databinding.ActivityFailureBinding;
 

@@ -1,19 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".SessionActivity">
+    android:layout_height="match_parent">
 
-    <fragment
-        android:id="@+id/session_fragment"
-        android:name="com.appliedrec.verid.ui2.VerIDSessionFragment"
+    <TextureView
+        android:id="@+id/textureView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
 
+    <com.appliedrec.verid.ui2.DetectedFaceView
+        android:id="@+id/detectedFaceView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
+
+    <TextView
+        android:id="@+id/instructionTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/rounded_corner_white"
+        android:padding="4dp"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+        android:textColor="@android:color/black"
+        android:visibility="gone" />
+
     <LinearLayout
-        android:id="@+id/faceImages"
+        android:id="@+id/faceImagesView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"

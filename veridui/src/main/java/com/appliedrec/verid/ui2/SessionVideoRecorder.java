@@ -4,6 +4,7 @@ import android.media.MediaRecorder;
 import android.util.Size;
 import android.view.Surface;
 
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LifecycleOwner;
 
@@ -12,6 +13,11 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Session video recorder
+ * @since 2.0.0
+ */
+@Keep
 public class SessionVideoRecorder implements ISessionVideoRecorder, MediaRecorder.OnErrorListener {
 
     private final AtomicReference<MediaRecorder> mediaRecorderRef = new AtomicReference<>();
@@ -20,11 +26,13 @@ public class SessionVideoRecorder implements ISessionVideoRecorder, MediaRecorde
     private final AtomicInteger height = new AtomicInteger(0);
     private final AtomicInteger rotation = new AtomicInteger(0);
 
+    @Keep
     @Override
     public Optional<Surface> getSurface() {
         return getMediaRecorder(true).flatMap(mediaRecorder -> Optional.ofNullable(mediaRecorder.getSurface()));
     }
 
+    @Keep
     @Override
     public void setup(Size videoSize, int rotationDegrees) {
         width.set(videoSize.getWidth());
@@ -32,11 +40,13 @@ public class SessionVideoRecorder implements ISessionVideoRecorder, MediaRecorde
         rotation.set(rotationDegrees);
     }
 
+    @Keep
     @Override
     public void start() {
         getMediaRecorder(true).ifPresent(MediaRecorder::start);
     }
 
+    @Keep
     @Override
     public void stop() {
         getMediaRecorder(false).ifPresent(mediaRecorder -> {
@@ -52,6 +62,7 @@ public class SessionVideoRecorder implements ISessionVideoRecorder, MediaRecorde
         });
     }
 
+    @Keep
     @Override
     public Optional<File> getVideoFile() {
         return Optional.ofNullable(videoFile);

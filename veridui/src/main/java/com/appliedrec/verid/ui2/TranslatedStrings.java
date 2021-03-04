@@ -8,6 +8,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Xml;
 
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
@@ -24,7 +25,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Default implementation of {@link IStringTranslator}
+ */
 @SuppressWarnings("WeakerAccess")
+@Keep
 public class TranslatedStrings implements IStringTranslator, Parcelable {
 
     public static final String EXTRA_LOCALE = "com.appliedrec.verid.EXTRA_LOCALE";
@@ -36,6 +41,7 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
     private Locale locale = Locale.ENGLISH;
     private final Object loadLock = new Object();
 
+    @Keep
     public TranslatedStrings(Context context, String assetPath, Locale locale) {
         this.locale = locale;
         new Thread(() -> {
@@ -51,6 +57,7 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
         }).start();
     }
 
+    @Keep
     public TranslatedStrings(Context context, Uri translationFileUri, Locale locale) {
         this.locale = locale;
         new Thread(() -> {
@@ -66,6 +73,7 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
         }).start();
     }
 
+    @Keep
     public TranslatedStrings(Context context, Intent intent) {
         if (intent != null) {
             final String translationFilePath = intent.getStringExtra(EXTRA_TRANSLATION_FILE_PATH);
@@ -215,21 +223,21 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
     }
 
     @WorkerThread
-    public void loadTranslatedStrings(final String sourcePath) throws IOException, XmlPullParserException {
+    private void loadTranslatedStrings(final String sourcePath) throws IOException, XmlPullParserException {
         File file = new File(sourcePath);
         FileInputStream inputStream = new FileInputStream(file);
         loadTranslatedStrings(inputStream);
     }
 
     @WorkerThread
-    public void loadTranslatedStrings(InputStream inputStream) throws IOException, XmlPullParserException {
+    private void loadTranslatedStrings(InputStream inputStream) throws IOException, XmlPullParserException {
         XmlPullParser parser = Xml.newPullParser();
         parser.setInput(inputStream, null);
         loadTranslatedStrings(parser);
     }
 
     @WorkerThread
-    public void loadTranslatedStrings(XmlPullParser parser) throws XmlPullParserException, IOException {
+    private void loadTranslatedStrings(XmlPullParser parser) throws XmlPullParserException, IOException {
         try {
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
             parser.nextTag();
@@ -254,11 +262,13 @@ public class TranslatedStrings implements IStringTranslator, Parcelable {
         }
     }
 
+    @Keep
     public void setTranslatedStrings(Map<String,String> translations) {
         strings = translations;
     }
 
     @Override
+    @Keep
     public  @NonNull String getTranslatedString(@NonNull String original, Object ...args) {
         synchronized (loadLock) {
             while (!loaded) {

@@ -6,7 +6,6 @@ import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;

@@ -1,45 +1,40 @@
 package com.appliedrec.verid.ui2;
 
-import android.content.Intent;
+import android.app.Activity;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
-import android.os.Bundle;
 import android.view.Surface;
 import android.view.TextureView;
-import android.view.View;
+import android.widget.FrameLayout;
+
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RawRes;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.util.Consumer;
 
 import com.appliedrec.verid.core2.AntiSpoofingException;
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.FacePresenceException;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
-import com.appliedrec.verid.ui2.databinding.ActivityResultErrorBinding;
 
-public class SessionLivenessDetectionFailureActivity extends AbstractSessionFailureActivity {
-
-    @Override
-    public boolean didTapRetryButtonInSessionResultActivity() {
-        return shouldRetry;
-    }
+/**
+ * Ver-ID's default implementation of the {@link SessionFailureDialogFactory session failure dialog factory}
+ * @since 2.0.0
+ */
+@Keep
+public class DefaultSessionFailureDialogFactory implements SessionFailureDialogFactory {
 
     enum ScreenDensity {
         MEDIUM, HIGH, EXTRA_HIGH
     }
 
-    private MediaPlayer mediaPlayer;
-    private boolean shouldRetry = false;
-
+    @Keep
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        com.appliedrec.verid.ui2.databinding.ActivityResultErrorBinding activityResultErrorBinding = ActivityResultErrorBinding.inflate(getLayoutInflater());
-        setContentView(activityResultErrorBinding.getRoot());
-        if (!getSessionResult().getError().isPresent()) {
-            finish();
-            return;
-        }
-        VerIDSessionException exception = getSessionResult().getError().get();
-        float density = getResources().getDisplayMetrics().density;
+    public <T extends Activity & ISessionActivity> AlertDialog makeDialog(@NonNull T activity, @NonNull Consumer<OnDismissAction> onDismissListener, @NonNull VerIDSessionException exception, @NonNull IStringTranslator stringTranslator) {
         ScreenDensity screenDensity;
+        float density = activity.getResources().getDisplayMetrics().density;
         if (density > 2) {
             screenDensity = ScreenDensity.EXTRA_HIGH;
         } else if (density > 1) {
@@ -49,9 +44,9 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
         }
         Bearing requestedBearing = null;
         String message = null;
-        int videoResourceId = -1;
+        Integer videoResourceId = null;
         if (exception.getCode() == VerIDSessionException.Code.FACE_IS_COVERED) {
-            message = translate("Please remove face coverings");
+            message = stringTranslator.getTranslatedString("Please remove face coverings");
             switch (screenDensity) {
                 case EXTRA_HIGH:
                     videoResourceId = R.raw.face_mask_off_3;
@@ -67,77 +62,75 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
             AntiSpoofingException antiSpoofingException = (AntiSpoofingException)exception.getCause();
             requestedBearing = antiSpoofingException.getRequestedBearing();
             if (antiSpoofingException.getCode() == AntiSpoofingException.Code.MOVED_OPPOSITE) {
-                message = translate("Turn your head in the direction of the arrow");
+                message = stringTranslator.getTranslatedString("Turn your head in the direction of the arrow");
             } else if (antiSpoofingException.getCode() == AntiSpoofingException.Code.MOVED_TOO_FAST) {
-                message = translate("Please turn slowly");
+                message = stringTranslator.getTranslatedString("Please turn slowly");
             }
         } else if (exception.getCause() instanceof FacePresenceException) {
             FacePresenceException facePresenceException = (FacePresenceException)exception.getCause();
             requestedBearing = facePresenceException.getRequestedBearing();
             if (facePresenceException.getCode() == FacePresenceException.Code.FACE_MOVED_TOO_FAR) {
-                message = translate("You may have turned too far");
+                message = stringTranslator.getTranslatedString("You may have turned too far");
             } else if (facePresenceException.getCode() == FacePresenceException.Code.FACE_LOST) {
-                message = translate("Turn your head in the direction of the arrow");
+                message = stringTranslator.getTranslatedString("Turn your head in the direction of the arrow");
             }
+        } else {
+            return null;
         }
-        if (videoResourceId == -1 && requestedBearing != null) {
+        if (videoResourceId == null && requestedBearing != null) {
             videoResourceId = getVideoResourceId(screenDensity, requestedBearing);
         }
-        if (message != null) {
-            activityResultErrorBinding.textView.setText(message);
-        }
-        activityResultErrorBinding.retryButton.setOnClickListener(v -> {
-            shouldRetry = true;
-            setResult(RESULT_OK);
-            finish();
-        });
-        if (videoResourceId != -1) {
-            mediaPlayer = MediaPlayer.create(this, videoResourceId);
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setMessage(message);
+        if (videoResourceId != null) {
+            final MediaPlayer mediaPlayer = MediaPlayer.create(activity, videoResourceId);
             mediaPlayer.setOnErrorListener((mp, what, extra) -> false);
-            mediaPlayer.setOnPreparedListener(MediaPlayer::start);
+            mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.start());
             mediaPlayer.setLooping(true);
             mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
-            activityResultErrorBinding.videoTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+
+            TextureView textureView = new TextureView(activity);
+            textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
                 @Override
-                public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
-                    mediaPlayer.setSurface(new Surface(surfaceTexture));
+                public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                    Surface s = new Surface(surface);
+                    mediaPlayer.setSurface(s);
                 }
 
                 @Override
-                public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
+                public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
 
                 }
 
                 @Override
-                public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
                     return false;
                 }
 
                 @Override
-                public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+                public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
                 }
             });
+            FixedAspectRatioFrameLayout frameLayout = new FixedAspectRatioFrameLayout(activity, 4, 3);
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+            frameLayout.addView(textureView, layoutParams);
+            builder.setView(frameLayout);
         }
+        String cancel = stringTranslator.getTranslatedString("Cancel");
+        String tips = stringTranslator.getTranslatedString("Tips");
+        String tryAgain = stringTranslator.getTranslatedString("Try again");
+        builder.setNegativeButton(cancel, (dialogInterface, which) -> onDismissListener.accept(OnDismissAction.CANCEL));
+        builder.setNeutralButton(tips, (dialogInterface, which) -> onDismissListener.accept(OnDismissAction.SHOW_TIPS));
+        builder.setPositiveButton(tryAgain, (dialogInterface, which) -> onDismissListener.accept(OnDismissAction.RETRY));
+        builder.setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog.setCanceledOnTouchOutside(false);
+        return dialog;
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mediaPlayer != null) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
-    }
-
-    private void onShowTips(View view) {
-        Intent intent = new Intent(this, TipsActivity.class);
-        intent.putExtra(AbstractSessionActivity.EXTRA_SESSION_ID, getIntent().getLongExtra(AbstractSessionActivity.EXTRA_SESSION_ID, -1));
-        startActivity(intent);
-    }
-
-    private int getVideoResourceId(ScreenDensity screenDensity, Bearing requestedBearing) {
+    @RawRes
+    private Integer getVideoResourceId(ScreenDensity screenDensity, Bearing requestedBearing) {
         switch (screenDensity) {
             case MEDIUM:
                 switch (requestedBearing) {
@@ -203,6 +196,6 @@ public class SessionLivenessDetectionFailureActivity extends AbstractSessionFail
                         return R.raw.left_up_3;
                 }
         }
-        return -1;
+        return null;
     }
 }

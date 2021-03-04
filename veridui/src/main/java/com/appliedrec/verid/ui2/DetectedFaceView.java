@@ -7,19 +7,18 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 
+import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
 /**
- * Created by jakub on 16/02/2018.
+ * View that renders an overlay based on a detected face
  */
-
-public class
-DetectedFaceView extends View {
+@Keep
+public class DetectedFaceView extends View {
 
     private Paint strokePaint;
 //    private Paint strokeBackgroundPaint;
@@ -37,11 +36,13 @@ DetectedFaceView extends View {
     private final Path templatePath = new Path();
     private float screenDensity;
 
+    @Keep
     public DetectedFaceView(Context context) {
         super(context);
         init(context);
     }
 
+    @Keep
     public DetectedFaceView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init(context);
@@ -114,14 +115,29 @@ DetectedFaceView extends View {
         }
     }
 
+    /**
+     * Set face landmarks
+     * @param landmarks Face landmarks to be rendered in the next draw
+     */
+    @Keep
     @UiThread
     public void setFaceLandmarks(PointF[] landmarks) {
         this.landmarks = landmarks;
         invalidate();
     }
 
+    /**
+     * Set face rectangle
+     * @param faceRect Bounding box around the detected face or where the face is expected – rendered as oval with coloured stroke
+     * @param templateRect Bounding box around the detected face – rendered as a cutout in the background colour
+     * @param faceRectColour Colour of the stroke around the face
+     * @param faceBackgroundColour Background colour in which the face will be "cut out"
+     * @param angle Angle of the arrow that indicates the desired pose
+     * @param distance Distance from the desired pose – used to determine the length of the arrow
+     */
+    @Keep
     @UiThread
-    public void setFaceRect(RectF faceRect, RectF templateRect, int faceRectColour, int faceBackgroundColour, Double angle, Double distance) {
+    public void setFaceRect(@Nullable RectF faceRect, @Nullable RectF templateRect, int faceRectColour, int faceBackgroundColour, @Nullable Double angle, @Nullable Double distance) {
         this.faceRect = faceRect;
         this.templateRect = templateRect;
         this.strokePaint.setColor(faceRectColour);

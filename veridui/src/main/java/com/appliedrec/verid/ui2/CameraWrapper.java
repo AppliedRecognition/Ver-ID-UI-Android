@@ -19,18 +19,20 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Size;
 import android.view.Surface;
-import android.view.SurfaceView;
 
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.exifinterface.media.ExifInterface;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
+
+import com.appliedrec.verid.core2.session.IImageIterator;
+import com.appliedrec.verid.core2.session.VerIDSessionException;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -40,31 +42,56 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Interfaces with the device's camera
+ * @since 2.0.0
+ */
+@Keep
 public class CameraWrapper implements DefaultLifecycleObserver {
 
+    /**
+     * Camera wrapper listener
+     * @since 2.0.0
+     */
+    @Keep
     public interface Listener {
+        /**
+         * Called when the camera determines its preview size based on the dimensions of the containing view
+         * @param width Preview width
+         * @param height Preview height
+         * @param sensorOrientation Camera sensor orientation on the device
+         * @since 2.0.0
+         */
+        @Keep
         @UiThread
-        void onPreviewSize(int width, int height, int sensorOrientation);
+        void onCameraPreviewSize(int width, int height, int sensorOrientation);
+
+        /**
+         * Called when opening the camera or starting a preview fails
+         * @param error Session exception that caused the failure
+         * @since 2.0.0
+         */
+        @Keep
+        void onCameraError(VerIDSessionException error);
     }
 
-    private final WeakReference<AppCompatActivity> activityWeakReference;
+    private final WeakReference<Context> contextWeakReference;
     private final CameraLocation cameraLocation;
-    private final VerIDImageAnalyzer imageAnalyzer;
-    private String cameraId;
+    private final IImageIterator imageIterator;
+    private final AtomicReference<String> cameraId = new AtomicReference<>();
     private ImageReader imageReader;
     private final ISessionVideoRecorder videoRecorder;
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
-    private Listener listener;
-    private CameraDevice cameraDevice;
+    private final AtomicReference<CameraDevice> cameraDevice = new AtomicReference<>();
     private HandlerThread cameraProcessingThread;
     private Handler cameraProcessingHandler;
     private ExecutorService backgroundExecutor;
@@ -74,8 +101,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private final AtomicInteger viewWidth = new AtomicInteger(0);
     private final AtomicInteger viewHeight = new AtomicInteger(0);
     private final AtomicInteger displayRotation = new AtomicInteger(0);
-    private final Class<?> previewClass;
+    private Class<?> previewClass;
     private CameraManager cameraManager;
+    private final ArrayList<Listener> listeners = new ArrayList<>();
+    private final AtomicBoolean isCameraOpen = new AtomicBoolean(false);
 
     private static final NormalizedSize SIZE_1080P = new NormalizedSize(1920, 1080);
 
@@ -93,33 +122,86 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         }
     }
 
-    public CameraWrapper(@NonNull AppCompatActivity activity, @NonNull CameraLocation cameraLocation, @NonNull VerIDImageAnalyzer imageAnalyzer, @Nullable ISessionVideoRecorder videoRecorder, Class<?> previewClass) {
-        activityWeakReference = new WeakReference<>(activity);
+    //region Public API
+
+    /**
+     * Constructor
+     * @param context Context
+     * @param cameraLocation Location of the camera to use
+     * @param imageIterator Image iterator – reads images from the camera and provides them to a session
+     * @param videoRecorder Video recorder to use to record a video of the session (optional)
+     * @since 2.0.0
+     */
+    @Keep
+    public CameraWrapper(@NonNull Context context, @NonNull CameraLocation cameraLocation, @NonNull IImageIterator imageIterator, @Nullable ISessionVideoRecorder videoRecorder) {
+        contextWeakReference = new WeakReference<>(context);
         this.cameraLocation = cameraLocation;
-        this.imageAnalyzer = imageAnalyzer;
+        this.imageIterator = imageIterator;
         this.videoRecorder = videoRecorder;
-        this.previewClass = previewClass;
-        if (activity.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
-            throw new IllegalStateException();
+        if (context instanceof LifecycleOwner) {
+            if (((LifecycleOwner)context).getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
+                throw new IllegalStateException();
+            }
+            ((LifecycleOwner)context).getLifecycle().addObserver(this);
         }
-        activity.getLifecycle().addObserver(this);
     }
 
+    /**
+     * Set a surface on which to render the camera preview
+     * @param surface Surface on which to render the camera preview
+     * @since 2.0.0
+     */
+    @Keep
     public void setPreviewSurface(Surface surface) {
         surfaceRef.set(surface);
     }
 
-    public void setListener(Listener listener) {
-        this.listener = listener;
+    /**
+     * Set preview class – will be used to determine the available preview sizes
+     * @param previewClass Preview class
+     * @since 2.0.0
+     */
+    @Keep
+    public void setPreviewClass(Class<?> previewClass) {
+        this.previewClass = previewClass;
     }
 
+    /**
+     * Add a listener
+     * @param listener Listener to add
+     * @since 2.0.0
+     */
+    @Keep
+    public void addListener(Listener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Remove a listener
+     * @param listener Listener to remove
+     * @since 2.0.0
+     */
+    @Keep
+    public void removeListener(Listener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Open the camera nad start a preview
+     * @param width Width of the view in which the camera preview will be rendered
+     * @param height Height of the view in which the camera preview will be rendered
+     * @param displayRotation Display rotation of the view in which the camera preview will be rendered
+     * @since 2.0.0
+     */
+    @Keep
     public void start(int width, int height, int displayRotation) {
         startBackgroundThread();
         this.viewWidth.set(width);
         this.viewHeight.set(height);
         this.displayRotation.set(displayRotation);
-        getActivity().ifPresent(context -> runInBackground(() -> {
+        runInBackground(() -> {
             try {
+                Context context = getContext().orElseThrow(() -> new Exception("Activity unavailable"));
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
@@ -128,7 +210,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                     throw new TimeoutException("Time out waiting to acquire camera lock.");
                 }
                 String[] cameras = manager.getCameraIdList();
-                cameraId = null;
+                cameraId.set(null);
                 int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
                 if (cameraLocation == CameraLocation.BACK) {
                     requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
@@ -136,26 +218,26 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 for (String camId : cameras) {
                     Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
                     if (lensFacing != null && lensFacing == requestedLensFacing) {
-                        cameraId = camId;
+                        cameraId.set(camId);
                         break;
                     }
                 }
-                if (cameraId == null) {
+                if (cameraId.get() == null) {
                     for (String camId : cameras) {
                         Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
                         if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
-                            cameraId = camId;
+                            cameraId.set(camId);
                             break;
                         }
                     }
-                    if (cameraId == null) {
+                    if (cameraId.get() == null) {
                         throw new Exception("Camera not available");
                     }
                 }
 //                if (manager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) == CameraMetadata.IN
 
                 // Choose the sizes for camera preview and video recording
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId.get());
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
                 int sensorOrientation = (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
@@ -173,37 +255,47 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 Size previewSize = sizes[0];
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
-                imageAnalyzer.setExifOrientation(getExifOrientation(rotation));
+                imageIterator.setExifOrientation(getExifOrientation(rotation));
 
                 getSessionVideoRecorder().ifPresent(videoRecorder -> {
                     Size videoSize = sizes[2];
                     videoRecorder.setup(videoSize, rotation);
                 });
-
-                getListener().ifPresent(listener -> {
-                    new Handler(Looper.getMainLooper()).post(() -> listener.onPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation));
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    for (Listener listener : listeners) {
+                        listener.onCameraPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation);
+                    }
                 });
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    imageAnalyzer.fail(new Exception("Missing camera permission"));
+                    onError(new VerIDSessionException(new Exception("Missing camera permission")));
                     return;
                 }
-                manager.openCamera(cameraId, stateCallback, cameraProcessingHandler);
+                if (isCameraOpen.compareAndSet(false, true)) {
+                    manager.openCamera(cameraId.get(), stateCallback, cameraProcessingHandler);
+                }
             } catch (Exception e) {
-                imageAnalyzer.fail(e);
+                onError(new VerIDSessionException(e));
             } finally {
                 cameraOpenCloseLock.release();
             }
-        }));
+        });
     }
 
+    /**
+     * Close the camera
+     * @since 2.0.0
+     */
+    @Keep
     public void stop() {
+        isCameraOpen.set(false);
         try {
             if (imageReader != null) {
                 imageReader.close();
             }
             if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
-                if (cameraDevice != null) {
-                    cameraDevice.close();
+                CameraDevice camera = cameraDevice.getAndSet(null);
+                if (camera != null) {
+                    camera.close();
                 }
                 cameraOpenCloseLock.release();
             }
@@ -214,8 +306,24 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         }
     }
 
-    public Optional<Listener> getListener() {
-        return Optional.ofNullable(listener);
+    /**
+     * Get image iterator
+     * @return Image iterator used to read images from the camera
+     * @since 2.0.0
+     */
+    @Keep
+    public IImageIterator getImageIterator() {
+        return imageIterator;
+    }
+
+    //endregion
+
+    private void onError(VerIDSessionException exception) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            for (Listener listener : listeners) {
+                listener.onCameraError(exception);
+            }
+        });
     }
 
     private void runInBackground(Runnable runnable) {
@@ -228,7 +336,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
-            CameraWrapper.this.cameraDevice = cameraDevice;
+            CameraWrapper.this.cameraDevice.set(cameraDevice);
             cameraOpenCloseLock.release();
             startPreview();
         }
@@ -236,19 +344,21 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         @Override
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
             cameraOpenCloseLock.release();
+            isCameraOpen.set(false);
             getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
             cameraDevice.close();
-            CameraWrapper.this.cameraDevice = null;
-            cameraId = null;
+            CameraWrapper.this.cameraDevice.set(null);
+            cameraId.set(null);
         }
 
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int error) {
             cameraOpenCloseLock.release();
+            isCameraOpen.set(false);
             getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
             cameraDevice.close();
-            CameraWrapper.this.cameraDevice = null;
-            cameraId = null;
+            CameraWrapper.this.cameraDevice.set(null);
+            cameraId.set(null);
             String message;
             switch (error) {
                 case ERROR_CAMERA_IN_USE:
@@ -269,105 +379,106 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 default:
                     message = "";
             }
-            imageAnalyzer.fail(new Exception("Failed to open camera: "+message));
+            CameraWrapper.this.onError(new VerIDSessionException(new Exception("Failed to open camera: "+message)));
         }
 
         @Override
         public void onClosed(@NonNull CameraDevice camera) {
             super.onClosed(camera);
-            cameraDevice = null;
-            cameraId = null;
+            cameraDevice.set(null);
+            cameraId.set(null);
         }
     };
 
     private void startPreview() {
-        if (null == cameraDevice || !getActivity().isPresent() || !getActivity().get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
-            return;
-        }
-        try {
-            if (!cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (!getLifecycleOwner().isPresent() || !getLifecycleOwner().get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+                onError(new VerIDSessionException(new Exception("CameraWrapper requires a started activity")));
                 return;
             }
-            ArrayList<Surface> surfaces = new ArrayList<>();
-            CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            runInBackground(() -> {
+                try {
+                    if (cameraDevice.get() == null) {
+                        throw new VerIDSessionException(new Exception("Camera unavailable"));
+                    }
+                    if (!cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+                        throw new Exception("Failed to acquire camera");
+                    }
+                    ArrayList<Surface> surfaces = new ArrayList<>();
+                    CaptureRequest.Builder previewBuilder = cameraDevice.get().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
-            Surface previewSurface = surfaceRef.get();
-            if (previewSurface != null) {
-                previewBuilder.addTarget(previewSurface);
-                surfaces.add(previewSurface);
-            }
+                    Surface previewSurface = surfaceRef.get();
+                    if (previewSurface != null) {
+                        previewBuilder.addTarget(previewSurface);
+                        surfaces.add(previewSurface);
+                    }
 
-            imageReader.setOnImageAvailableListener(imageAnalyzer, cameraProcessingHandler);
-            previewBuilder.addTarget(imageReader.getSurface());
-            surfaces.add(imageReader.getSurface());
+                    imageReader.setOnImageAvailableListener(imageIterator, cameraProcessingHandler);
+                    previewBuilder.addTarget(imageReader.getSurface());
+                    surfaces.add(imageReader.getSurface());
 
-            getSessionVideoRecorder().flatMap(ISessionVideoRecorder::getSurface).ifPresent(surface -> {
-                previewBuilder.addTarget(surface);
-                surfaces.add(surface);
-            });
+                    getSessionVideoRecorder().flatMap(ISessionVideoRecorder::getSurface).ifPresent(surface -> {
+                        previewBuilder.addTarget(surface);
+                        surfaces.add(surface);
+                    });
 
-            cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                    cameraDevice.get().createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
 
-                    @Override
-                    public void onConfigured(@NonNull CameraCaptureSession session) {
-                        if (getActivity().isPresent() && getActivity().get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
-                            try {
-                                previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-                                session.setRepeatingRequest(previewBuilder.build(), null, cameraPreviewHandler);
-                            } catch (CameraAccessException e) {
-                                imageAnalyzer.fail(e);
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            if (isCameraOpen.get() && getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(false)) {
+                                try {
+                                    previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                                    session.setRepeatingRequest(previewBuilder.build(), null, cameraPreviewHandler);
+                                } catch (CameraAccessException e) {
+                                    onError(new VerIDSessionException(e));
+                                }
+                                getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
                             }
-                            getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
                         }
-                    }
 
-                    @Override
-                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                        imageAnalyzer.fail(new Exception("Failed to start preview"));
-                    }
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                            onError(new VerIDSessionException(new Exception("Failed to start preview")));
+                        }
 
-                }, cameraProcessingHandler);
-        } catch (CameraAccessException | InterruptedException e) {
-            imageAnalyzer.fail(e);
-        } finally {
-            cameraOpenCloseLock.release();
-        }
+                    }, cameraProcessingHandler);
+                } catch (Exception e) {
+                    onError(new VerIDSessionException(e));
+                } finally {
+                    cameraOpenCloseLock.release();
+                }
+            });
+        });
     }
 
-    private Optional<AppCompatActivity> getActivity() {
-        return Optional.ofNullable(activityWeakReference.get());
+    private Optional<Context> getContext() {
+        return Optional.ofNullable(contextWeakReference.get());
+    }
+
+    private Optional<LifecycleOwner> getLifecycleOwner() {
+        return getContext().flatMap(context -> {
+            if (context instanceof LifecycleOwner) {
+                return Optional.of((LifecycleOwner)context);
+            } else {
+                return Optional.empty();
+            }
+        });
     }
 
     private Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
         return Optional.ofNullable(videoRecorder);
     }
 
-    public CameraManager getCameraManager() throws Exception {
+    private CameraManager getCameraManager() throws Exception {
         if (cameraManager == null) {
-            if (getActivity().isPresent()) {
-                cameraManager = (CameraManager) getActivity().get().getSystemService(Context.CAMERA_SERVICE);
-                if (cameraManager == null) {
-                    throw new Exception("Camera manager unavailable");
-                }
-            } else {
-                throw new Exception("Activity unavailable");
+            Context context = getContext().orElseThrow(() -> new Exception("Context unavailable"));
+            cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+            if (cameraManager == null) {
+                throw new Exception("Camera manager unavailable");
             }
         }
         return cameraManager;
-    }
-
-    private Size getPreviewSize(StreamConfigurationMap configurationMap, NormalizedSize viewSize) throws Exception {
-        boolean isHDSize = viewSize.longSide >= SIZE_1080P.longSide || viewSize.shortSide >= SIZE_1080P.shortSide;
-        NormalizedSize maxSize = isHDSize ? SIZE_1080P : viewSize;
-        Size[] allSizes = configurationMap.getOutputSizes(previewClass);
-        Arrays.sort(allSizes, (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() > rhs.getWidth() * rhs.getHeight() ? -1 : 1);
-        for (Size size : allSizes) {
-            NormalizedSize normalizedSize = new NormalizedSize(size.getWidth(), size.getHeight());
-            if (normalizedSize.longSide <= maxSize.longSide && normalizedSize.shortSide <= maxSize.shortSide) {
-                return new Size(normalizedSize.width, normalizedSize.height);
-            }
-        }
-        throw new Exception("Camera does not provide a fitting preview size");
     }
 
     private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {
@@ -395,27 +506,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             float lhsAspectRatioDiff = Math.abs(lhs.getKey() - aspectRatio);
             float rhsAspectRatioDiff = Math.abs(rhs.getKey() - aspectRatio);
             return (int)(lhsAspectRatioDiff * 1000f - rhsAspectRatioDiff * 1000f);
-
-//            int lhsw = lhs.getValue()[0].getWidth();
-//            int lhsh = lhs.getValue()[0].getHeight();
-//            int rhsw = rhs.getValue()[0].getWidth();
-//            int rhsh = rhs.getValue()[0].getHeight();
-//
-//            int lhsAreaDiff = Math.abs(lhsw * lhsh - viewArea);
-//            int rhsAreaDiff = Math.abs(rhsw * rhsh - viewArea);
-//
-//            if (lhsAreaDiff == rhsAreaDiff) {
-//                float lhsAspectRatioDiff = Math.abs(lhs.getKey() - viewAspectRatio);
-//                float rhsAspectRatioDiff = Math.abs(rhs.getKey() - viewAspectRatio);
-//                float ratioDiff = lhsAspectRatioDiff - rhsAspectRatioDiff;
-//                if (ratioDiff == 0) {
-//                    int lhsHeightDiff = Math.abs(lhsh - height);
-//                    int rhsHeightDiff = Math.abs(rhsh - height);
-//                    return lhsHeightDiff - rhsHeightDiff;
-//                }
-//                return (int)(ratioDiff * 100f);
-//            }
-//            return lhsAreaDiff - rhsAreaDiff;
         });
         return bestEntry.getValue();
     }
@@ -444,7 +534,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         return sizes;
     }
 
-    private @VerIDImageAnalyzer.ExifOrientation int getExifOrientation(int rotationDegrees) {
+    private @VerIDImageIterator.ExifOrientation int getExifOrientation(int rotationDegrees) {
         int exifOrientation;
         switch (rotationDegrees) {
             case 90:
@@ -487,7 +577,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         cameraProcessingHandler = new Handler(cameraProcessingThread.getLooper());
         cameraPreviewThread = new HandlerThread("Ver-ID camera preview");
         cameraPreviewThread.start();
-        cameraProcessingHandler = new Handler(cameraPreviewThread.getLooper());
+        cameraPreviewHandler = new Handler(cameraPreviewThread.getLooper());
         backgroundExecutor = Executors.newSingleThreadExecutor();
     }
 
@@ -511,6 +601,8 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         backgroundExecutor = null;
     }
 
+    //region Lifecycle callbacks
+
     @Override
     public void onStart(@NonNull LifecycleOwner owner) {
         if (viewWidth.get() > 0 && viewHeight.get() > 0) {
@@ -527,4 +619,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     public void onDestroy(@NonNull LifecycleOwner owner) {
         owner.getLifecycle().removeObserver(this);
     }
+
+    //endregion
 }

@@ -7,10 +7,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application>
-        <activity android:name=".SessionActivity"
-            android:theme="@style/CameraActivityTheme" />
         <activity
-            android:name=".SessionActivityCameraX"
+            android:name=".SessionActivity"
             android:theme="@style/CameraActivityTheme" />
         <activity android:name=".SessionSuccessActivity" />
         <activity android:name=".SessionResultActivity" />

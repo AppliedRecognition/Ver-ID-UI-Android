@@ -4,40 +4,53 @@ import android.graphics.Rect;
 import android.media.Image;
 import android.media.ImageReader;
 
-import androidx.annotation.IntDef;
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.exifinterface.media.ExifInterface;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
 
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.IImage;
-import com.appliedrec.verid.core2.session.IImageFlowable;
+import com.appliedrec.verid.core2.session.IImageIterator;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.nio.ByteBuffer;
-import java.util.Optional;
+import java.util.Iterator;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
-import io.reactivex.rxjava3.core.FlowableEmitter;
-
-public class VerIDImageAnalyzer implements IImageFlowable, ImageReader.OnImageAvailableListener, DefaultLifecycleObserver {
+/**
+ * Default implementation of {@link IImageIterator}
+ * @since 2.0.0
+ */
+@Keep
+public class VerIDImageIterator implements IImageIterator {
 
     private final SynchronousQueue<VerIDImage<?>> imageQueue = new SynchronousQueue<>();
     private final AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
     private final AtomicBoolean isMirrored = new AtomicBoolean(false);
-    private final AtomicReference<Throwable> failure = new AtomicReference<>();
-    private Thread subscribeThread;
-    private final AtomicBoolean isStarted = new AtomicBoolean(false);
-    private VerID verID;
-    private final Object veridLock = new Object();
+    private final AtomicBoolean isActive = new AtomicBoolean(false);
+    private final VerID verID;
+
+    @NonNull
+    @Override
+    public Iterator<VerIDImage<?>> iterator() {
+        return this;
+    }
+
+    @Override
+    public boolean hasNext() {
+        return true;
+    }
+
+    @Override
+    public VerIDImage<?> next() {
+        try {
+            return imageQueue.take();
+        } catch (InterruptedException ignore) {
+            return null;
+        }
+    }
 
     private static class MediaImageImage implements IImage<Image> {
 
@@ -100,35 +113,27 @@ public class VerIDImageAnalyzer implements IImageFlowable, ImageReader.OnImageAv
         }
     }
 
-    public VerIDImageAnalyzer(AppCompatActivity lifecycleOwner) {
-        lifecycleOwner.getLifecycle().addObserver(this);
-        isStarted.set(lifecycleOwner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED));
+    /**
+     * Constructor
+     * @param verID Instance of {@link VerID}
+     */
+    @Keep
+    public VerIDImageIterator(VerID verID) {
+        this.verID = verID;
     }
 
     @Override
     public void onImageAvailable(ImageReader imageReader) {
         try (Image image = imageReader.acquireLatestImage()) {
-            if (image == null || !isStarted.get()) {
+            if (image == null || !isActive.get()) {
                 return;
             }
             queueImage(new MediaImageImage(image, exifOrientation.get()));
         }
     }
 
-    public void setVerID(VerID verID) {
-        synchronized (veridLock) {
-            this.verID = verID;
-            veridLock.notifyAll();
-        }
-    }
-
     private void queueImage(IImage<?> image) {
         try {
-            synchronized (veridLock) {
-                while (verID == null) {
-                    veridLock.wait();
-                }
-            }
             VerIDImage<?> verIDImage = verID.getFaceDetection().createVerIDImage(image);
             verIDImage.setIsMirrored(isMirrored.get());
             imageQueue.put(verIDImage);
@@ -137,21 +142,7 @@ public class VerIDImageAnalyzer implements IImageFlowable, ImageReader.OnImageAv
         }
     }
 
-    public void fail(Throwable throwable) {
-        this.failure.set(throwable);
-        if (subscribeThread != null) {
-            subscribeThread.interrupt();
-        }
-    }
-
-    Optional<Throwable> getFailure() {
-        return Optional.ofNullable(failure.get());
-    }
-
-    @IntDef({ExifInterface.ORIENTATION_NORMAL,ExifInterface.ORIENTATION_ROTATE_90,ExifInterface.ORIENTATION_ROTATE_180,ExifInterface.ORIENTATION_ROTATE_270,ExifInterface.ORIENTATION_FLIP_HORIZONTAL,ExifInterface.ORIENTATION_FLIP_VERTICAL,ExifInterface.ORIENTATION_TRANSPOSE,ExifInterface.ORIENTATION_TRANSVERSE})
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface ExifOrientation{}
-
+    @Override
     public void setExifOrientation(@ExifOrientation int exifOrientation) {
         boolean isMirrored;
         switch (exifOrientation) {
@@ -179,58 +170,12 @@ public class VerIDImageAnalyzer implements IImageFlowable, ImageReader.OnImageAv
     }
 
     @Override
-    public void subscribe(@io.reactivex.rxjava3.annotations.NonNull FlowableEmitter<VerIDImage<?>> emitter) {
-        subscribeThread = Thread.currentThread();
-        while (!emitter.isCancelled()) {
-            if (getFailure().isPresent()) {
-                emitter.onError(getFailure().get());
-                return;
-            }
-            try {
-                VerIDImage<?> image = imageQueue.take();
-                emitter.onNext(image);
-            } catch (InterruptedException ignore) {
-            }
-        }
-    }
-
-    private void cropByteBufferToSize(ByteBuffer srcBuffer, ByteBuffer dstBuffer, int width, int height, int bytesPerRow) {
-        dstBuffer.rewind();
-        byte[] row = new byte[width];
-        for (int i=0; i<height*bytesPerRow; i+=bytesPerRow) {
-            srcBuffer.position(i);
-            srcBuffer.get(row, 0, width);
-            dstBuffer.put(row);
-        }
-    }
-
-    private int getRotationCompensation() {
-        switch (exifOrientation.get()) {
-            case ExifInterface.ORIENTATION_NORMAL:
-                return 0;
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                return 90;
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                return 180;
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                return 270;
-            default:
-                return 0;
-        }
+    public void activate() {
+        isActive.set(true);
     }
 
     @Override
-    public void onStart(@NonNull LifecycleOwner owner) {
-        isStarted.set(true);
-    }
-
-    @Override
-    public void onStop(@NonNull LifecycleOwner owner) {
-        isStarted.set(false);
-    }
-
-    @Override
-    public void onDestroy(@NonNull LifecycleOwner owner) {
-        owner.getLifecycle().removeObserver(this);
+    public void deactivate() {
+        isActive.set(false);
     }
 }

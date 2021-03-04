@@ -7,4 +7,8 @@
         <attr name="text_color" format="color" />
         <attr name="text_color_highlighted" format="color" />
     </declare-styleable>
+    <declare-styleable name="FixedAspectRatioFrameLayout">
+        <attr name="aspect_ratio_width" format="integer" />
+        <attr name="aspect_ratio_height" format="integer" />
+    </declare-styleable>
 </resources>

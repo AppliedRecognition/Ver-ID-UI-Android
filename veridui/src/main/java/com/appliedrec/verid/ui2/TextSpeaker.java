@@ -4,6 +4,8 @@ import android.content.Context;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 
+import androidx.annotation.Keep;
+
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,6 +14,7 @@ import java.util.concurrent.Executors;
  * Speaks text
  * @since 1.21.0
  */
+@Keep
 public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.OnInitListener {
 
     private static TextSpeaker instance;
@@ -22,6 +25,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @param context Speaker context
      * @since 1.21.0
      */
+    @Keep
     public static void setup(Context context) {
         synchronized (INSTANCE_LOCK) {
             instance = new TextSpeaker(context);
@@ -32,6 +36,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * Destroy an instance of text speaker
      * @since 1.21.0
      */
+    @Keep
     public static void destroy() {
         synchronized (INSTANCE_LOCK) {
             if (instance != null) {
@@ -46,6 +51,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @return Speaker instance
      * @since 1.21.0
      */
+    @Keep
     public static ITextSpeaker getInstance() {
         synchronized (INSTANCE_LOCK) {
             if (instance != null) {
@@ -56,8 +62,11 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
         }
     }
 
+    @Keep
     public interface SpeechProgressListener {
+        @Keep
         void onSpoken(TextSpeaker speaker, String text);
+        @Keep
         void onError(TextSpeaker speaker, String text);
     }
 
@@ -105,6 +114,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @since 1.21.0
      */
     @SuppressWarnings("WeakerAccess")
+    @Keep
     public TextSpeaker(Context context) {
         consumerExecutor = Executors.newSingleThreadExecutor();
         producerExecutor = Executors.newSingleThreadExecutor();
@@ -121,6 +131,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @since 1.21.0
      */
     @Override
+    @Keep
     public void speak(String text, Locale locale, boolean interrupt) {
         if (interrupt) {
             synchronized (ttsLock) {
@@ -146,10 +157,12 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
         }
     }
 
+    @Keep
     public SpeechProgressListener getListener() {
         return listener;
     }
 
+    @Keep
     public void setListener(SpeechProgressListener listener) {
         this.listener = listener;
     }
@@ -183,6 +196,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
      * @since 1.21.0
      */
     @Override
+    @Keep
     public void close() {
         synchronized (ttsLock) {
             if (textToSpeech != null) {
@@ -201,6 +215,7 @@ public class TextSpeaker implements ITextSpeaker, AutoCloseable, TextToSpeech.On
     }
 
     @Override
+    @Keep
     public void onInit(int i) {
         if (i == TextToSpeech.SUCCESS && consumerExecutor != null) {
             synchronized (ttsLock) {
