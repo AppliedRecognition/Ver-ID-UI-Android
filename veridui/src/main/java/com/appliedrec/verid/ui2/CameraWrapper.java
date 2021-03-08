@@ -31,6 +31,7 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.appliedrec.verid.core2.ExifOrientation;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 
@@ -534,7 +535,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         return sizes;
     }
 
-    private @VerIDImageIterator.ExifOrientation int getExifOrientation(int rotationDegrees) {
+    private @ExifOrientation int getExifOrientation(int rotationDegrees) {
         int exifOrientation;
         switch (rotationDegrees) {
             case 90:

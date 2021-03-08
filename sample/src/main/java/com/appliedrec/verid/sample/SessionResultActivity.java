@@ -1,7 +1,6 @@
 package com.appliedrec.verid.sample;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
@@ -14,12 +13,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
-import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.sharing.SampleAppFileProvider;
+import com.appliedrec.verid.ui2.ISessionActivity;
+import com.appliedrec.verid.ui2.SessionParameters;
 import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
 import java.io.File;
@@ -34,14 +34,13 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
-public class SessionResultActivity extends AppCompatActivity implements IVerIDLoadObserver {
-
-    public static final String EXTRA_RESULT = "com.appliedrec.verid.EXTRA_RESULT";
-    public static final String EXTRA_SETTINGS = "com.appliedrec.verid.EXTRA_SETTINGS";
+public class SessionResultActivity extends AppCompatActivity implements ISessionActivity {
 
     private static final int REQUEST_CODE_SHARE = 1;
     private Disposable createIntentDisposable;
     private VerID verID;
+    private VerIDSessionResult sessionResult;
+    private VerIDSessionSettings sessionSettings;
     private SessionResultPackage sessionResultPackage;
     private boolean areViewsAdded = false;
 
@@ -56,8 +55,6 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
         if (areViewsAdded) {
             return;
         }
-        VerIDSessionResult sessionResult = getIntent().getParcelableExtra(EXTRA_RESULT);
-        VerIDSessionSettings sessionSettings = getIntent().getParcelableExtra(EXTRA_SETTINGS);
         if (verID == null || sessionResult == null || sessionSettings == null) {
             return;
         }
@@ -135,19 +132,6 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
         return false;
     }
 
-    @Override
-    public void onVerIDLoaded(VerID verid) {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        FaceDetectionRecognitionSettings defaultSettings = new FaceDetectionRecognitionSettings(null);
-        verID = verid;
-        prepareSharing();
-    }
-
-    @Override
-    public void onVerIDUnloaded() {
-        verID = null;
-    }
-
     private void createSessionResultPackage(VerIDSessionSettings sessionSettings, VerIDSessionResult sessionResult) {
         if (verID != null && sessionSettings != null && sessionResult != null) {
             try {
@@ -198,5 +182,13 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void setSessionParameters(SessionParameters sessionParameters) {
+        verID = sessionParameters.getVerID();
+        sessionResult = sessionParameters.getSessionResult().orElse(null);
+        sessionSettings = sessionParameters.getSessionSettings();
+        prepareSharing();
     }
 }

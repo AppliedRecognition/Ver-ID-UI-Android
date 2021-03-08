@@ -1,5 +1,6 @@
 package com.appliedrec.verid.sample;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -24,8 +25,8 @@ import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui2.AbstractVerIDSession;
 import com.appliedrec.verid.ui2.CameraLocation;
+import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.PageViewActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -125,7 +126,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
             ));
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
-        VerIDSession<RegistrationSessionSettings> session = new VerIDSession<>(verID, settings);
+        VerIDSession session = new VerIDSession(verID, settings);
         session.setDelegate(this);
         session.start();
     }
@@ -158,7 +159,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public void onSessionFinished(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -169,21 +170,26 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
             Intent intent = new Intent(this, RegisteredUserActivity.class);
             startActivity(intent);
             finish();
-        } else {
-            Intent intent = new Intent(this, SessionResultActivity.class);
-            intent.putExtra(SessionResultActivity.EXTRA_RESULT, result);
-            intent.putExtra(SessionResultActivity.EXTRA_SETTINGS, session.getSettings());
-            startActivity(intent);
         }
     }
 
     @Override
-    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
+        return result.getError().isPresent();
+    }
+
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+        return (Class<A>) SessionResultActivity.class;
+    }
+
+    @Override
+    public boolean shouldSessionSpeakPrompts(VerIDSession session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
     @Override
-    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
+    public CameraLocation getSessionCameraLocation(VerIDSession session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
     }
 

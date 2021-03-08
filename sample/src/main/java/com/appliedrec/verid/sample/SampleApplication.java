@@ -60,7 +60,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         if (preferences.contains(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD)) {
             faceDetectionRecognitionSettings.setFaceExtractQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD, "8.0")));
         }
-        FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, null, faceDetectionRecognitionSettings);
+        FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, faceDetectionRecognitionSettings);
         VerIDFactory verIDFactory = new VerIDFactory(this, (VerIDFactoryDelegate)this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
 //        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_MLKIT, false)) {

@@ -255,23 +255,19 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
             switch (faceDetectionResult.getStatus()) {
                 case FACE_FIXED:
                 case FACE_ALIGNED:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
-                    faceAngle = null;
-                    break;
-                case FACE_MISALIGNED:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds());
-                    faceAngle = faceDetectionResult.getFaceAngle();
-                    break;
                 case FACE_TURNED_TOO_FAR:
-                    ovalBounds = faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds;
+                    ovalBounds = faceDetectionResult.getFaceBounds().orElse(defaultFaceBounds);
                     cutoutBounds = new RectF(ovalBounds);
                     faceAngle = null;
                     break;
+                case FACE_MISALIGNED:
+                    ovalBounds = faceDetectionResult.getFaceBounds().orElse(defaultFaceBounds);
+                    cutoutBounds = new RectF(ovalBounds);
+                    faceAngle = faceDetectionResult.getFaceAngle().orElse(null);
+                    break;
                 default:
                     ovalBounds = defaultFaceBounds;
-                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds() != null ? faceDetectionResult.getFaceBounds() : defaultFaceBounds);
+                    cutoutBounds = new RectF(faceDetectionResult.getFaceBounds().orElse(defaultFaceBounds));
                     faceAngle = null;
             }
             try {
@@ -297,15 +293,15 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
                     distance = Math.hypot(offsetAngleFromBearing.getYaw(), 0 - offsetAngleFromBearing.getPitch()) * 2;
                 }
                 getDetectedFaceView().setFaceRect(ovalBounds, cutoutBounds, colour, getOverlayBackgroundColor(), angle, distance);
-                if (shouldPlotFaceLandmarks() && faceDetectionResult.getFaceLandmarks() != null && faceDetectionResult.getFaceLandmarks().length > 0) {
-                    float[] landmarks = new float[faceDetectionResult.getFaceLandmarks().length*2];
+                if (shouldPlotFaceLandmarks() && faceDetectionResult.getFaceLandmarks().map(landmarks -> landmarks.length).orElse(0) > 0) {
+                    float[] landmarks = new float[faceDetectionResult.getFaceLandmarks().get().length*2];
                     int i=0;
-                    for (PointF pt : faceDetectionResult.getFaceLandmarks()) {
+                    for (PointF pt : faceDetectionResult.getFaceLandmarks().get()) {
                         landmarks[i++] = pt.x;
                         landmarks[i++] = pt.y;
                     }
                     faceBoundsMatrix.mapPoints(landmarks);
-                    PointF[] pointLandmarks = new PointF[faceDetectionResult.getFaceLandmarks().length];
+                    PointF[] pointLandmarks = new PointF[faceDetectionResult.getFaceLandmarks().get().length];
                     for (i=0; i<pointLandmarks.length; i++) {
                         pointLandmarks[i] = new PointF(landmarks[i*2], landmarks[i*2+1]);
                     }

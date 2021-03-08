@@ -8,6 +8,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.exifinterface.media.ExifInterface;
 
+import com.appliedrec.verid.core2.ExifOrientation;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.IImage;

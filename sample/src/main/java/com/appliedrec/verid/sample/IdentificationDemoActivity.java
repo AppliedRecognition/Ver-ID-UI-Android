@@ -27,7 +27,6 @@ import com.appliedrec.verid.core2.VerIDCoreException;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityIdentificationDemoBinding;
-import com.appliedrec.verid.ui2.AbstractVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 
@@ -190,13 +189,13 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     private void startSession() {
         LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
         sessionSettings.setFaceCaptureCount(1);
-        VerIDSession<LivenessDetectionSessionSettings> session = new VerIDSession<>(verID, sessionSettings);
+        VerIDSession session = new VerIDSession(verID, sessionSettings);
         session.setDelegate(this);
         session.start();
     }
 
     @Override
-    public void onSessionFinished(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
         result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
             UserIdentification userIdentification = new UserIdentification(verID);
             IRecognizable face = faceCapture.getFace();
@@ -309,7 +308,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void onSessionCanceled(AbstractVerIDSession<?, ?, ?> session) {
+    public void onSessionCanceled(VerIDSession session) {
         isSessionRunning.set(false);
         invalidateOptionsMenu();
         if (viewBinding == null) {

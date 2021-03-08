@@ -47,7 +47,6 @@ import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui2.SessionActivity;
 import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 

@@ -6,15 +6,10 @@
     android:layout_height="match_parent"
     tools:context=".ContinuousLivenessActivity">
 
-    <fragment
-        android:id="@+id/sessionFragment"
-        android:name="com.appliedrec.verid.ui2.VerIDSessionFragmentWithTextureView"
+    <com.appliedrec.verid.ui2.SessionView
+        android:id="@+id/sessionView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="match_parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sessionResult"

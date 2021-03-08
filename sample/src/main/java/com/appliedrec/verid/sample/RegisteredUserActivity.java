@@ -1,5 +1,6 @@
 package com.appliedrec.verid.sample;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -7,7 +8,6 @@ import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewTreeObserver;
@@ -29,8 +29,8 @@ import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui2.AbstractVerIDSession;
 import com.appliedrec.verid.ui2.CameraLocation;
+import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -184,12 +184,12 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                         settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
                     }
                     settings.setSessionDiagnosticsEnabled(true);
-                    VerIDSession<AuthenticationSessionSettings> authenticationSession;
+                    VerIDSession authenticationSession;
                     if (i == 1) {
                         TranslatedStrings translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
-                        authenticationSession = new VerIDSession<>(verID, settings, translatedStrings);
+                        authenticationSession = new VerIDSession(verID, settings, translatedStrings);
                     } else {
-                        authenticationSession = new VerIDSession<>(verID, settings);
+                        authenticationSession = new VerIDSession(verID, settings);
                     }
                     authenticationSession.setDelegate(this);
                     authenticationSession.start();
@@ -217,7 +217,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
-        VerIDSession<RegistrationSessionSettings> registrationSession = new VerIDSession<>(verID, settings);
+        VerIDSession registrationSession = new VerIDSession(verID, settings);
         registrationSession.setDelegate(this);
         registrationSession.start();
     }
@@ -332,7 +332,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     //endregion
 
     @Override
-    public void onSessionFinished(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
+    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -342,26 +342,31 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                 } catch (Exception ignore) {
                 }
             });
-        } else {
-            Intent intent = new Intent(this, SessionResultActivity.class);
-            intent.putExtra(SessionResultActivity.EXTRA_RESULT, result);
-            intent.putExtra(SessionResultActivity.EXTRA_SETTINGS, session.getSettings());
-            startActivity(intent);
         }
     }
 
     @Override
-    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
+        return !(session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent());
+    }
+
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+        return (Class<A>) SessionResultActivity.class;
+    }
+
+    @Override
+    public boolean shouldSessionSpeakPrompts(VerIDSession session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
     @Override
-    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
+    public CameraLocation getSessionCameraLocation(VerIDSession session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
     }
 
     @Override
-    public boolean shouldSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
+    public boolean shouldSessionRecordVideo(VerIDSession session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false);
     }
 
