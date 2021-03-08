@@ -9,6 +9,7 @@ import androidx.annotation.Keep;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.SessionFunctions;
+import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
@@ -19,16 +20,7 @@ import java.util.function.Function;
  * @since 2.0.0
  */
 @Keep
-public interface VerIDSessionDelegate {
-
-    /**
-     * Called when session finishes
-     * @param session Session that finished
-     * @param result Session result
-     * @since 2.0.0
-     */
-    @Keep
-    void onSessionFinished(VerIDSession session, VerIDSessionResult result);
+public interface VerIDSessionDelegate extends VerIDSessionInViewDelegate {
 
     /**
      * Called when session is canceled by the user
@@ -36,7 +28,7 @@ public interface VerIDSessionDelegate {
      * @since 2.0.0
      */
     @Keep
-    default void onSessionCanceled(VerIDSession session) {
+    default void onSessionCanceled(IVerIDSession<?> session) {
     }
 
     /**
@@ -47,68 +39,36 @@ public interface VerIDSessionDelegate {
      * @since 2.0.0
      */
     @Keep
-    default boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
-        return false;
-    }
-
-    /**
-     * Called to see whether to use speech to communicate the session prompts to the user
-     * @param session Session
-     * @return {@literal true} to speak the session prompts
-     * @since 2.0.0
-     */
-    @Keep
-    default boolean shouldSessionSpeakPrompts(VerIDSession session) {
-        return false;
-    }
-
-    /**
-     * Called by the session to see which camera lens to use to capture the session faces
-     * @param session Session
-     * @return {@link CameraLocation#BACK} to use the back camera or {@link CameraLocation#FRONT} (default) to use the front-facing (selfie) camera
-     * @since 2.0.0
-     */
-    @Keep
-    default CameraLocation getSessionCameraLocation(VerIDSession session) {
-        return CameraLocation.FRONT;
-    }
-
-    @Keep
-    default boolean shouldSessionRecordVideo(VerIDSession session) {
+    default boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
         return false;
     }
 
     @Keep
-    default Function<VerID, IImageIterator> createImageIteratorFactory() {
-        return VerIDImageIterator::new;
-    }
-
-    @Keep
-    default SessionFailureDialogFactory createSessionFailureDialogFactory() {
-        return new DefaultSessionFailureDialogFactory();
-    }
-
-    @Keep
-    default <V extends View & ISessionView> Function<Context, V> createSessionViewFactory() {
+    default <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
         return context -> (V) new SessionView(context);
     }
 
     @Keep
-    default SessionFunctions createSessionFunctions(VerID verID, VerIDSessionSettings sessionSettings) {
-        return new SessionFunctions(verID, sessionSettings);
-    }
-
-    @Keep
-    default <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass() {
+    default <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass(IVerIDSession<?> session) {
         return (Class<A>) SessionActivity.class;
     }
 
     @Keep
-    default <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+    default <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
         if (result.getError().isPresent()) {
             return (Class<A>) SessionSuccessActivity.class;
         } else {
             return (Class<A>) SessionFailureActivity.class;
         }
+    }
+
+    @Keep
+    default SessionFailureDialogFactory createSessionFailureDialogFactory(IVerIDSession<?> session) {
+        return new DefaultSessionFailureDialogFactory();
+    }
+
+    @Keep
+    default boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
+        return false;
     }
 }

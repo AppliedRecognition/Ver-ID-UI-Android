@@ -118,4 +118,11 @@ public interface ISessionView extends Iterator<FaceBounds> {
      */
     @Keep
     void setPreviewSize(int width, int height, int sensorOrientation);
+
+    /**
+     * @return Default face extents
+     * @since 2.0.0
+     */
+    @Keep
+    FaceExtents getDefaultFaceExtents();
 }

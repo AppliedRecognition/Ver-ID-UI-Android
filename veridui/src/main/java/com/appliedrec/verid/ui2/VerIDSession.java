@@ -11,7 +11,9 @@ import android.os.Looper;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
 import androidx.annotation.UiThread;
+import androidx.annotation.VisibleForTesting;
 import androidx.test.espresso.IdlingResource;
 
 import com.appliedrec.verid.core2.VerID;
@@ -32,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @since 2.0.0
  */
 @Keep
-public class VerIDSession implements Application.ActivityLifecycleCallbacks, IdlingResource {
+public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Application.ActivityLifecycleCallbacks, IdlingResource {
 
     private final VerID verID;
     private final VerIDSessionSettings settings;
@@ -47,7 +49,7 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
     private final SessionPrompts sessionPrompts;
     private ISessionVideoRecorder videoRecorder;
 
-    private static final AtomicLong lastSessionId = new AtomicLong(0);
+    static final AtomicLong lastSessionId = new AtomicLong(0);
 
     /**
      * Session constructor
@@ -168,8 +170,8 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
      */
     @NonNull
     private <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass() {
-        if (getDelegate().map(VerIDSessionDelegate::getSessionActivityClass).isPresent()) {
-            return (Class<A>) getDelegate().map(VerIDSessionDelegate::getSessionActivityClass).get();
+        if (getDelegate().map(delegate -> delegate.getSessionActivityClass(this)).isPresent()) {
+            return (Class<A>) getDelegate().map(delegate -> delegate.getSessionActivityClass(this)).get();
         } else {
             return (Class<A>) SessionActivity.class;
         }
@@ -184,7 +186,7 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
     @NonNull
     private  <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(@NonNull VerIDSessionResult sessionResult) {
         if (getDelegate().isPresent()) {
-            return (Class<A>) getDelegate().map(delegate -> delegate.getSessionResultActivityClass(sessionResult)).get();
+            return (Class<A>) getDelegate().map(delegate -> delegate.getSessionResultActivityClass(this, sessionResult)).get();
         } else if (sessionResult.getError().isPresent()){
             return (Class<A>) SessionFailureActivity.class;
         } else {
@@ -276,17 +278,19 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
 
     //region Activity lifecycle callbacks
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
         sessionActivity(activity).ifPresent(sessionActivity -> {
-            SessionParameters sessionParameters = new SessionParameters(verID, settings, getCameraLens(), getDelegate().map(VerIDSessionDelegate::createSessionViewFactory).orElse(SessionView::new), stringTranslator, getDelegate().map(delegate -> delegate.createSessionFunctions(getVerID(), getSettings())).orElse(new SessionFunctions(getVerID(), getSettings())));
+            SessionParameters sessionParameters = new SessionParameters(verID, settings, getCameraLens(), getDelegate().map(delegate -> delegate.createSessionViewFactory(this)).orElse(SessionView::new), stringTranslator, getDelegate().map(delegate -> delegate.createSessionFunctions(this, getVerID(), getSettings())).orElse(new SessionFunctions(getVerID(), getSettings())));
             getVideoRecorder().ifPresent(sessionParameters::setVideoRecorder);
             sessionParameters.setSessionResultObserver(this::onSessionResult);
             sessionParameters.setFaceDetectionResultObserver(this::onFaceDetectionResult);
-            sessionParameters.setImageIteratorFactory(getDelegate().map(VerIDSessionDelegate::createImageIteratorFactory).orElse((VerIDImageIterator::new)));
-            sessionParameters.setSessionFailureDialogFactory(getDelegate().map(VerIDSessionDelegate::createSessionFailureDialogFactory).orElse(new DefaultSessionFailureDialogFactory()));
+            sessionParameters.setImageIteratorFactory(getDelegate().map(delegate -> delegate.createImageIteratorFactory(this)).orElse((VerIDImageIterator::new)));
+            sessionParameters.setSessionFailureDialogFactory(getDelegate().map(delegate -> delegate.createSessionFailureDialogFactory(this)).orElse(new DefaultSessionFailureDialogFactory()));
             sessionParameters.setOnSessionFinishedRunnable(this::onSessionFinished);
             sessionParameters.setOnSessionCancelledRunnable(this::onSessionCancelled);
+            sessionParameters.shouldRetryOnFailure(exception -> getDelegate().map(delegate -> delegate.shouldRetrySessionAfterFailure(this, exception)).orElse(false));
             sessionParameters.setResultIntentSupplier((result,context) -> {
                 Intent intent = new Intent(context, getSessionResultActivityClass(result));
                 intent.putExtra(com.appliedrec.verid.ui2.SessionActivity.EXTRA_SESSION_ID, sessionId);
@@ -311,30 +315,36 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
 
     //region Unused
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityDestroyed(@NonNull Activity activity) {
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityStarted(@NonNull Activity activity) {
 
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
 
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityPaused(@NonNull Activity activity) {
 
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityStopped(@NonNull Activity activity) {
 
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
 
@@ -346,16 +356,19 @@ public class VerIDSession implements Application.ActivityLifecycleCallbacks, Idl
 
     //region Idling resource
 
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     @Override
     public String getName() {
         return "Ver-ID session";
     }
 
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     @Override
     public boolean isIdleNow() {
         return isIdle.get();
     }
 
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     @Override
     public void registerIdleTransitionCallback(ResourceCallback callback) {
         idlingResourceCallback = callback;

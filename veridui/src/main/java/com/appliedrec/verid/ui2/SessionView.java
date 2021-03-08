@@ -283,7 +283,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
                 getInstructionTextView().setTextColor(textColour);
                 getInstructionTextView().setBackgroundColor(colour);
 
-                ((FrameLayout.LayoutParams)getInstructionTextView().getLayoutParams()).topMargin = (int) (ovalBounds.top - getInstructionTextView().getHeight() - getResources().getDisplayMetrics().density * 16f);
+                ((FrameLayout.LayoutParams)getInstructionTextView().getLayoutParams()).topMargin = Math.max(0, (int) (ovalBounds.top - getInstructionTextView().getHeight() - getResources().getDisplayMetrics().density * 16f));
                 setTextViewColour(colour, textColour);
                 Double angle = null;
                 Double distance = null;

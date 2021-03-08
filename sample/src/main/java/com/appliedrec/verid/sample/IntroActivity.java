@@ -27,6 +27,7 @@ import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
+import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.PageViewActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -159,7 +160,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -174,22 +175,22 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
+    public boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
         return result.getError().isPresent();
     }
 
     @Override
-    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
         return (Class<A>) SessionResultActivity.class;
     }
 
     @Override
-    public boolean shouldSessionSpeakPrompts(VerIDSession session) {
+    public boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
     @Override
-    public CameraLocation getSessionCameraLocation(VerIDSession session) {
+    public CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
     }
 

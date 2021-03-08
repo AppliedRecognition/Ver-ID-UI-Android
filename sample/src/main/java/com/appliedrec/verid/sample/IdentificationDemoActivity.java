@@ -27,6 +27,7 @@ import com.appliedrec.verid.core2.VerIDCoreException;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityIdentificationDemoBinding;
+import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 
@@ -195,7 +196,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
         result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
             UserIdentification userIdentification = new UserIdentification(verID);
             IRecognizable face = faceCapture.getFace();
@@ -308,7 +309,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void onSessionCanceled(VerIDSession session) {
+    public void onSessionCanceled(IVerIDSession<?> session) {
         isSessionRunning.set(false);
         invalidateOptionsMenu();
         if (viewBinding == null) {

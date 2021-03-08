@@ -181,7 +181,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     //region Ver-ID session delegate
     
     @Override
-    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             // Session succeeded
         } else {
@@ -193,71 +193,79 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
 
     // Implement this method to notify your app when the user cancelled the session
     @Override    
-    public void onSessionCanceled(VerIDSession session) {
+    public void onSessionCanceled(IVerIDSession<?> session) {
     }
 
     // Return true to show the result of the session in a new activity
     @Override
-    public boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
+    public boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
         return true;
     }
 
     // Return true for the session to use audible prompts in addition to on-screen instructions
     @Override
-    public boolean shouldSessionSpeakPrompts(VerIDSession session) {
+    public boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
         return true;
     }
 
     // Return CameraLocation.BACK to use the back-facing camera instead of the default front-facing (selfie) camera
     @Override
-    public CameraLocation getSessionCameraLocation(VerIDSession session) {
+    public CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
         return CameraLocation.BACK;
     }
 
     // Return true to record a video of the session
     @Override
-    public boolean shouldSessionRecordVideo(VerIDSession session) {
+    public boolean shouldSessionRecordVideo(IVerIDSession<?> session) {
         return true;
     }
 
     // Override this method if you wish to implement your own image iterator/reader class
     @Override
-    public Function<VerID, IImageIterator> createImageIteratorFactory() {
+    public Function<VerID, IImageIterator> createImageIteratorFactory(IVerIDSession<?> session) {
         return VerIDImageIterator::new;
     }
 
     // Override to supply your own dialog when the session fails and the user is allowed to re-run the session
     @Override
-    public SessionFailureDialogFactory createSessionFailureDialogFactory() {
+    public SessionFailureDialogFactory createSessionFailureDialogFactory(IVerIDSession<?> session) {
         return new DefaultSessionFailureDialogFactory();
     }
 
     // Override to supply your own session view
     @Override
-    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory() {
+    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
         return context -> (V) new SessionView(context);
     }
 
     // Override to supply custom functions to control the session logic
     @Override
-    public SessionFunctions createSessionFunctions(VerID verID, VerIDSessionSettings sessionSettings) {
+    public SessionFunctions createSessionFunctions(IVerIDSession<?> session, VerID verID, VerIDSessionSettings sessionSettings) {
         return new SessionFunctions(verID, sessionSettings);
     }
 
     // Override to supply a custom session activity
     @Override
-    public <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass() {
+    public <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass(IVerIDSession<?> session) {
         return (Class<A>) SessionActivity.class;
     }
 
     // Override to supply custom activities for displaying the session results
     @Override
-    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
         if (result.getError().isPresent()) {
             return (Class<A>) SessionSuccessActivity.class;
         } else {
             return (Class<A>) SessionFailureActivity.class;
         }
+    }
+    
+    // Override to allow the user retry the session
+    // You can supply your own logic. In this example the delegate keeps track of how many times the session ran (runCount)
+    // and lets the user retry if the session ran fewer than 3 times
+    @Override
+    public boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
+        return runCount < 3;
     }
     
     //endregion

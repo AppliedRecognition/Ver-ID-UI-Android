@@ -46,7 +46,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Activity used to control Ver-ID sessions
@@ -73,7 +72,6 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     private final Object sessionViewLock = new Object();
     private Session<?> session;
     private SessionPrompts sessionPrompts;
-    private final AtomicInteger runCount = new AtomicInteger(0);
     private final AtomicBoolean isSessionRunning = new AtomicBoolean(false);
     private SessionParameters sessionParameters;
 
@@ -157,10 +155,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     protected void startSession() {
         if (isSessionRunning.compareAndSet(false, true)) {
-            getSession().ifPresent(session1 -> {
-                runCount.incrementAndGet();
-                session1.start();
-            });
+            getSession().ifPresent(Session::start);
         }
     }
 
@@ -315,7 +310,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         });
         getSessionParameters().flatMap(SessionParameters::getSessionResultObserver).ifPresent(observer -> observer.onChanged(result));
 
-        if (runCount.get() < getSessionParameters().map(SessionParameters::getSessionSettings).map(VerIDSessionSettings::getMaxRetryCount).orElse(0) && result.getError().isPresent() && getSessionParameters().map(SessionParameters::getSessionFailureDialogFactory).isPresent()) {
+        if (result.getError().isPresent() && getSessionParameters().flatMap(SessionParameters::shouldRetryOnFailure).orElse(exception -> false).apply(result.getError().get()) && getSessionParameters().map(SessionParameters::getSessionFailureDialogFactory).isPresent()) {
             AlertDialog alertDialog = getSessionParameters().map(SessionParameters::getSessionFailureDialogFactory).get().makeDialog(this, onDismissAction -> {
                 switch (onDismissAction) {
                     case RETRY:

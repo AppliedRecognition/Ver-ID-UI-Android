@@ -14,6 +14,7 @@ import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.SessionFunctions;
+import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
@@ -46,6 +47,7 @@ public class SessionParameters {
     private ISessionVideoRecorder videoRecorder;
     private Function<VerIDSessionResult,Boolean> sessionResultDisplayIndicator = result -> false;
     private VerIDSessionResult sessionResult;
+    private Function<VerIDSessionException, Boolean> shouldRetryOnFailure;
 
     /**
      * Constructor
@@ -216,5 +218,13 @@ public class SessionParameters {
     @Keep
     public void setSessionResult(VerIDSessionResult sessionResult) {
         this.sessionResult = sessionResult;
+    }
+
+    public Optional<Function<VerIDSessionException, Boolean>> shouldRetryOnFailure() {
+        return Optional.ofNullable(shouldRetryOnFailure);
+    }
+
+    public void shouldRetryOnFailure(Function<VerIDSessionException, Boolean> shouldRetryOnFailure) {
+        this.shouldRetryOnFailure = shouldRetryOnFailure;
     }
 }

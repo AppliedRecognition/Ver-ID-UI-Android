@@ -36,6 +36,7 @@ import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.CameraWrapper;
 import com.appliedrec.verid.ui2.ISessionView;
 import com.appliedrec.verid.ui2.IStringTranslator;
+import com.appliedrec.verid.ui2.SessionView;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDImageIterator;
 import com.appliedrec.verid.ui2.VerIDSessionInView;
@@ -66,12 +67,11 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     private Disposable faceDetectionDisposable;
     private final LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
     private VerID verID;
-//    private Session<LivenessDetectionSessionSettings> session;
     private final AtomicBoolean isSessionRunning = new AtomicBoolean(false);
     private CameraWrapper cameraWrapper;
     private VerIDImageIterator imageIterator;
     private IStringTranslator stringTranslator;
-    private VerIDSessionInView verIDSessionInView;
+    private VerIDSessionInView<SessionView> verIDSessionInView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,8 +90,6 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         viewBinding.retryButton.setOnClickListener(view -> startSession());
         viewBinding.idle.setVisibility(View.VISIBLE);
         viewBinding.sessionResult.setVisibility(View.VISIBLE);
-
-//        viewBinding.sessionView.setListener(this);
         viewBinding.sessionView.setDefaultFaceExtents(sessionSettings.getExpectedFaceExtents());
     }
 
@@ -140,6 +138,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         verID = null;
     }
 
+    @SuppressWarnings("unchecked")
     private void runFaceDetectionUntil(Predicate<Boolean> predicate, Action onComplete) {
         if (faceDetectionDisposable != null && !faceDetectionDisposable.isDisposed()) {
             faceDetectionDisposable.dispose();
@@ -169,17 +168,15 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
                         return;
                     }
                     viewBinding.sessionView.addListener(this);
-//                    viewBinding.sessionView.setListener(this);
                     imageIterator.activate();
                 })
                 .subscribe(
                         onComplete,
-                        error -> {
-                            Log.e("Ver-ID", Objects.requireNonNull(error.getLocalizedMessage()));
-                        }
+                        error -> Log.e("Ver-ID", Objects.requireNonNull(error.getLocalizedMessage()))
                 );
     }
 
+    @SuppressWarnings("unchecked")
     private <DetectionImage> IFaceTracking<DetectionImage> startFaceTracking() {
         return (IFaceTracking<DetectionImage>) verID.getFaceDetection().startFaceTracking();
     }
@@ -194,7 +191,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         }
         if (isSessionRunning.compareAndSet(false, true)) {
             viewBinding.sessionResult.setVisibility(View.GONE);
-            verIDSessionInView = new VerIDSessionInView(verID, sessionSettings, viewBinding.sessionView, CameraLocation.FRONT, stringTranslator);
+            verIDSessionInView = new VerIDSessionInView<>(verID, sessionSettings, viewBinding.sessionView, stringTranslator);
             verIDSessionInView.getSessionResultLiveData().observe(this, this::onSessionResult);
             verIDSessionInView.start();
         }

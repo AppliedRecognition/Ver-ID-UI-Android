@@ -204,6 +204,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             try {
                 Context context = getContext().orElseThrow(() -> new Exception("Activity unavailable"));
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    onError(new VerIDSessionException(VerIDSessionException.Code.CAMERA_ACCESS_DENIED));
                     return;
                 }
                 CameraManager manager = getCameraManager();
@@ -267,10 +268,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                         listener.onCameraPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation);
                     }
                 });
-                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    onError(new VerIDSessionException(new Exception("Missing camera permission")));
-                    return;
-                }
                 if (isCameraOpen.compareAndSet(false, true)) {
                     manager.openCamera(cameraId.get(), stateCallback, cameraProcessingHandler);
                 }

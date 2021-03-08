@@ -83,6 +83,8 @@ class MyActivity extends AppCompatActivity {
 ```java
 class MyActivity extends AppCompatActivity implements VerIDSessionDelegate {
 
+    VerID verID;
+
     void startLivenessDetectionSession() {
         // Start a Ver-ID session
         LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
@@ -92,7 +94,7 @@ class MyActivity extends AppCompatActivity implements VerIDSessionDelegate {
     }
     
     @Override
-    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             // Liveness detection session succeeded
         }
