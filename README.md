@@ -9,15 +9,21 @@ Version 2 of the Ver-ID SDK brings a number of improvements:
 - Simpler API
     - Consumers no longer have to parse session results in activities' `onActivityResult`.
     - Session result is passed to the session delegate.
+    - Session delegate now includes optional methods that allow better session customisation.
     - Instead of aligning the Android and iOS APIs, we decided to use platform conventions. For example, `veridSessionDidFinishWithResult` became `onSessionFinished` on Android.
     - Introduced reactive stream implementations in some classes. For example `VerIDFactory` now extends [`RxJava.Single`](http://reactivex.io/documentation/single.html).
 - Improved performance
-    - Faster camera preview due to the use of surface views.
+    - Faster camera preview using newer camera APIs.
     - Face capture images are no longer written to files, saving disk space and eliminating unwanted cached files.
     - Results are passed directly to the session delegate without having to be marshalled into parcels.
 - Less ambiguity
     - Better defined error codes – Ver-ID methods and sessions throw or return one of the pre-defined exceptions with clearly-defined error codes.
+    - Better separation of UI and core session logic.
     - Using Java 8 optionals – cleaner and less ambiguous than `null` checks.
+- Diagnostic features
+    - Sessions can be configured to return diagnostic data to facilitate debugging.
+    - Added face covering detection.
+    - Added reporting of image quality metrics.
 
 Please note that Ver-ID 2.+ is not compatible with Ver-ID 1.+. You will need to migrate to the new SDK. 
 
@@ -103,6 +109,9 @@ To build this project and to run the sample app you will need a computer with th
 	    implementation 'com.appliedrec.verid:ui:2.0.0-beta.01'
     }
     ~~~
+    
+## Migrating from Ver-ID 1
+Please consult [this document](Migrating from Ver-ID 1 to Ver-ID 2.md).
 		
 ## Usage
 
@@ -157,7 +166,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     public void onVerIDCreated(VerIDFactory verIDFactory, VerID verID) {
         // You can now start a Ver-ID session
         LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-        VerIDSession<LivenessDetectionSessionSettings> session = new VerIDSession<>(verID, settings);
+        VerIDSession session = new VerIDSession(verID, settings);
         session.setDelegate(this);
         session.start();
     }
@@ -172,7 +181,7 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
     //region Ver-ID session delegate
     
     @Override
-    public void onSessionFinished(AbstractVerIDSession<?,?,?> session, VerIDSessionResult result) {
+    public void onSessionFinished(VerIDSession session, VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             // Session succeeded
         } else {
@@ -180,38 +189,75 @@ class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerI
         }
     }
     
-    // The following four delegate methods are optional
-    
-    @Override
-    public void onSessionCanceled(AbstractVerIDSession<?,?,?> session) {
-        // Implement this method if you need to handle the case where the user cancels the session.
+    // The following delegate methods are optional
+
+    // Implement this method to notify your app when the user cancelled the session
+    @Override    
+    public void onSessionCanceled(VerIDSession session) {
     }
-    
+
+    // Return true to show the result of the session in a new activity
     @Override
-    public boolean shouldSessionDisplayResult(AbstractVerIDSession<?, ?, ?> session, VerIDSessionResult result) {
-        // Here you can decide whether to show the result of the session to the user.
-        // For example, if you have your own way of showing a successful result but you want Ver-ID
-        // to handle showing failures you may do something like this:
-        return result.getError().isPresent();
+    public boolean shouldSessionDisplayResult(VerIDSession session, VerIDSessionResult result) {
+        return true;
     }
-    
+
+    // Return true for the session to use audible prompts in addition to on-screen instructions
     @Override
-    public boolean shouldSessionSpeakPrompts(AbstractVerIDSession<?, ?, ?> session) {
-        // Return true to let the device use speech synthesis to speak the prompts during the session.
-        return false;
+    public boolean shouldSessionSpeakPrompts(VerIDSession session) {
+        return true;
     }
-    
+
+    // Return CameraLocation.BACK to use the back-facing camera instead of the default front-facing (selfie) camera
     @Override
-    public CameraLocation getSessionCameraLocation(AbstractVerIDSession<?, ?, ?> session) {
-        // Return CameraLocation.BACK to use the device's back camera. 
-        // The default is to use the front-facing (selfie) camera.
-        return CameraLocation.FRONT;
+    public CameraLocation getSessionCameraLocation(VerIDSession session) {
+        return CameraLocation.BACK;
     }
-    
+
+    // Return true to record a video of the session
     @Override
-    public boolean shouldSessionRecordVideo(AbstractVerIDSession<?, ?, ?> session) {
-        // Return true if you want to record a video of the session.
-        return false;
+    public boolean shouldSessionRecordVideo(VerIDSession session) {
+        return true;
+    }
+
+    // Override this method if you wish to implement your own image iterator/reader class
+    @Override
+    public Function<VerID, IImageIterator> createImageIteratorFactory() {
+        return VerIDImageIterator::new;
+    }
+
+    // Override to supply your own dialog when the session fails and the user is allowed to re-run the session
+    @Override
+    public SessionFailureDialogFactory createSessionFailureDialogFactory() {
+        return new DefaultSessionFailureDialogFactory();
+    }
+
+    // Override to supply your own session view
+    @Override
+    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory() {
+        return context -> (V) new SessionView(context);
+    }
+
+    // Override to supply custom functions to control the session logic
+    @Override
+    public SessionFunctions createSessionFunctions(VerID verID, VerIDSessionSettings sessionSettings) {
+        return new SessionFunctions(verID, sessionSettings);
+    }
+
+    // Override to supply a custom session activity
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass() {
+        return (Class<A>) SessionActivity.class;
+    }
+
+    // Override to supply custom activities for displaying the session results
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(VerIDSessionResult result) {
+        if (result.getError().isPresent()) {
+            return (Class<A>) SessionSuccessActivity.class;
+        } else {
+            return (Class<A>) SessionFailureActivity.class;
+        }
     }
     
     //endregion
@@ -287,4 +333,4 @@ verIDFactory.createVerID();
 Full documentation available on the project's [Github page](https://appliedrecognition.github.io/Ver-ID-UI-Android/).
 
 ## Change log
-We maintain a separate [page](./CHANGELOG.md) with our API change log.
+Changes are described in release notes.
