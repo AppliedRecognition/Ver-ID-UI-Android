@@ -7,7 +7,7 @@ buildscript {
         
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.2'
+        classpath 'com.android.tools.build:gradle:4.1.3'
         
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -35,7 +35,7 @@ ext {
     versionMinor = 0
     versionPatch = 0
     versionClassifier = "rc"
-    versionClassifierVersion = "02"
+    versionClassifierVersion = "03"
 
     minSdkVersion = 21
     compileSdkVersion = 30
