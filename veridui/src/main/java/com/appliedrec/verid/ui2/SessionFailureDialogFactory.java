@@ -1,6 +1,7 @@
 package com.appliedrec.verid.ui2;
 
 import android.app.Activity;
+import android.content.Context;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
@@ -37,15 +38,14 @@ public interface SessionFailureDialogFactory {
 
     /**
      * Make a dialog that will be displayed when a Ver-ID session fails but the session's maximum retry count hasn't been reached.
-     * @param activity Session activity in which the dialog will be shown
+     * @param context Context in which the dialog will be created
      * @param onDismissListener Listener that must be called when the dialog is dismissed
      * @param exception Session exception that triggered the session to display the dialog
      * @param stringTranslator Translator instance or {@literal null} to use the current locale for string translations
-     * @param <T> Activity
      * @return {@code AlertDialog} or {@literal null} if the session should be let to fail instead of showing the dialog
      * @since 2.0.0
      */
     @Keep
     @Nullable
-    <T extends Activity & ISessionActivity> AlertDialog makeDialog(@NonNull T activity, @NonNull Consumer<OnDismissAction> onDismissListener, @NonNull VerIDSessionException exception, @Nullable IStringTranslator stringTranslator);
+    AlertDialog makeDialog(@NonNull Context context, @NonNull Consumer<OnDismissAction> onDismissListener, @NonNull VerIDSessionException exception, @Nullable IStringTranslator stringTranslator);
 }

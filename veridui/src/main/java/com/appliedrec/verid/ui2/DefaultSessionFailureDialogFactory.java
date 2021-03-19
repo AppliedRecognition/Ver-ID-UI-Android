@@ -1,6 +1,7 @@
 package com.appliedrec.verid.ui2;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.view.Surface;
@@ -32,9 +33,9 @@ public class DefaultSessionFailureDialogFactory implements SessionFailureDialogF
 
     @Keep
     @Override
-    public <T extends Activity & ISessionActivity> AlertDialog makeDialog(@NonNull T activity, @NonNull Consumer<OnDismissAction> onDismissListener, @NonNull VerIDSessionException exception, @NonNull IStringTranslator stringTranslator) {
+    public AlertDialog makeDialog(@NonNull Context context, @NonNull Consumer<OnDismissAction> onDismissListener, @NonNull VerIDSessionException exception, @NonNull IStringTranslator stringTranslator) {
         ScreenDensity screenDensity;
-        float density = activity.getResources().getDisplayMetrics().density;
+        float density = context.getResources().getDisplayMetrics().density;
         if (density > 2) {
             screenDensity = ScreenDensity.EXTRA_HIGH;
         } else if (density > 1) {
@@ -80,16 +81,16 @@ public class DefaultSessionFailureDialogFactory implements SessionFailureDialogF
         if (videoResourceId == null && requestedBearing != null) {
             videoResourceId = getVideoResourceId(screenDensity, requestedBearing);
         }
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setMessage(message);
         if (videoResourceId != null) {
-            final MediaPlayer mediaPlayer = MediaPlayer.create(activity, videoResourceId);
+            final MediaPlayer mediaPlayer = MediaPlayer.create(context, videoResourceId);
             mediaPlayer.setOnErrorListener((mp, what, extra) -> false);
             mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.start());
             mediaPlayer.setLooping(true);
             mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
 
-            TextureView textureView = new TextureView(activity);
+            TextureView textureView = new TextureView(context);
             textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
                 @Override
                 public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -112,7 +113,7 @@ public class DefaultSessionFailureDialogFactory implements SessionFailureDialogF
 
                 }
             });
-            FixedAspectRatioFrameLayout frameLayout = new FixedAspectRatioFrameLayout(activity, 4, 3);
+            FixedAspectRatioFrameLayout frameLayout = new FixedAspectRatioFrameLayout(context, 4, 3);
             FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
             frameLayout.addView(textureView, layoutParams);
             builder.setView(frameLayout);
