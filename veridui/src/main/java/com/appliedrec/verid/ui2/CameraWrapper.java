@@ -424,7 +424,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
-                            if (isCameraOpen.get() && getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(false)) {
+                            if (isCameraOpen.get() && (!getLifecycleOwner().isPresent() || getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(false))) {
                                 try {
                                     previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
                                     session.setRepeatingRequest(previewBuilder.build(), null, cameraPreviewHandler);
