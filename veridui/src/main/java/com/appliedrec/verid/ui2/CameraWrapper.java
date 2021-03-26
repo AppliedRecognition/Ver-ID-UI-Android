@@ -390,7 +390,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     private void startPreview() {
         new Handler(Looper.getMainLooper()).post(() -> {
-            if (!getLifecycleOwner().isPresent() || !getLifecycleOwner().get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            if (!getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(true)) {
                 onError(new VerIDSessionException(new Exception("CameraWrapper requires a started activity")));
                 return;
             }
@@ -428,10 +428,12 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                                 try {
                                     previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
                                     session.setRepeatingRequest(previewBuilder.build(), null, cameraPreviewHandler);
+                                    getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
                                 } catch (CameraAccessException e) {
                                     onError(new VerIDSessionException(e));
                                 }
-                                getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
+                            } else {
+                                onError(new VerIDSessionException(new Exception("Failed to configure camera")));
                             }
                         }
 
