@@ -8,7 +8,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
 
-public class TipsActivity extends PageViewActivity {
+public class TipsActivity extends PageViewActivity implements ISessionActivity {
 
     public static final String EXTRA_TRANSLATOR = "com.appliedrec.verid.EXTRA_TRANSLATOR";
 
@@ -141,5 +141,10 @@ public class TipsActivity extends PageViewActivity {
             default:
                 return translate("Avoid standing in a light that throws sharp shadows like in sharp sunlight or directly under a lamp.");
         }
+    }
+
+    @Override
+    public void setSessionParameters(SessionParameters sessionParameters) {
+        stringTranslator = sessionParameters.getStringTranslator();
     }
 }
