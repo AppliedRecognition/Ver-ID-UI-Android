@@ -12,7 +12,7 @@ import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
 
 public class SecuritySettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
@@ -24,7 +24,7 @@ public class SecuritySettingsFragment extends PreferenceFragmentCompat implement
         SharedPreferences preferences = getPreferenceManager().getSharedPreferences();
 
         LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
-        int requiredPoseCount = Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(livenessDetectionSessionSettings.getNumberOfResultsToCollect())));
+        int requiredPoseCount = Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(livenessDetectionSessionSettings.getFaceCaptureCount())));
         float yawThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(livenessDetectionSessionSettings.getYawThreshold())));
         float pitchThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(livenessDetectionSessionSettings.getPitchThreshold())));
         float authThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.AUTHENTICATION_THRESHOLD, "4.0"));

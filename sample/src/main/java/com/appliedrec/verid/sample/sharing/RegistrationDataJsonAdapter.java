@@ -6,7 +6,7 @@ import android.util.Base64;
 import android.util.Base64InputStream;
 import android.util.Base64OutputStream;
 
-import com.appliedrec.verid.core.RecognizableSubject;
+import com.appliedrec.verid.core2.RecognizableSubject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;

@@ -8,9 +8,9 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
-import com.appliedrec.verid.core.IRecognizable;
-import com.appliedrec.verid.core.RecognizableSubject;
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.IRecognizable;
+import com.appliedrec.verid.core2.RecognizableSubject;
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.sample.BuildConfig;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.VerIDUser;

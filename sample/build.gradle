@@ -1,19 +1,28 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion rootProject.compileSdkVersion
+    buildToolsVersion rootProject.buildToolsVersion
 
     defaultConfig {
         applicationId "com.appliedrec.verid.sample"
         minSdkVersion rootProject.minSdkVersion
-        targetSdkVersion 29
+        targetSdkVersion rootProject.targetSdkVersion
         versionCode rootProject.generateVersionCode()
         versionName rootProject.generateVersionName()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments clearPackageData: 'true'
 
-        missingDimensionStrategy "apilevel", "api21"
+        multiDexEnabled true
+    }
 
+    testOptions {
+        execution 'ANDROIDX_TEST_ORCHESTRATOR'
+    }
+
+    buildFeatures {
+        viewBinding = true
     }
 
     buildTypes {
@@ -28,6 +37,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -35,19 +45,29 @@ android {
     lintOptions {
         abortOnError false
     }
+
+    packagingOptions {
+        exclude 'META-INF/androidx.exifinterface_exifinterface.version'
+    }
 }
+
+apply from: "../sample-dependencies.gradle"
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     debugApi project(':veridui')
-    debugImplementation "com.appliedrec.verid:core:${rootProject.generateVersionName()}"
-    releaseImplementation "com.appliedrec.verid:ui:${rootProject.generateVersionName()}"
-    //noinspection GradleDependency
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'androidx.multidex:multidex:2.0.1'
-    testImplementation 'junit:junit:4.13'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    debugImplementation "com.appliedrec.verid:core2:${rootProject.generateVersionName()}"
+    releaseImplementation "com.appliedrec.verid:ui2:${rootProject.generateVersionName()}"
+    for (dep in coreLibraryDesugaringDependencies) {
+        coreLibraryDesugaring dep.toString()
+    }
+    for (dep in sampledependencies) {
+        implementation dep.toString()
+    }
+    for (dep in sampleAndroidTestDependencies) {
+        androidTestImplementation dep.toString()
+    }
+    androidTestUtil "androidx.test:orchestrator:${rootProject.androidTestVersion}"
+
+    annotationProcessor "androidx.room:room-compiler:${rootProject.roomVersion}"
 }

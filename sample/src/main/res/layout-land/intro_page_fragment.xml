@@ -8,7 +8,7 @@
         android:id="@+id/frameLayout"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:background="@color/background_light"
+        android:background="@android:color/background_light"
         app:layout_constraintEnd_toStartOf="@+id/guideline2"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -23,7 +23,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:padding="@dimen/padding_default"
+        android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/frameLayout">
 

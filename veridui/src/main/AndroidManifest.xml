@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.appliedrec.verid.ui">
+    package="com.appliedrec.verid.ui2">
+
+    <uses-feature android:name="android.hardware.camera.any" />
 
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <application
-        android:allowBackup="true"
-        android:label="@string/app_name"
-        android:supportsRtl="true">
-        <activity android:name=".VerIDSessionActivity" android:theme="@style/CameraActivityTheme" />
+    <application>
+        <activity
+            android:name=".SessionActivity"
+            android:theme="@style/CameraActivityTheme" />
+        <activity android:name=".SessionSuccessActivity" />
+        <activity android:name=".SessionResultActivity" />
+        <activity android:name=".SessionFailureActivity" />
+        <activity android:name=".SessionLivenessDetectionFailureActivity" />
         <activity android:name=".TipsActivity" />
+        <activity android:name=".PageViewActivity" />
     </application>
 
 </manifest>

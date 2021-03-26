@@ -23,4 +23,6 @@ public class PreferenceKeys {
     public static final String USE_BACK_CAMERA = "use_back_camera";
     public static final String FACE_BOUNDS_WIDTH_FRACTION = "face_bounds_width_fraction";
     public static final String FACE_BOUNDS_HEIGHT_FRACTION = "face_bounds_height_fraction";
+    public static final String RECORD_SESSION_VIDEO = "record_session_video";
+    public static final String ENABLE_MASK_DETECTION = "enable_mask_detection";
 }

@@ -1,18 +1,39 @@
-![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui/maven-metadata.xml.svg)
+![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui2/maven-metadata.xml.svg)
 
 # Ver-ID UI for Android
 
-This project along with [Ver-ID Core](https://appliedrecognition.github.io/Ver-ID-Core-Android) replace the [legacy Ver-ID SDK](https://github.com/AppliedRecognition/Ver-ID-Android). The new API is not compatible with the legacy SDK. Please refer to the [migration instructions](./MigratingFromLegacySDK.md).
+## What's new in Ver-ID 2.0
 
-## July 2020 – beta version of Ver-ID UI 2 is now available
+Version 2 of the Ver-ID SDK brings a number of improvements:
 
-Please [check it out](https://github.com/AppliedRecognition/Ver-ID-UI-Android/tree/version2) and let us know what you think.
+- Simpler API
+    - Consumers no longer have to parse session results in activities' `onActivityResult`.
+    - Session result is passed to the session delegate.
+    - Session delegate now includes optional methods that allow better session customisation.
+    - Instead of aligning the Android and iOS APIs, we decided to use platform conventions. For example, `veridSessionDidFinishWithResult` became `onSessionFinished` on Android.
+    - Introduced reactive stream implementations in some classes. For example `VerIDFactory` now extends [`RxJava.Single`](http://reactivex.io/documentation/single.html).
+- Improved performance
+    - Faster camera preview using newer camera APIs.
+    - Face capture images are no longer written to files, saving disk space and eliminating unwanted cached files.
+    - Results are passed directly to the session delegate without having to be marshalled into parcels.
+- Less ambiguity
+    - Better defined error codes – Ver-ID methods and sessions throw or return one of the pre-defined exceptions with clearly-defined error codes.
+    - Better separation of UI and core session logic.
+    - Using Java 8 optionals – cleaner and less ambiguous than `null` checks.
+- Diagnostic features
+    - Sessions can be configured to return diagnostic data to facilitate debugging.
+    - Added face covering detection.
+    - Added reporting of image quality metrics.
 
-## Prerequisites
+Please note that Ver-ID 2.+ is not compatible with Ver-ID 1.+. You will need to migrate to the new SDK. 
+
+We opted to separate the new API to its own packages so both Ver-ID 1.+ and Ver-ID 2.+ can co-exist in the same project.
+
+## Requirements
 
 To build this project and to run the sample app you will need a computer with these applications:
 
-- [Android Studio](https://developer.android.com/studio) with Gradle plugin version 3.5.0 or newer
+- [Android Studio 4](https://developer.android.com/studio) with Gradle plugin version 4.0.0 or newer
 - [Git](https://git-scm.com)
 
 ## Installation
@@ -64,8 +85,8 @@ To build this project and to run the sample app you will need a computer with th
             // Failed to create identity with your credentials.
         }
         ~~~
-
-1. Add the Applied Recognition repository to the repositories in your app module's **gradle.build** file:
+    - Constructing `VerIDFactory` without an instance of `VerIDSDKIdentity` assumes that the **Ver-ID identity.p12** file is in the app's **assets** folder and the password is in the **AndroidManifest.xml**.
+1. Add the following entries in your app module's **gradle.build** file:
     
     ~~~groovy
     repositories {
@@ -73,39 +94,25 @@ To build this project and to run the sample app you will need a computer with th
             url 'https://dev.ver-id.com/artifactory/gradle-release'
         }
     }
-    ~~~
-1. ~~Your app's assets must include [Ver-ID-Models](https://github.com/AppliedRecognition/Ver-ID-Models/tree/matrix-16). Clone the folder using Git instead of downloading the Zip archive. Your system must have [Git LFS](https://git-lfs.github.com) installed prior to cloning the folder. Add the contents as a folder named **VerIDModels** to your app's **assets** folder.~~ <br/><br/>**As of version 1.7.4 VerIDModels are now packaged in the Ver-ID Core dependency. Please delete the VerIDModels folder from your app's assets folder to avoid conflicts.**
-
-1. Add the following statement in your app's **gradle.build** file:
-
-    ~~~groovy
     android {
+        defaultConfig {
+            multiDexEnabled true
+        }
         compileOptions {
+            coreLibraryDesugaringEnabled true
             sourceCompatibility JavaVersion.VERSION_1_8
             targetCompatibility JavaVersion.VERSION_1_8
         }
     }
+    dependencies {
+        coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
+	    implementation 'com.appliedrec.verid:ui:2.0.0-beta.01'
+    }
     ~~~
-1. If you are targeting Android API level 21 or later
-	
-	- Add the following dependency to your **gradle.build** file:
-
-		~~~groovy
-	    dependencies {
-		    implementation 'com.appliedrec.verid:ui:1.19.0'
-	    }
-		~~~
-
-1. If you are targeting Android API level 14–20
-
-	- Add the following dependency to your **gradle.build** file:
-
-		~~~groovy
-	    dependencies {
-		    implementation 'com.appliedrec.verid:ui-api14:1.19.0'
-	    }
-		~~~
-
+    
+## Migrating from Ver-ID 1
+Please consult [this document](Migrating from Ver-ID 1 to Ver-ID 2.md).
+		
 ## Usage
 
 ### Creating Ver-ID Environment
@@ -114,76 +121,167 @@ Prior to running Ver-ID sessions you will need to create an instance of Ver-ID.
 ~~~java
 VerIDFactory verIDFactory = new VerIDFactory(getContext(), new VerIDFactoryDelegate() {
     @Override
-    public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
+    public void onVerIDCreated(VerIDFactory verIDFactory, VerID verID) {
         // You can now use the VerID instance
     }
 
     @Override
-    public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
+    public void onVerIDCreationFailed(VerIDFactory verIDFactory, Exception e) {
         // Failed to create an instance of Ver-ID
     }
 });
 verIDFactory.createVerID();
 ~~~
+`VerIDFactory` extends the reactive class `Single`. As an alternative to using `VerIDFactoryDelegate` you can use the reactive implementation:
+
+~~~java
+VerIDFactor verIDFactory = new VerIDFactory(getContext());
+Disposable veridFactoryDisposable = verIDFactory
+    .subscribeOn(Schedulers.io())
+    .observeOn(AndroidSchedulers.mainThread())
+    .subscribe(
+        verID -> {
+            // You can now use the VerID instance
+        },
+        error -> {
+            // Failed to create an instance of Ver-ID
+        }
+    );
+// Call veridFactoryDisposable.dispose() to cancel the operation.
+~~~
 
 ### Running Ver-ID Session Activities
 ~~~java
-class MyActivity extends AppCompatActivity {
-
-    static final int REQUEST_CODE_LIVENESS_DETECTION = 0;
+class MyActivity extends AppCompatActivity implements VerIDFactoryDelegate, VerIDSessionDelegate {
 
     void startLivenessDetectionSession() {
-        try {
-            VerIDSDKIdentity identity = new VerIDSDKIdentity(this);
-            VerIDFactory veridFactory = new VerIDFactory(this, identity, new VerIDFactoryDelegate() {
-                @Override
-                public void veridFactoryDidCreateEnvironment(VerIDFactory verIDFactory, VerID verID) {
-                    // You can now start a Ver-ID session
-                    LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-                    settings.setNumberOfResultsToCollect(2);
-                    Intent intent = new VerIDSessionIntent(this, verID, settings);
-                    startActivityForResult(intent, REQUEST_CODE_LIVENESS_DETECTION);
-                }
+        VerIDFactory veridFactory = new VerIDFactory(this);
+        veridFactory.setDelegate(this);
+        veridFactory.createVerID();
+    }
     
-                @Override
-                public void veridFactoryDidFailWithException(VerIDFactory verIDFactory, Exception e) {
-                    // Failed to create an instance of Ver-ID
-                }
-            });
-            veridFactory.createVerID();
-        } catch (Exception e) {
-            // Failed to create Ver-ID SDK identity
+    //region Ver-ID factory delegate
+    
+    @Override
+    public void onVerIDCreated(VerIDFactory verIDFactory, VerID verID) {
+        // You can now start a Ver-ID session
+        LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
+        VerIDSession session = new VerIDSession(verID, settings);
+        session.setDelegate(this);
+        session.start();
+    }
+    
+    @Override
+    public void onVerIDCreationFailed(VerIDFactory verIDFactory, Exception e) {
+        // Failed to create an instance of Ver-ID
+    }
+    
+    //endregion
+    
+    //region Ver-ID session delegate
+    
+    @Override
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+        if (!result.getError().isPresent()) {
+            // Session succeeded
+        } else {
+            // Session failed
         }
+    }
+    
+    // The following delegate methods are optional
+
+    // Implement this method to notify your app when the user cancelled the session
+    @Override    
+    public void onSessionCanceled(IVerIDSession<?> session) {
     }
 
+    // Return true to show the result of the session in a new activity
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_LIVENESS_DETECTION && resultCode == RESULT_OK && data != null) {
-            VerIDSessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-            if (sessionResult != null && sessionResult.getError() == null) {
-                // Liveness detection session succeeded
-            }
+    public boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
+        return true;
+    }
+
+    // Return true for the session to use audible prompts in addition to on-screen instructions
+    @Override
+    public boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
+        return true;
+    }
+
+    // Return CameraLocation.BACK to use the back-facing camera instead of the default front-facing (selfie) camera
+    @Override
+    public CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
+        return CameraLocation.BACK;
+    }
+
+    // Return true to record a video of the session
+    @Override
+    public boolean shouldSessionRecordVideo(IVerIDSession<?> session) {
+        return true;
+    }
+
+    // Override this method if you wish to implement your own image iterator/reader class
+    @Override
+    public Function<VerID, IImageIterator> createImageIteratorFactory(IVerIDSession<?> session) {
+        return VerIDImageIterator::new;
+    }
+
+    // Override to supply your own dialog when the session fails and the user is allowed to re-run the session
+    @Override
+    public SessionFailureDialogFactory createSessionFailureDialogFactory(IVerIDSession<?> session) {
+        return new DefaultSessionFailureDialogFactory();
+    }
+
+    // Override to supply your own session view
+    @Override
+    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
+        return context -> (V) new SessionView(context);
+    }
+
+    // Override to supply custom functions to control the session logic
+    @Override
+    public SessionFunctions createSessionFunctions(IVerIDSession<?> session, VerID verID, VerIDSessionSettings sessionSettings) {
+        return new SessionFunctions(verID, sessionSettings);
+    }
+
+    // Override to supply a custom session activity
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass(IVerIDSession<?> session) {
+        return (Class<A>) SessionActivity.class;
+    }
+
+    // Override to supply custom activities for displaying the session results
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
+        if (result.getError().isPresent()) {
+            return (Class<A>) SessionSuccessActivity.class;
+        } else {
+            return (Class<A>) SessionFailureActivity.class;
         }
     }
+    
+    // Override to allow the user retry the session
+    // You can supply your own logic. In this example the delegate keeps track of how many times the session ran (runCount)
+    // and lets the user retry if the session ran fewer than 3 times
+    @Override
+    public boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
+        return runCount < 3;
+    }
+    
+    //endregion
 }
 ~~~
-
-### Customizing Ver-ID Session Behaviour
-The Ver-ID session activity finishes as the session concludes. If you want to change this or other behaviour of the session you can write your own activity class that extends `VerIDSessionActivity`.
-
-For an example of an activity that extends `VerIDSessionActivity` take a look at [AuthenticationActivity](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android/blob/master/app/src/main/java/com/appliedrec/verid/kiosk/AuthenticationActivity.java) in the [Ver-ID Kiosk sample app](https://github.com/AppliedRecognition/Ver-ID-Kiosk-Android).
 
 ### Controlling Liveness Detection
 If you run a Ver-ID session with `LivenessDetectionSessionSettings` or its subclass `AuthenticationSessionSettings` you can control how Ver-ID detects liveness.
 
-To disable liveness detection set the session's [number of results to collect](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionSettings.html#setNumberOfResultsToCollect(int)) to `1`.
+To disable liveness detection set the session's [face capture count](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.VerIDSessionSettings.html#setFaceCaptureCount(int)) to `1`.
 
-To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
+To control the bearings the user may be asked to assume call the [setBearings(EnumSet)](https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings.html#setBearings(EnumSet)) method. For example, to ask the user to look straight at the camera and then assume 2 random poses from the choice of left and right modify the settings as follows:
 
 ~~~java
 LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-settings.setNumberOfResultsToCollect(3); // 1 straight plus 2 other poses
+settings.setFaceCaptureCount(3); // 1 straight plus 2 other poses
 settings.setBearings(EnumSet.of(Bearing.STRAIGHT, Bearing.LEFT, Bearing.RIGHT)); // Limit the poses to left and right
 ~~~
 The session result will contain 3 faces: 1 looking straight at the camera and 2 in random poses.
@@ -243,4 +341,4 @@ verIDFactory.createVerID();
 Full documentation available on the project's [Github page](https://appliedrecognition.github.io/Ver-ID-UI-Android/).
 
 ## Change log
-We maintain a separate [page](./CHANGELOG.md) with our API change log.
+Changes are described in release notes.

@@ -3,7 +3,9 @@ package com.appliedrec.verid.sample.preferences;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.hardware.Camera;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -14,11 +16,13 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.sample.IntroActivity;
 import com.appliedrec.verid.sample.R;
+
+import static android.content.Context.CAMERA_SERVICE;
 
 public class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -74,14 +78,19 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         faceWidthPref.setKey(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION);
         faceWidthPref.setTitle(R.string.face_bounds_width);
         faceWidthPref.setFragment(FaceSizeSettingsFragment.class.getName());
-        faceWidthPref.setSummary(String.format("%.0f%% of view width", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, livenessDetectionSessionSettings.getFaceBoundsFraction().x) * 100));
+        faceWidthPref.setSummary(String.format("%.0f%% of view width", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100));
         faceDetectionCategory.addPreference(faceWidthPref);
         Preference faceHeightPref = new Preference(context);
         faceHeightPref.setKey(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION);
         faceHeightPref.setTitle(R.string.face_bounds_height);
         faceHeightPref.setFragment(FaceSizeSettingsFragment.class.getName());
-        faceHeightPref.setSummary(String.format("%.0f%% of view height", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, livenessDetectionSessionSettings.getFaceBoundsFraction().y) * 100));
+        faceHeightPref.setSummary(String.format("%.0f%% of view height", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100));
         faceDetectionCategory.addPreference(faceHeightPref);
+        SwitchPreferenceCompat enableMaskDetectionPref = new SwitchPreferenceCompat(context);
+        enableMaskDetectionPref.setKey(PreferenceKeys.ENABLE_MASK_DETECTION);
+        enableMaskDetectionPref.setTitle(R.string.enable_face_covering_detection);
+        enableMaskDetectionPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, livenessDetectionSessionSettings.isFaceCoveringDetectionEnabled()));
+        preferenceScreen.addPreference(enableMaskDetectionPref);
 
         // REGISTRATION
         PreferenceCategory registrationCategory = new PreferenceCategory(context);
@@ -93,7 +102,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         registrationFaceCountPref.setEntries(R.array.registration_face_count_titles);
         registrationFaceCountPref.setEntryValues(R.array.registration_face_count_values);
         RegistrationSessionSettings registrationSessionSettings = new RegistrationSessionSettings("");
-        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format("%d",registrationSessionSettings.getNumberOfResultsToCollect()));
+        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format("%d",registrationSessionSettings.getFaceCaptureCount()));
         registrationFaceCountPref.setValue(registrationFaceCount);
         registrationFaceCountPref.setSummaryProvider(ListPreference.SimpleSummaryProvider.getInstance());
         registrationCategory.addPreference(registrationFaceCountPref);
@@ -113,24 +122,33 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         speakPromptsPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.SPEAK_PROMPTS, false));
         accessibilityCategory.addPreference(speakPromptsPref);
 
-        int camCount = Camera.getNumberOfCameras();
-        for (int i = 0; i < camCount; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-
-                // CAMERA
-                PreferenceCategory cameraCategory = new PreferenceCategory(context);
-                cameraCategory.setTitle(R.string.camera);
-                preferenceScreen.addPreference(cameraCategory);
-                SwitchPreferenceCompat useBackCameraPref = new SwitchPreferenceCompat(context);
-                useBackCameraPref.setTitle(R.string.use_back_camera);
-                useBackCameraPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false));
-                cameraCategory.addPreference(useBackCameraPref);
-                break;
+        // CAMERA
+        PreferenceCategory cameraCategory = new PreferenceCategory(context);
+        cameraCategory.setTitle(R.string.camera);
+        preferenceScreen.addPreference(cameraCategory);
+        try {
+            CameraManager cameraManager = (CameraManager) context.getSystemService(CAMERA_SERVICE);
+            if (cameraManager != null) {
+                for (String id : cameraManager.getCameraIdList()) {
+                    Integer facing = cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING);
+                    if (facing != null && facing.equals(CameraCharacteristics.LENS_FACING_BACK)) {
+                        SwitchPreferenceCompat useBackCameraPref = new SwitchPreferenceCompat(context);
+                        useBackCameraPref.setTitle(R.string.use_back_camera);
+                        useBackCameraPref.setKey(PreferenceKeys.USE_BACK_CAMERA);
+                        useBackCameraPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false));
+                        cameraCategory.addPreference(useBackCameraPref);
+                        break;
+                    }
+                }
             }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
-
+        SwitchPreferenceCompat recordSessionVideo = new SwitchPreferenceCompat(context);
+        recordSessionVideo.setTitle(R.string.record_session_video);
+        recordSessionVideo.setKey(PreferenceKeys.RECORD_SESSION_VIDEO);
+        recordSessionVideo.setChecked(sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
+        cameraCategory.addPreference(recordSessionVideo);
         setPreferenceScreen(preferenceScreen);
     }
 
@@ -152,9 +170,9 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
             LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
             String summary;
             if (s.equals(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION)) {
-                summary = String.format("%.0f%% of view height", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getFaceBoundsFraction().y) * 100);
+                summary = String.format("%.0f%% of view height", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100);
             } else {
-                summary = String.format("%.0f%% of view width", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getFaceBoundsFraction().x) * 100);
+                summary = String.format("%.0f%% of view width", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100);
             }
             Preference preference = findPreference(s);
             if (preference != null) {

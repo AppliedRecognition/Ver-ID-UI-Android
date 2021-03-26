@@ -1,21 +1,35 @@
 package com.appliedrec.verid.sample;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.test.espresso.IdlingResource;
 
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.VerID;
 
-public class MainActivity extends AppCompatActivity implements IVerIDLoadObserver {
+import io.reactivex.rxjava3.disposables.Disposable;
+
+public class MainActivity extends AppCompatActivity implements IVerIDLoadObserver, IdlingResource {
 
     private static final int REQUEST_CODE_ONERROR = 0;
+    private boolean veridLoadFinished = false;
+    private ResourceCallback resourceCallback;
+    private Disposable getUsersDisposable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (getUsersDisposable != null && !getUsersDisposable.isDisposed()) {
+            getUsersDisposable.dispose();
+        }
+        getUsersDisposable = null;
     }
 
     @Override
@@ -28,10 +42,8 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
 
     @Override
     public void onVerIDLoaded(VerID verid) {
-        AsyncTask.execute(() -> {
-            try {
-                String[] users = verid.getUserManagement().getUsers();
-                runOnUiThread(() -> {
+        getUsersDisposable = verid.getUserManagement().getUsersSingle().subscribe(
+                users -> {
                     if (isDestroyed()) {
                         return;
                     }
@@ -42,23 +54,44 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
                         intent = new Intent(this, IntroActivity.class);
                     }
                     startActivity(intent);
+                    veridLoadFinished = true;
+                    if (resourceCallback != null) {
+                        resourceCallback.onTransitionToIdle();
+                    }
                     finish();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
+                },
+                error -> {
                     if (isDestroyed()) {
                         return;
                     }
                     Intent intent = new Intent(this, ErrorActivity.class);
-                    intent.putExtra(Intent.EXTRA_TEXT, e.getLocalizedMessage());
+                    intent.putExtra(Intent.EXTRA_TEXT, error.toString());
                     startActivityForResult(intent, REQUEST_CODE_ONERROR);
-                });
-            }
-        });
+                    veridLoadFinished = true;
+                    if (resourceCallback != null) {
+                        resourceCallback.onTransitionToIdle();
+                    }
+                }
+        );
     }
 
     @Override
     public void onVerIDUnloaded() {
 
+    }
+
+    @Override
+    public String getName() {
+        return "Main Activity";
+    }
+
+    @Override
+    public boolean isIdleNow() {
+        return veridLoadFinished;
+    }
+
+    @Override
+    public void registerIdleTransitionCallback(ResourceCallback callback) {
+        resourceCallback = callback;
     }
 }

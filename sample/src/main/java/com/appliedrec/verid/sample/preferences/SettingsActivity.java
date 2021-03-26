@@ -8,7 +8,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
 
 public class SettingsActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback, FaceSizeSettingsFragment.Listener {
@@ -20,7 +20,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
         if (PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION.equals(pref.getKey()) || PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION.equals(pref.getKey())) {
             LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
             boolean isLandscape = PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION.equals(pref.getKey());
-            float value = PreferenceManager.getDefaultSharedPreferences(this).getFloat(pref.getKey(), isLandscape ? livenessDetectionSessionSettings.getFaceBoundsFraction().y : livenessDetectionSessionSettings.getFaceBoundsFraction().x);
+            float value = PreferenceManager.getDefaultSharedPreferences(this).getFloat(pref.getKey(), isLandscape ? livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight() : livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth());
             Bundle args = new Bundle();
             args.putFloat(FaceSizeSettingsFragment.ARG_INITIAL_VALUE, value);
             args.putBoolean(FaceSizeSettingsFragment.ARG_IS_LANDSCAPE, isLandscape);

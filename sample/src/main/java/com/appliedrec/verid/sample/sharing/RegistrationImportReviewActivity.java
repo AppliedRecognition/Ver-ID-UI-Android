@@ -2,25 +2,25 @@ package com.appliedrec.verid.sample.sharing;
 
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.Group;
+import androidx.core.util.Pair;
 
-import com.appliedrec.verid.core.VerID;
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.sample.IVerIDLoadObserver;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.R;
-import com.appliedrec.verid.sample.sharing.RegistrationData;
-import com.appliedrec.verid.sample.sharing.RegistrationImport;
+import com.appliedrec.verid.sample.databinding.ActivityRegistrationImportReviewBinding;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 /**
  * Activity that displays downloaded profile picture and registers downloaded face templates
@@ -32,83 +32,80 @@ public class RegistrationImportReviewActivity extends AppCompatActivity implemen
     private RegistrationData registrationData;
     private RegistrationImport registrationImport;
     private VerID verID;
+    private ArrayList<Disposable> disposables = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         profilePhotoHelper = new ProfilePhotoHelper(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_registration_import_review);
-        Group registration = findViewById(R.id.registration);
-        ProgressBar progressBar = findViewById(R.id.progressBar);
-        registration.setVisibility(View.GONE);
-        progressBar.setVisibility(View.VISIBLE);
-        CheckBox checkBox = findViewById(R.id.checkBox);
-        TextView textView = findViewById(R.id.textView);
-        Button importButton = findViewById(R.id.button);
-        ImageView imageView = findViewById(R.id.imageView);
-        importButton.setEnabled(false);
-        importButton.setOnClickListener(view -> AsyncTask.execute(() -> {
-            try {
-                if (registrationImport == null || registrationData == null) {
-                    return;
-                }
-                registrationImport.importRegistration(registrationData);
-                runOnUiThread(this::onImported);
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> onFailure(e));
+        ActivityRegistrationImportReviewBinding viewBinding = ActivityRegistrationImportReviewBinding.inflate(getLayoutInflater());
+        setContentView(viewBinding.getRoot());
+        viewBinding.button.setEnabled(false);
+        viewBinding.button.setOnClickListener(view -> {
+            if (registrationImport == null || registrationData == null) {
+                return;
             }
-        }));
+            disposables.add(registrationImport.importRegistration(registrationData)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            this::onImported,
+                            this::onFailure
+                    ));
+        });
         if (getIntent() != null && (getIntent().hasExtra(Intent.EXTRA_STREAM) || getIntent().getData() != null)) {
-            AsyncTask.execute(() -> {
-                try {
-                    if (registrationImport == null || verID == null) {
-                        return;
-                    }
-                    String[] users = verID.getUserManagement().getUsers();
-                    Uri registrationUri = getIntent().getParcelableExtra(Intent.EXTRA_STREAM);
-                    if (registrationUri == null) {
-                        registrationUri = getIntent().getData();
-                    }
-                    if (registrationUri == null) {
-                        return;
-                    }
-                    registrationData = registrationImport.registrationDataFromUri(this, registrationUri);
-                    runOnUiThread(() -> {
-                        if (isDestroyed()) {
-                            return;
-                        }
-                        imageView.setImageBitmap(registrationData.getProfilePicture());
-                        importButton.setEnabled(true);
-                        registration.setVisibility(View.VISIBLE);
-                        if (users.length == 0) {
-                            // For some reason setting visibility to GONE still keeps the checkbox visible
-                            checkBox.getLayoutParams().height = 1;
-                            checkBox.setAlpha(0);
-                        }
-                        progressBar.setVisibility(View.GONE);
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        if (isDestroyed()) {
-                            return;
-                        }
-                        progressBar.setVisibility(View.GONE);
-                        registration.setVisibility(View.VISIBLE);
-                        importButton.setVisibility(View.GONE);
-                        checkBox.setVisibility(View.GONE);
-                        imageView.setVisibility(View.GONE);
-                        textView.setText(R.string.failed_to_import_registration);
-                    });
-                }
-            });
+            if (registrationImport == null || verID == null) {
+                return;
+            }
+            Uri registrationUri = getIntent().getParcelableExtra(Intent.EXTRA_STREAM) != null ? getIntent().getParcelableExtra(Intent.EXTRA_STREAM) : getIntent().getData();
+            if (registrationUri == null) {
+                return;
+            }
+            disposables.add(verID.getUserManagement()
+                    .getUsersSingle()
+                    .flatMap(users -> registrationImport.registrationDataFromUri(registrationUri)
+                            .map(regData -> new Pair<>(users,regData)))
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            usersAndRegData -> {
+                                registrationData = usersAndRegData.second;
+                                viewBinding.imageView.setImageBitmap(registrationData.getProfilePicture());
+                                viewBinding.button.setEnabled(true);
+                                viewBinding.registration.setVisibility(View.VISIBLE);
+                                if (usersAndRegData.first.length == 0) {
+                                    // For some reason setting visibility to GONE still keeps the checkbox visible
+                                    viewBinding.checkBox.getLayoutParams().height = 1;
+                                    viewBinding.checkBox.setAlpha(0);
+                                }
+                                viewBinding.progressBar.setVisibility(View.GONE);
+                            },
+                            error -> {
+                                viewBinding.progressBar.setVisibility(View.GONE);
+                                viewBinding.registration.setVisibility(View.VISIBLE);
+                                viewBinding.button.setVisibility(View.GONE);
+                                viewBinding.checkBox.setVisibility(View.GONE);
+                                viewBinding.imageView.setVisibility(View.GONE);
+                                viewBinding.textView.setText(R.string.failed_to_import_registration);
+                            }
+                    ));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Iterator<Disposable> disposableIterator = disposables.iterator();
+        while (disposableIterator.hasNext()) {
+            Disposable disposable = disposableIterator.next();
+            if (!disposable.isDisposed()) {
+                disposable.dispose();
+            }
+            disposableIterator.remove();
         }
     }
 
     private void onImported() {
-        if (isDestroyed()) {
-            return;
-        }
         Intent data = new Intent();
         if (registrationData != null) {
             data.putExtra(EXTRA_IMPORTED_FACE_COUNT, registrationData.getFaceTemplates().length);
@@ -118,9 +115,6 @@ public class RegistrationImportReviewActivity extends AppCompatActivity implemen
     }
 
     private void onFailure(Throwable throwable) {
-        if (isDestroyed()) {
-            return;
-        }
         new AlertDialog.Builder(this)
                 .setTitle(R.string.failed_to_import_registration)
                 .setMessage(throwable.getLocalizedMessage())

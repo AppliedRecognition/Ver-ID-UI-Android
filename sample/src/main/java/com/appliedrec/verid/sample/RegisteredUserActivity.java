@@ -1,118 +1,99 @@
 package com.appliedrec.verid.sample;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewTreeObserver;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
-import com.appliedrec.verid.core.AuthenticationSessionSettings;
-import com.appliedrec.verid.core.Bearing;
-import com.appliedrec.verid.core.Face;
-import com.appliedrec.verid.core.RegistrationSessionSettings;
-import com.appliedrec.verid.core.VerID;
-import com.appliedrec.verid.core.VerIDSessionResult;
-import com.appliedrec.verid.core.VerIDSessionSettings;
+import com.appliedrec.verid.core2.Bearing;
+import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.FaceExtents;
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionException;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui.TranslatedStrings;
-import com.appliedrec.verid.ui.VerIDSessionActivity;
-import com.appliedrec.verid.ui.VerIDSessionIntent;
+import com.appliedrec.verid.ui2.CameraLocation;
+import com.appliedrec.verid.ui2.ISessionActivity;
+import com.appliedrec.verid.ui2.IVerIDSession;
+import com.appliedrec.verid.ui2.TranslatedStrings;
+import com.appliedrec.verid.ui2.VerIDSession;
+import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Locale;
-import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class RegisteredUserActivity extends AppCompatActivity implements IVerIDLoadObserver {
+public class RegisteredUserActivity extends AppCompatActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
-    private static final int AUTHENTICATION_REQUEST_CODE = 0;
-    private static final int REGISTRATION_REQUEST_CODE = 1;
     private static final int IMPORT_REQUEST_CODE = 2;
     private static final int REGISTRATION_EXPORT_REQUEST_CODE = 3;
     private static final int IMPORT_REVIEW_REQUEST_CODE = 4;
 
     private ProfilePhotoHelper profilePhotoHelper;
     private VerID verID;
-    private Button authenticateButton;
-    private Button registerButton;
     private RegistrationExport registrationExport;
+    private ExecutorService backgroundExecutor;
+    private ActivityRegisteredUserBinding viewBinding;
+    private AtomicInteger sessionRunCount = new AtomicInteger(0);
+    private final int sessionMaxRetryCount = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         profilePhotoHelper = new ProfilePhotoHelper(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_registered_user);
+        viewBinding = ActivityRegisteredUserBinding.inflate(getLayoutInflater());
+        setContentView(viewBinding.getRoot());
+        backgroundExecutor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable);
+            thread.setName("Registered user activity");
+            return thread;
+        });
         loadProfilePicture();
-        authenticateButton = findViewById(R.id.authenticate);
-        registerButton = findViewById(R.id.register);
-        findViewById(R.id.removeButton).setOnClickListener(v -> unregisterUser());
-        authenticateButton.setOnClickListener(v -> authenticate());
-        registerButton.setOnClickListener(v -> registerMoreFaces());
-        authenticateButton.setEnabled(verID != null);
-        registerButton.setEnabled(verID != null);
-        findViewById(R.id.import_registration).setOnClickListener(v -> importRegistration());
+        viewBinding.removeButton.setOnClickListener(v -> unregisterUser());
+        viewBinding.authenticate.setOnClickListener(v -> authenticate());
+        viewBinding.register.setOnClickListener(v -> registerMoreFaces());
+        viewBinding.identificationDemo.setOnClickListener(v -> startIdentificationDemo());
+        viewBinding.authenticate.setEnabled(verID != null);
+        viewBinding.register.setEnabled(verID != null);
+        viewBinding.importRegistration.setOnClickListener(v -> importRegistration());
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        registerButton = null;
-        authenticateButton = null;
+        viewBinding = null;
         registrationExport = null;
         verID = null;
+        if (backgroundExecutor != null) {
+            backgroundExecutor.shutdown();
+        }
+        backgroundExecutor = null;
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        // To inspect the result of the session:
-        if (resultCode == RESULT_OK && (requestCode == REGISTRATION_REQUEST_CODE || requestCode == AUTHENTICATION_REQUEST_CODE) && data != null) {
-            // See documentation at
-            // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
-            VerIDSessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
-            if (sessionResult != null) {
-                if (requestCode == REGISTRATION_REQUEST_CODE && sessionResult.getError() == null) {
-                    Iterator<Map.Entry<Face, Uri>> faceImageIterator = sessionResult.getFaceImages(Bearing.STRAIGHT).entrySet().iterator();
-                    if (faceImageIterator.hasNext()) {
-                        AsyncTask.execute(() -> {
-                            Map.Entry<Face, Uri> entry = faceImageIterator.next();
-                            try {
-                                profilePhotoHelper.setProfilePhotoFromUri(entry.getValue(), entry.getKey().getBounds());
-                                runOnUiThread(() -> {
-                                    if (isDestroyed()) {
-                                        return;
-                                    }
-                                    loadProfilePicture();
-                                    Toast.makeText(this, "Registration succeeded", Toast.LENGTH_SHORT).show();
-                                });
-                            } catch (Exception ignore) {
-                            }
-                        });
-                    }
-                } else {
-                    Intent intent = new Intent(this, SessionResultActivity.class);
-                    intent.putExtras(data);
-                    startActivity(intent);
-                }
-            }
-        } else if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_REQUEST_CODE) {
+        if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_REQUEST_CODE) {
             Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
             intent.setData(data.getData());
             intent.putExtras(data);
@@ -144,18 +125,20 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             case R.id.action_export_registration:
                 exportRegistration();
                 return true;
+            case R.id.action_kiosk_demo:
+                startActivity(new Intent(this, ContinuousLivenessActivity.class));
+                return true;
         }
         return false;
     }
 
     private void loadProfilePicture() {
-        ImageView profileImageView = findViewById(R.id.profileImage);
-        refreshProfilePictureInView(profileImageView);
-        profileImageView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        refreshProfilePictureInView(viewBinding.profileImage);
+        viewBinding.profileImage.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
-                profileImageView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                refreshProfilePictureInView(profileImageView);
+                viewBinding.profileImage.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                refreshProfilePictureInView(viewBinding.profileImage);
             }
         });
     }
@@ -165,7 +148,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         if (width == 0) {
             return;
         }
-        AsyncTask.execute(() -> {
+        executeInBackground(() -> {
             try {
                 Drawable drawable = profilePhotoHelper.getProfilePhotoDrawable(width);
                 runOnUiThread(() -> {
@@ -196,23 +179,26 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                     // The higher the count the more confident we can be of a live face at the expense of usability
                     // Note that 1 is added to the setting to include the initial mandatory straight pose
                     if (preferences != null) {
-                        settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getNumberOfResultsToCollect()))));
+                        settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
                         settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
                         settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
-                        if (preferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false)) {
-                            settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-                        }
-                        settings.shouldSpeakPrompts(preferences.getBoolean(PreferenceKeys.SPEAK_PROMPTS, false));
-                        settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
-                        settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
+                        settings.setExpectedFaceExtents(new FaceExtents(
+                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+                        ));
+                        settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
                     }
-                    settings.shouldRecordSessionVideo(true);
-                    TranslatedStrings translatedStrings = null;
+                    settings.setSessionDiagnosticsEnabled(true);
+                    sessionRunCount.set(0);
+                    VerIDSession authenticationSession;
                     if (i == 1) {
-                        translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
+                        TranslatedStrings translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
+                        authenticationSession = new VerIDSession(verID, settings, translatedStrings);
+                    } else {
+                        authenticationSession = new VerIDSession(verID, settings);
                     }
-                    Intent intent = new VerIDSessionIntent<>(RegisteredUserActivity.this, verID, settings, translatedStrings);
-                    startActivityForResult(intent, AUTHENTICATION_REQUEST_CODE);
+                    authenticationSession.setDelegate(this);
+                    authenticationSession.start();
                 })
                 .setTitle("Select language")
                 .create()
@@ -227,40 +213,42 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (preferences != null) {
-            settings.setNumberOfResultsToCollect(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getNumberOfResultsToCollect()))));
+            settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
             settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
             settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
-            if (preferences.getBoolean(PreferenceKeys.USE_BACK_CAMERA, false)) {
-                settings.setFacingOfCameraLens(VerIDSessionSettings.LensFacing.BACK);
-            }
-            settings.shouldSpeakPrompts(preferences.getBoolean(PreferenceKeys.SPEAK_PROMPTS, false));
-            settings.getFaceBoundsFraction().x = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getFaceBoundsFraction().x);
-            settings.getFaceBoundsFraction().y = preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getFaceBoundsFraction().y);
+            settings.setExpectedFaceExtents(new FaceExtents(
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+            ));
+            settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
-        settings.shouldRecordSessionVideo(true);
-        Intent intent = new VerIDSessionIntent<>(this, verID, settings);
-        startActivityForResult(intent, REGISTRATION_REQUEST_CODE);
+        settings.setSessionDiagnosticsEnabled(true);
+        sessionRunCount.set(0);
+        VerIDSession registrationSession = new VerIDSession(verID, settings);
+        registrationSession.setDelegate(this);
+        registrationSession.start();
     }
 
     private void unregisterUser() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_unregister)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.unregister, (dialog, which) -> AsyncTask.execute(() -> {
-                    try {
-                        verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
-                        runOnUiThread(() -> {
-                            if (isDestroyed()) {
-                                return;
+                .setPositiveButton(R.string.unregister, (dialog, which) ->
+                        executeInBackground(() -> {
+                            try {
+                                verID.getUserManagement().deleteUsers(new String[]{VerIDUser.DEFAULT_USER_ID});
+                                runOnUiThread(() -> {
+                                    if (isDestroyed()) {
+                                        return;
+                                    }
+                                    Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
+                                    startActivity(intent);
+                                    finish();
+                                });
+                            } catch (Exception ignore) {
                             }
-                            Intent intent = new Intent(RegisteredUserActivity.this, IntroActivity.class);
-                            intent.putExtra(VerIDSessionActivity.EXTRA_VERID_INSTANCE_ID, verID.getInstanceId());
-                            startActivity(intent);
-                            finish();
-                        });
-                    } catch (Exception ignore) {
-                    }
-                }))
+                        })
+                )
                 .create()
                 .show();
     }
@@ -275,7 +263,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     }
 
     private void exportRegistration() {
-        AsyncTask.execute(() -> {
+        executeInBackground(() -> {
             if (registrationExport != null) {
                 try {
                     Intent intent = registrationExport.createShareIntent(this);
@@ -284,7 +272,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                             return;
                         }
                         ArrayList<Intent> consumers = new ArrayList<>();
-                        for (ResolveInfo resolveInfo : getPackageManager ().queryIntentActivities(intent, 0)) {
+                        for (ResolveInfo resolveInfo : getPackageManager().queryIntentActivities(intent, 0)) {
                             String packageName = resolveInfo.activityInfo.packageName;
                             if (!packageName.equals(getPackageName())) {
                                 Intent consumerIntent = new Intent(intent);
@@ -315,16 +303,23 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     //endregion
 
+    //region Identification demo
+
+    private void startIdentificationDemo() {
+        Intent intent = new Intent(this, IdentificationDemoActivity.class);
+        startActivity(intent);
+    }
+
+    //endregion
+
     //region Ver-ID load observer
 
     @Override
     public void onVerIDLoaded(VerID verid) {
         this.verID = verid;
-        if (registerButton != null) {
-            registerButton.setEnabled(true);
-        }
-        if (authenticateButton != null) {
-            authenticateButton.setEnabled(true);
+        if (viewBinding != null) {
+            viewBinding.register.setEnabled(true);
+            viewBinding.authenticate.setEnabled(true);
         }
         registrationExport = new RegistrationExport(verid, profilePhotoHelper);
         invalidateOptionsMenu();
@@ -333,15 +328,63 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     @Override
     public void onVerIDUnloaded() {
         verID = null;
-        if (registerButton != null) {
-            registerButton.setEnabled(false);
-        }
-        if (authenticateButton != null) {
-            authenticateButton.setEnabled(false);
+        if (viewBinding != null) {
+            viewBinding.register.setEnabled(false);
+            viewBinding.authenticate.setEnabled(false);
         }
         registrationExport = null;
         invalidateOptionsMenu();
     }
 
     //endregion
+
+    @Override
+    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+        if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
+            result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
+                try {
+                    profilePhotoHelper.setProfilePhoto(faceCapture.getFaceImage());
+                    loadProfilePicture();
+                    Toast.makeText(this, "Registration succeeded", Toast.LENGTH_SHORT).show();
+                } catch (Exception ignore) {
+                }
+            });
+        }
+    }
+
+    @Override
+    public boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
+        return !(session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent());
+    }
+
+    @Override
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
+        return (Class<A>) SessionResultActivity.class;
+    }
+
+    @Override
+    public boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
+    }
+
+    @Override
+    public CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
+    }
+
+    @Override
+    public boolean shouldSessionRecordVideo(IVerIDSession<?> session) {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false);
+    }
+
+    @Override
+    public boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
+        return sessionRunCount.getAndIncrement() < sessionMaxRetryCount;
+    }
+
+    private void executeInBackground(Runnable runnable) {
+        if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
+            backgroundExecutor.execute(runnable);
+        }
+    }
 }

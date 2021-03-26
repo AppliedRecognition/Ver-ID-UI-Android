@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="RoundedCornersImageView">
-        <attr name="corner_radius" format="dimension" />
+    <declare-styleable name="VerIDSessionFragment">
+        <attr name="overlay_background_color" format="color" />
+        <attr name="oval_color" format="color" />
+        <attr name="oval_color_highlighted" format="color" />
+        <attr name="text_color" format="color" />
+        <attr name="text_color_highlighted" format="color" />
     </declare-styleable>
     <declare-styleable name="FixedAspectRatioFrameLayout">
         <attr name="aspect_ratio_width" format="integer" />

@@ -2,12 +2,7 @@ package com.appliedrec.verid.sample;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,20 +13,18 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.appliedrec.verid.core.DetectedFace;
-
-import java.io.IOException;
-import java.io.InputStream;
+import com.appliedrec.verid.core2.session.FaceCapture;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
 
 public class SessionFacesFragment extends Fragment {
 
-    private static final String ARG_FACES = "faces";
+    private static final String ARG_RESULT = "result";
     private final float height = 100;
 
-    public static SessionFacesFragment newInstance(DetectedFace[] faces) {
+    public static SessionFacesFragment newInstance(VerIDSessionResult result) {
 
         Bundle args = new Bundle();
-        args.putParcelableArray(ARG_FACES, faces);
+        args.putParcelable(ARG_RESULT, result);
 
         SessionFacesFragment fragment = new SessionFacesFragment();
         fragment.setArguments(args);
@@ -45,32 +38,18 @@ public class SessionFacesFragment extends Fragment {
         LinearLayout view = (LinearLayout) inflater.inflate(R.layout.faces_list_item, container, false);
         Bundle args = getArguments();
         if (args != null) {
-            DetectedFace[] faces = (DetectedFace[]) args.getParcelableArray(ARG_FACES);
-            if (faces != null && getContext() != null) {
-                AsyncTask.execute(() -> {
-                    for (DetectedFace face : faces) {
-                        if (face.getImageUri() != null) {
-                            try (InputStream inputStream = getContext().getContentResolver().openInputStream(face.getImageUri())) {
-                                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                                if (bitmap != null) {
-                                    Rect cropRect = new Rect();
-                                    face.getFace().getBounds().round(cropRect);
-                                    cropRect.intersect(new Rect(0,0,bitmap.getWidth(),bitmap.getHeight()));
-                                    bitmap = Bitmap.createBitmap(bitmap, cropRect.left, cropRect.top, cropRect.width(), cropRect.height());
-                                    float height = this.height * getResources().getDisplayMetrics().density;
-                                    float scale = height / (float)bitmap.getHeight();
-                                    bitmap = Bitmap.createScaledBitmap(bitmap, (int)((float)bitmap.getWidth()*scale), (int)((float)bitmap.getHeight() * scale), true);
-                                    ImageView imageView = new ImageView(getContext());
-                                    imageView.setImageBitmap(bitmap);
-                                    imageView.setScaleType(ImageView.ScaleType.CENTER);
-                                    new Handler(Looper.getMainLooper()).post(() -> view.addView(imageView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1)));
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                });
+            VerIDSessionResult result = args.getParcelable(ARG_RESULT);
+            if (result != null && getContext() != null) {
+                for (FaceCapture face : result.getFaceCaptures()) {
+                    Bitmap bitmap = face.getFaceImage();
+                    float height = this.height * getResources().getDisplayMetrics().density;
+                    float scale = height / (float)bitmap.getHeight();
+                    bitmap = Bitmap.createScaledBitmap(bitmap, (int)((float)bitmap.getWidth()*scale), (int)((float)bitmap.getHeight() * scale), true);
+                    ImageView imageView = new ImageView(getContext());
+                    imageView.setImageBitmap(bitmap);
+                    imageView.setScaleType(ImageView.ScaleType.CENTER);
+                    view.addView(imageView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+                }
             }
         }
         return view;

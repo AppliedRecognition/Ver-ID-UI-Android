@@ -14,9 +14,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.appliedrec.verid.core.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
-import com.appliedrec.verid.ui.DetectedFaceView;
+import com.appliedrec.verid.ui2.DetectedFaceView;
 
 public class FaceSizeSettingsFragment extends Fragment implements SeekBar.OnSeekBarChangeListener, ViewTreeObserver.OnGlobalLayoutListener {
 
@@ -71,7 +71,7 @@ public class FaceSizeSettingsFragment extends Fragment implements SeekBar.OnSeek
         seekBar.setOnSeekBarChangeListener(this);
         if (getArguments() != null) {
             LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
-            int value = (int)(getArguments().getFloat(ARG_INITIAL_VALUE, isLandscape ? livenessDetectionSessionSettings.getFaceBoundsFraction().y : livenessDetectionSessionSettings.getFaceBoundsFraction().x)*seekBar.getMax());
+            int value = (int)(getArguments().getFloat(ARG_INITIAL_VALUE, isLandscape ? livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight() : livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth())*seekBar.getMax());
             seekBar.setProgress(value);
         }
         detectedFaceView = view.findViewById(R.id.detectedFaceView);
