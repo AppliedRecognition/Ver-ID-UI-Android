@@ -34,8 +34,8 @@ ext {
     versionMajor = 2
     versionMinor = 0
     versionPatch = 0
-    versionClassifier = "rc"
-    versionClassifierVersion = "03"
+    versionClassifier = null
+    versionClassifierVersion = null
 
     minSdkVersion = 21
     compileSdkVersion = 30
