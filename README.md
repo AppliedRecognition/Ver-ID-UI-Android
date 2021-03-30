@@ -106,7 +106,7 @@ To build this project and to run the sample app you will need a computer with th
     }
     dependencies {
         coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
-	    implementation 'com.appliedrec.verid:ui:2.0.0-beta.01'
+	    implementation 'com.appliedrec.verid:ui2:2.0.0'
     }
     ~~~
     
