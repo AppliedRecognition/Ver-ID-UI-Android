@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Abstract Ver-ID session class
+ * Ver-ID session class
  * @since 2.0.0
  */
 @Keep
