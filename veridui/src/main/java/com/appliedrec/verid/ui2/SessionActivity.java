@@ -91,7 +91,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
             wrapper.setPreviewClass(sessionView.getPreviewClass());
             wrapper.addListener(this);
         });
-        sessionPrompts = new SessionPrompts(getSessionParameters().map(SessionParameters::getStringTranslator).orElse(null));
+        sessionPrompts = new SessionPrompts(getSessionParameters().map(SessionParameters::getStringTranslator).orElseThrow(RuntimeException::new));
         getSession().ifPresent(session1 -> {
             session1.getFaceDetectionLiveData().observe(this, this::onFaceDetection);
             session1.getFaceCaptureLiveData().observe(this, this::onFaceCapture);
@@ -113,9 +113,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         faceImages.clear();
         getCameraWrapper().ifPresent(wrapper -> wrapper.removeListener(this));
         cameraWrapper = null;
-        if (sessionView != null) {
-            sessionView.removeListener(this);
-        }
+        getSessionView().ifPresent(view -> view.removeListener(this));
         sessionView = null;
         getSessionVideoRecorder().ifPresent(getLifecycle()::removeObserver);
         getSession().ifPresent(session1 -> {
@@ -155,6 +153,11 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     protected void startSession() {
         if (isSessionRunning.compareAndSet(false, true)) {
+            try {
+                startCamera();
+            } catch (Exception ignore) {
+
+            }
             getSession().ifPresent(Session::start);
         }
     }
@@ -302,12 +305,11 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         if (!isSessionRunning.compareAndSet(true, false)) {
             return;
         }
+        getCameraWrapper().ifPresent(CameraWrapper::stop);
         getSessionVideoRecorder().flatMap(recorder -> {
             recorder.stop();
             return recorder.getVideoFile();
-        }).ifPresent(videoFile -> {
-            result.setVideoUri(Uri.fromFile(videoFile));
-        });
+        }).ifPresent(videoFile -> result.setVideoUri(Uri.fromFile(videoFile)));
         getSessionParameters().flatMap(SessionParameters::getSessionResultObserver).ifPresent(observer -> observer.onChanged(result));
 
         if (result.getError().isPresent() && getSessionParameters().flatMap(SessionParameters::shouldRetryOnFailure).orElse(exception -> false).apply(result.getError().get()) && getSessionParameters().map(SessionParameters::getSessionFailureDialogFactory).isPresent()) {

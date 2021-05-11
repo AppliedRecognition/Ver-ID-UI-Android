@@ -41,7 +41,7 @@ public class VerIDImageIterator implements IImageIterator {
 
     @Override
     public boolean hasNext() {
-        return true;
+        return isActive.get();
     }
 
     @Override
