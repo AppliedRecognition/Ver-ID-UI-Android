@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 public class TipsActivity extends PageViewActivity implements ISessionActivity {
 
     public static final String EXTRA_TRANSLATOR = "com.appliedrec.verid.EXTRA_TRANSLATOR";
+    public static final String EXTRA_SPEAK_TEXT = "com.appliedrec.verid.EXTRA_SPEAK_TEXT";
 
     private IStringTranslator stringTranslator;
     private ITextSpeaker textSpeaker;
@@ -24,7 +25,8 @@ public class TipsActivity extends PageViewActivity implements ISessionActivity {
         if (getIntent().hasExtra(EXTRA_TRANSLATOR)) {
             stringTranslator = getIntent().getParcelableExtra(EXTRA_TRANSLATOR);
         }
-        if (textSpeaker == null) {
+        boolean speakText = getIntent().getBooleanExtra(EXTRA_SPEAK_TEXT, false);
+        if (speakText && textSpeaker == null) {
             TextSpeaker.setup(getApplicationContext());
             textSpeaker = TextSpeaker.getInstance();
         }
@@ -61,6 +63,8 @@ public class TipsActivity extends PageViewActivity implements ISessionActivity {
         if (textSpeaker != null && stringTranslator != null) {
             textSpeaker.speak(null, stringTranslator.getLocale(), true);
         }
+        textSpeaker = null;
+        stringTranslator = null;
     }
 
     @Override
@@ -146,5 +150,6 @@ public class TipsActivity extends PageViewActivity implements ISessionActivity {
     @Override
     public void setSessionParameters(SessionParameters sessionParameters) {
         stringTranslator = sessionParameters.getStringTranslator();
+        textSpeaker = sessionParameters.getTextSpeaker().orElse(null);
     }
 }

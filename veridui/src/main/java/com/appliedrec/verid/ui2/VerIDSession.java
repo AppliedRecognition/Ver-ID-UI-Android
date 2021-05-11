@@ -309,6 +309,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
                 }
             });
             sessionParameters.setSessionResult(sessionResult.get());
+            getTextSpeaker().ifPresent(sessionParameters::setTextSpeaker);
             sessionActivity.setSessionParameters(sessionParameters);
         });
     }

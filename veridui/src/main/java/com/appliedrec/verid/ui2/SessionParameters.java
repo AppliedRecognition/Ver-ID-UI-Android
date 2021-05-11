@@ -7,6 +7,7 @@ import android.view.View;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
 
 import com.appliedrec.verid.core2.VerID;
@@ -48,6 +49,7 @@ public class SessionParameters {
     private Function<VerIDSessionResult,Boolean> sessionResultDisplayIndicator = result -> false;
     private VerIDSessionResult sessionResult;
     private Function<VerIDSessionException, Boolean> shouldRetryOnFailure;
+    private ITextSpeaker textSpeaker;
 
     /**
      * Constructor
@@ -220,11 +222,23 @@ public class SessionParameters {
         this.sessionResult = sessionResult;
     }
 
+    @Keep
     public Optional<Function<VerIDSessionException, Boolean>> shouldRetryOnFailure() {
         return Optional.ofNullable(shouldRetryOnFailure);
     }
 
+    @Keep
     public void shouldRetryOnFailure(Function<VerIDSessionException, Boolean> shouldRetryOnFailure) {
         this.shouldRetryOnFailure = shouldRetryOnFailure;
+    }
+
+    @Keep
+    public Optional<ITextSpeaker> getTextSpeaker() {
+        return Optional.ofNullable(textSpeaker);
+    }
+
+    @Keep
+    public void setTextSpeaker(ITextSpeaker textSpeaker) {
+        this.textSpeaker = textSpeaker;
     }
 }
