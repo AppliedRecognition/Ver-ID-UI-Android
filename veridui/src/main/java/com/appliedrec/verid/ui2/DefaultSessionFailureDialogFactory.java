@@ -105,7 +105,10 @@ public class DefaultSessionFailureDialogFactory implements SessionFailureDialogF
 
                 @Override
                 public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-                    return false;
+                    mediaPlayer.stop();
+                    mediaPlayer.reset();
+                    mediaPlayer.release();
+                    return true;
                 }
 
                 @Override
