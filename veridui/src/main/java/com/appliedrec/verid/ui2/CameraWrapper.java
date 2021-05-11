@@ -106,6 +106,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private CameraManager cameraManager;
     private final ArrayList<Listener> listeners = new ArrayList<>();
     private final AtomicBoolean isCameraOpen = new AtomicBoolean(false);
+    private final AtomicBoolean isStarted = new AtomicBoolean(false);
 
     private static final NormalizedSize SIZE_1080P = new NormalizedSize(1920, 1080);
 
@@ -196,6 +197,9 @@ public class CameraWrapper implements DefaultLifecycleObserver {
      */
     @Keep
     public void start(int width, int height, int displayRotation) {
+        if (!isStarted.compareAndSet(false, true)) {
+            return;
+        }
         startBackgroundThread();
         this.viewWidth.set(width);
         this.viewHeight.set(height);
@@ -285,6 +289,9 @@ public class CameraWrapper implements DefaultLifecycleObserver {
      */
     @Keep
     public void stop() {
+        if (!isStarted.compareAndSet(true, false)) {
+            return;
+        }
         isCameraOpen.set(false);
         try {
             if (imageReader != null) {
