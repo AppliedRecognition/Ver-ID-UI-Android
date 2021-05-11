@@ -37,6 +37,7 @@ import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -552,14 +553,16 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     //region Surface texture listener
 
     @Override
-    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
         isSurfaceAvailable.set(true);
         synchronized (listenerLock) {
-            for (SessionViewListener listener : listeners) {
-                listener.onPreviewSurfaceCreated(new Surface(surface));
+            Surface surface = new Surface(surfaceTexture);
+            Iterator<SessionViewListener> listenerIterator = listeners.iterator();
+            while (listenerIterator.hasNext()) {
+                listenerIterator.next().onPreviewSurfaceCreated(surface);
+                listenerIterator.remove();
             }
         }
-//        getListener().ifPresent(listener -> listener.onPreviewSurfaceCreated(new Surface(surface)));
         onViewSizeUpdate();
     }
 
@@ -572,11 +575,12 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
         isSurfaceAvailable.set(false);
         synchronized (listenerLock) {
-            for (SessionViewListener listener : listeners) {
-                listener.onPreviewSurfaceDestroyed();
+            Iterator<SessionViewListener> listenerIterator = listeners.iterator();
+            while (listenerIterator.hasNext()) {
+                listenerIterator.next().onPreviewSurfaceDestroyed();
+                listenerIterator.remove();
             }
         }
-//        getListener().ifPresent(SessionViewListener::onPreviewSurfaceDestroyed);
         return true;
     }
 
