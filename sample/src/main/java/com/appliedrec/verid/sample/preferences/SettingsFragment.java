@@ -111,6 +111,11 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         enableEncryptionPref.setKey(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION);
         enableEncryptionPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION, true));
         registrationCategory.addPreference(enableEncryptionPref);
+        SwitchPreferenceCompat migrateToV20FaceTemplates = new SwitchPreferenceCompat(context);
+        migrateToV20FaceTemplates.setTitle(R.string.migrate_to_v20_face_templates);
+        migrateToV20FaceTemplates.setKey(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES);
+        migrateToV20FaceTemplates.setChecked(sharedPreferences.getBoolean(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES, false));
+        registrationCategory.addPreference(migrateToV20FaceTemplates);
 
         // ACCESSIBILITY
         PreferenceCategory accessibilityCategory = new PreferenceCategory(context);

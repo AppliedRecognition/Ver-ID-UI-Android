@@ -17,6 +17,7 @@ public class PreferenceKeys {
 
     public static final String REGISTRATION_FACE_COUNT = "registration_face_count";
     public static final String ENABLE_FACE_TEMPLATE_ENCRYPTION = "enable_face_template_encryption";
+    public static final String MIGRATE_TO_V20_FACE_TEMPLATES = "migrate_to_v20_face_templates";
 
     public static final String SPEAK_PROMPTS = "speak_prompts";
 

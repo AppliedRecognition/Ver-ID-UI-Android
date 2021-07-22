@@ -4,8 +4,12 @@ import android.net.Uri;
 
 import androidx.annotation.NonNull;
 
+import com.appliedrec.verid.core2.FaceRecognition;
+import com.appliedrec.verid.core2.FaceTemplate;
+import com.appliedrec.verid.core2.IRecognizable;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
+import com.appliedrec.verid.core2.VerIDFaceTemplateVersion;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.VerIDUser;
 import com.google.gson.Gson;
@@ -14,6 +18,7 @@ import com.google.gson.stream.JsonReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Completable;

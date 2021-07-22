@@ -113,4 +113,5 @@
     <string name="use_mlkit">Use ML Kit for face detection</string>
     <string name="prefer_surface_view">Prefer surface view for camera preview</string>
     <string name="enable_face_covering_detection">Enable face covering detection</string>
+    <string name="migrate_to_v20_face_templates">Migrate to v20 face templates</string>
 </resources>

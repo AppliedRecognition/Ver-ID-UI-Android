@@ -18,12 +18,14 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.FaceRecognition;
+import com.appliedrec.verid.core2.FaceTemplate;
 import com.appliedrec.verid.core2.IRecognizable;
 import com.appliedrec.verid.core2.IdentifiedFace;
 import com.appliedrec.verid.core2.UserIdentification;
 import com.appliedrec.verid.core2.UserIdentificationCallbacks;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
+import com.appliedrec.verid.core2.VerIDFaceTemplateVersion;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityIdentificationDemoBinding;
@@ -111,6 +113,28 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
         this.verID = null;
     }
 
+    private boolean containsFaceVersion(IRecognizable[] faces, VerIDFaceTemplateVersion version) {
+        int faceTemplateVersion = version == VerIDFaceTemplateVersion.V20 ? FaceTemplate.Version.V20_UNENCRYPTED : FaceTemplate.Version.UNENCRYPTED;
+        for (IRecognizable face : faces) {
+            if (face.getVersion() == faceTemplateVersion) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private IRecognizable[] filterFacesByVersion(IRecognizable[] faces, int version) {
+        ArrayList<IRecognizable> filtered = new ArrayList<>();
+        for (IRecognizable face : faces) {
+            if (face.getVersion() == version) {
+                filtered.add(face);
+            }
+        }
+        IRecognizable[] filteredArray = new IRecognizable[filtered.size()];
+        filtered.toArray(filteredArray);
+        return filteredArray;
+    }
+
     private void generateFaces() {
         View focusedView = getCurrentFocus();
         if (focusedView != null) {
@@ -140,6 +164,20 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
             int remainder = facesToGenerate % processorCount;
             int reportingIndex = (int)Math.ceil((float)facesToGenerate / 100f);
             generatedFaces = new IRecognizable[facesToGenerate+userFaces.length];
+            final VerIDFaceTemplateVersion defaultVersion;
+            if (verID.getFaceRecognition() instanceof FaceRecognition) {
+                defaultVersion = ((FaceRecognition)verID.getFaceRecognition()).defaultFaceTemplateVersion;
+            } else {
+                defaultVersion = VerIDFaceTemplateVersion.V16;
+            }
+            final VerIDFaceTemplateVersion version;
+            if (defaultVersion == VerIDFaceTemplateVersion.V20 && this.containsFaceVersion(userFaces, VerIDFaceTemplateVersion.V20)) {
+                version = VerIDFaceTemplateVersion.V20;
+                userFaces = this.filterFacesByVersion(userFaces, FaceTemplate.Version.V20_UNENCRYPTED);
+            } else {
+                version = VerIDFaceTemplateVersion.V16;
+                userFaces = this.filterFacesByVersion(userFaces, FaceTemplate.Version.UNENCRYPTED);
+            }
             System.arraycopy(userFaces, 0, generatedFaces, facesToGenerate, userFaces.length);
             AtomicInteger tasksExecuted = new AtomicInteger(0);
             AtomicInteger faceCounter = new AtomicInteger(0);
@@ -147,7 +185,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
             for (int i=0; i<processorCount; i++) {
                 int size = facesPerTask + remainder;
                 remainder = 0;
-                GenerateFaces task = new GenerateFaces(size, faceCounter, startIndex, reportingIndex, processed -> {
+                GenerateFaces task = new GenerateFaces(size, faceCounter, startIndex, reportingIndex, version, processed -> {
                     if (viewBinding == null) {
                         return;
                     }
@@ -327,16 +365,18 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
         AtomicInteger counter;
         int startIndex;
         int reportAtEach;
+        VerIDFaceTemplateVersion faceTemplateVersion;
         ProgressCallback progressCallback;
         GenerateFacesCallback callback;
         ErrorCallback errorCallback;
         private AtomicReference<VerIDCoreException> errorRef = new AtomicReference<>();
 
-        GenerateFaces(int numberOfFaces, AtomicInteger counter, int startIndex, int reportAtEach, ProgressCallback progressCallback, GenerateFacesCallback callback, ErrorCallback errorCallback) {
+        GenerateFaces(int numberOfFaces, AtomicInteger counter, int startIndex, int reportAtEach, VerIDFaceTemplateVersion faceTemplateVersion, ProgressCallback progressCallback, GenerateFacesCallback callback, ErrorCallback errorCallback) {
             this.numberOfFaces = numberOfFaces;
             this.counter = counter;
             this.startIndex = startIndex;
             this.reportAtEach = reportAtEach;
+            this.faceTemplateVersion = faceTemplateVersion;
             this.progressCallback = progressCallback;
             this.callback = callback;
             this.errorCallback = errorCallback;
@@ -348,7 +388,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
             IRecognizable[] faces = new IRecognizable[numberOfFaces];
             for (int i=0; i<numberOfFaces; i++) {
                 try {
-                    faces[i] = faceRecognition.generateRandomFaceTemplate();
+                    faces[i] = faceRecognition.generateRandomFaceTemplate(this.faceTemplateVersion);
                     int count = counter.incrementAndGet();
                     if (count % reportAtEach == 0) {
                         publishProgress(count);
