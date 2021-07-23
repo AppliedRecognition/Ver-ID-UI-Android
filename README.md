@@ -2,9 +2,42 @@
 
 # Ver-ID UI for Android
 
-## What's new in Ver-ID 2.0
+<details>
+<summary>What's new in Ver-ID 2.1</summary>
 
-Version 2 of the Ver-ID SDK brings a number of improvements:
+## Version 2.1 of the Ver-ID SDK introduces a new face template version.
+
+### Background
+Versions of Ver-ID prior to 2.1 generate face recognition templates version 16 (internal versioning). Version 2.1 introduces face recognition templates version 20. The new face templates significantly improve the accuracy of face recognition, especially for minority gender and race taxons.
+
+Face templates version 20 are incompatible with version 16. The Ver-ID SDK offers a silent automatic migration to version 20 for its existing users. New installs of the SDK will automatically use version 20 face templates unless instructed otherwise.
+
+### Migration choices
+1. Let Ver-ID set the default face template version based on the existing registered faces. This is the default and in most cases the best choice. Ver-ID will check the existing registered faces and if no older (version 16) face templates are registered it will start generating face templates version 20. Otherwise it will set its default face template version to 20 and only register version 20 face templates. Once all users have both versions of the face templates the older version (16) faces can be deleted.
+2. Set the face template version to the older version 16. New registrations will generate both versions of the face templates but version 16 will be used for face comparisons. Version 20 face templates will be ready should you decide to switch to version 20 later. Choose this option if you want the SDK to keep using version 16 face templates.
+3. Set the face template version to 20. New registrations will also generate version 16 face templates but only if your database contains users with version 16 face templates. Otherwise only version 20 face templates will be generated and used for face comparison at authentication.
+
+### Setting default face template version
+If you choose to set the default face template version instead of relying on Ver-ID you can do so in the `FaceDetectionRecognitionFactory`:
+
+```java
+VerIDFaceTemplateVersion defaultFaceTemplateVersion = VerIDFaceTemplateVersion.V20; // Or VerIDFaceTemplateVersion.V16
+VerIDFactory veridFactory = new VerIDFactory(context);
+((FaceDetectionRecognitionFactory)verIDFactory.getFaceRecognitionFactory()).setDefaultFaceTemplateVersion(defaultFaceTemplateVersion);
+```
+
+### Automatically deleting face templates with older version
+If you're using Ver-ID's implementation of the `IUserManagement` interface you can enable automatic face template migration in its factory. This will ensure that version 16 faces will be deleted when all users have version 20 faces registered. To do this set the call `setEnableAutomaticFaceTemplateMigration(true)` on an instance of `UserManagementFactory`.
+
+```java
+VerIDFactory veridFactory = new VerIDFactory(context);
+((UserManagementFactory)verIDFactory.getUserManagementFactory()).setEnableAutomaticFaceTemplateMigration(true);
+```
+</details>
+
+<details><summary>What's new in Ver-ID 2.0</summary>
+
+## Version 2 of the Ver-ID SDK brings a number of improvements:
 
 - Simpler API
     - Consumers no longer have to parse session results in activities' `onActivityResult`.
@@ -28,6 +61,7 @@ Version 2 of the Ver-ID SDK brings a number of improvements:
 Please note that Ver-ID 2.+ is not compatible with Ver-ID 1.+. You will need to migrate to the new SDK. 
 
 We opted to separate the new API to its own packages so both Ver-ID 1.+ and Ver-ID 2.+ can co-exist in the same project.
+</details>
 
 ## Requirements
 
