@@ -32,7 +32,7 @@ class Dependency {
 
 ext {
     versionMajor = 2
-    versionMinor = 1
+    versionMinor = 2
     versionPatch = 0
     versionClassifier = null
     versionClassifierVersion = null
