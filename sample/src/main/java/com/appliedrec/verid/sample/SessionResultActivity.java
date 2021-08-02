@@ -1,5 +1,6 @@
 package com.appliedrec.verid.sample;
 
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -7,6 +8,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.activity.result.contract.ActivityResultContract;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,7 +38,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class SessionResultActivity extends AppCompatActivity implements ISessionActivity {
 
-    private static final int REQUEST_CODE_SHARE = 1;
     private Disposable createIntentDisposable;
     private VerID verID;
     private VerIDSessionResult sessionResult;
@@ -132,16 +133,6 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
         return false;
     }
 
-    private void createSessionResultPackage(VerIDSessionSettings sessionSettings, VerIDSessionResult sessionResult) {
-        if (verID != null && sessionSettings != null && sessionResult != null) {
-            try {
-                sessionResultPackage = new SessionResultPackage(verID, sessionSettings, sessionResult);
-            } catch (Exception ignore) {
-            }
-        }
-        invalidateOptionsMenu();
-    }
-
     private void shareSession() {
         Consumer<String> onFailure = message -> {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
@@ -167,7 +158,7 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(intent -> {
                 Intent chooser = Intent.createChooser(intent, "Share session");
                 if (intent.resolveActivity(getPackageManager()) != null) {
-                    startActivityForResult(chooser, REQUEST_CODE_SHARE);
+                    startActivity(chooser);
                 } else {
                     onFailure.accept("None of your applications can handle the shared session file");
                 }
@@ -177,11 +168,6 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
         } catch (Exception e) {
             onFailure.accept("Failed to create session package");
         }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override

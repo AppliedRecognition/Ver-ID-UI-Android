@@ -3,6 +3,8 @@ package com.appliedrec.verid.sample;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.test.espresso.IdlingResource;
 
@@ -12,7 +14,6 @@ import io.reactivex.rxjava3.disposables.Disposable;
 
 public class MainActivity extends AppCompatActivity implements IVerIDLoadObserver, IdlingResource {
 
-    private static final int REQUEST_CODE_ONERROR = 0;
     private boolean veridLoadFinished = false;
     private ResourceCallback resourceCallback;
     private Disposable getUsersDisposable;
@@ -32,13 +33,11 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
         getUsersDisposable = null;
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_ONERROR && resultCode == RESULT_OK) {
+    private final ActivityResultLauncher<Intent> errorLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result.getResultCode() == RESULT_OK) {
             finish();
         }
-    }
+    });
 
     @Override
     public void onVerIDLoaded(VerID verid) {
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
                     }
                     Intent intent = new Intent(this, ErrorActivity.class);
                     intent.putExtra(Intent.EXTRA_TEXT, error.toString());
-                    startActivityForResult(intent, REQUEST_CODE_ONERROR);
+                    errorLauncher.launch(intent);
                     veridLoadFinished = true;
                     if (resourceCallback != null) {
                         resourceCallback.onTransitionToIdle();

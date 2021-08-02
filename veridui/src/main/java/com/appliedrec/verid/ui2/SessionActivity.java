@@ -13,6 +13,8 @@ import android.os.Bundle;
 import android.view.Surface;
 import android.view.View;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.Keep;
 import androidx.annotation.MainThread;
@@ -134,15 +136,6 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         super.onPause();
         if (isFinishing()) {
             cancelSession();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_SESSION_RESULT) {
-            getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).ifPresent(Runnable::run);
-            finish();
         }
     }
 
@@ -300,6 +293,11 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         }
     }
 
+    private ActivityResultLauncher<Intent> sessionResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).ifPresent(Runnable::run);
+        finish();
+    });
+
     @Keep
     protected void onSessionResult(@NonNull VerIDSessionResult result) {
         if (!isSessionRunning.compareAndSet(true, false)) {
@@ -324,7 +322,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
                         break;
                     case SHOW_TIPS:
                         Intent tipsActivityIntent = getSessionParameters().map(SessionParameters::getTipsIntentSupplier).map(supplier -> supplier.apply(this)).orElseThrow(RuntimeException::new);
-                        startActivityForResult(tipsActivityIntent, REQUEST_CODE_TIPS);
+                        startActivity(tipsActivityIntent);
                         break;
                 }
             }, result.getError().get(), getSessionParameters().map(SessionParameters::getStringTranslator).orElse(null));
@@ -335,7 +333,8 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         }
         if (getSessionParameters().map(SessionParameters::getSessionResultDisplayIndicator).orElse(result1 -> false).apply(result) && getSessionParameters().map(SessionParameters::getResultIntentSupplier).isPresent()) {
             Intent intent = getSessionParameters().map(SessionParameters::getResultIntentSupplier).get().apply(result, this);
-            startActivityForResult(intent, REQUEST_CODE_SESSION_RESULT);
+            sessionResultLauncher.launch(intent);
+
         } else if (getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).isPresent()) {
             getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).get().run();
             finish();

@@ -12,6 +12,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -24,7 +26,6 @@ import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
-import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
@@ -37,8 +38,6 @@ import java.util.Objects;
 public class IntroActivity extends PageViewActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
     public static final String EXTRA_SHOW_REGISTRATION = "showRegistration";
-    private static final int REQUEST_CODE_IMPORT = 2;
-    private static final int REQUEST_CODE_IMPORT_REVIEW = 3;
     private boolean showRegistration = true;
     private VerID verID;
 
@@ -74,6 +73,13 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         return true;
     }
 
+    private ActivityResultLauncher<Intent> registrationImport = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new RegistrationImportActivityResultCallback(registerForActivityResult(new RegistrationImportReviewActivityResultContract(), result -> {
+        if (result != null) {
+            startActivity(new Intent(this, RegisteredUserActivity.class));
+            finish();
+        }
+    })));
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_next) {
@@ -89,7 +95,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         if (item.getItemId() == R.id.action_import) {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.setType("application/verid-registration");
-            startActivityForResult(intent, REQUEST_CODE_IMPORT);
+            registrationImport.launch(intent);
             return true;
         }
         if (item.getItemId() == R.id.action_settings) {
@@ -98,20 +104,6 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
             return true;
         }
         return false;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_IMPORT && data != null) {
-            Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
-            intent.putExtras(data);
-            intent.setData(data.getData());
-            startActivityForResult(intent, REQUEST_CODE_IMPORT_REVIEW);
-        } else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_IMPORT_REVIEW && data != null && data.getIntExtra(RegistrationImportReviewActivity.EXTRA_IMPORTED_FACE_COUNT, 0) > 0) {
-            startActivity(new Intent(this, RegisteredUserActivity.class));
-            finish();
-        }
     }
 
     private void register() {

@@ -14,6 +14,11 @@ import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContract;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
@@ -44,10 +49,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RegisteredUserActivity extends AppCompatActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
-
-    private static final int IMPORT_REQUEST_CODE = 2;
-    private static final int REGISTRATION_EXPORT_REQUEST_CODE = 3;
-    private static final int IMPORT_REVIEW_REQUEST_CODE = 4;
 
     private ProfilePhotoHelper profilePhotoHelper;
     private VerID verID;
@@ -88,20 +89,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             backgroundExecutor.shutdown();
         }
         backgroundExecutor = null;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_REQUEST_CODE) {
-            Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
-            intent.setData(data.getData());
-            intent.putExtras(data);
-            startActivityForResult(intent, IMPORT_REVIEW_REQUEST_CODE);
-        } else if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_REVIEW_REQUEST_CODE && data.getIntExtra(RegistrationImportReviewActivity.EXTRA_IMPORTED_FACE_COUNT, 0) > 0) {
-            loadProfilePicture();
-            Toast.makeText(this, R.string.registration_imported, Toast.LENGTH_SHORT).show();
-        }
     }
 
     @Override
@@ -256,10 +243,17 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     //region Registration import and export
 
+    private ActivityResultLauncher<Intent> registrationImport = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new RegistrationImportActivityResultCallback(registerForActivityResult(new RegistrationImportReviewActivityResultContract(), result -> {
+        if (result != null) {
+            loadProfilePicture();
+            Toast.makeText(this, R.string.registration_imported, Toast.LENGTH_SHORT).show();
+        }
+    })));
+
     private void importRegistration() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("application/verid-registration");
-        startActivityForResult(intent, IMPORT_REQUEST_CODE);
+        registrationImport.launch(intent);
     }
 
     private void exportRegistration() {
@@ -288,9 +282,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                             Parcelable[] intents = new Parcelable[consumers.size()];
                             consumers.toArray(intents);
                             chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, intents);
-                            startActivityForResult(chooser, REGISTRATION_EXPORT_REQUEST_CODE);
+                            startActivity(chooser);
                         } else {
-                            startActivityForResult(consumers.get(0), REGISTRATION_EXPORT_REQUEST_CODE);
+                            startActivity(consumers.get(0));
                         }
 
                     });
