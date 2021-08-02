@@ -3,6 +3,58 @@
 # Ver-ID UI for Android
 
 <details>
+<summary>What's new in Ver-ID 2.2</summary>
+
+## Added the ability to load and use custom face attribute classifiers.
+This features is helpful for extracting attributes from faces. For example, the SDK can now help you ascertain whether a face has a face covering or whether an image on an ID card is genuine.
+
+### Example
+Let's assume you have a machine learning model in a file called licence_classifier.nv in your application's files directory.
+	
+1. Load this model into Ver-ID:
+	
+	```java
+	String licenceClassifierName = "licence";
+	String licenceClassifierFileName = "licence_classifier.nv";
+	String licenceClassifierFile = new File(context.getFilesDir(), licenceClassifierFileName);
+	// Create an instance of the Classifier class
+	Classifier licenceImageAuthenticityClassifier = new Classifier(licenceClassifierName, licenceClassifierFile.getPath());
+	
+	// Create VerIDFactory
+	VerIDFactory veridFactory = new VerIDFactory(context);
+	// Add the classifier
+	((FaceDetectionRecognitionFactory)verIDFactory.getFaceDetectionFactory()).addClassifier(licenceImageAuthenticityClassifier);
+	
+	// You can check the classifiers you added using
+	Set<Classifier> addedClassifiers = ((FaceDetectionRecognitionFactory)verIDFactory.getFaceDetectionFactory()).getAdditionalClassifiers();
+	```
+2. Extract face attributes using a classifier:
+	
+	```java
+	// Create VerIDImage from a file
+	VerIDImageBitmap image = getVerIDImageForAsset("path/to/your/image.jpg");
+        IFaceDetection<FaceDetectionImage> faceDetection = getEnvironment().getFaceDetection();
+
+	// Ensure face detection is an instance of FaceDetection supplied by Ver-ID
+        if (!(faceDetection instanceof FaceDetection)) {
+            throw new Exception("Unsupported implementation of IFaceDetection interface");
+        }
+	
+	// Detect faces in image
+        Face[] faces = faceDetection.detectFacesInImage(image.createFaceDetectionImage(), 1, 0);
+
+	// Ensure face was detected
+	if (faces.length == 0) {
+		throw new Exception("Face not found");
+	}
+	
+	// Extract face attribute using your classifier
+        float score = ((FaceDetection) faceDetection).extractAttributeFromFace(faces[0], image, licenceClassifierName);
+	```
+	
+</details>
+
+<details>
 <summary>What's new in Ver-ID 2.1</summary>
 
 ## Version 2.1 of the Ver-ID SDK introduces a new face template version.
