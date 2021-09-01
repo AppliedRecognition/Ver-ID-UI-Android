@@ -104,21 +104,16 @@ The Ver-ID translation system gives you the flexibility to start Ver-ID sessions
 
 ## Running a Ver-ID session with a specific translation
 
-To use a translation saved as **es.xml** in your app's assets add the following extra in the Ver-ID session intent:
+To use a translation saved as **es.xml** in your app's assets add the following parameter in the Ver-ID session constructor:
 
 ~~~java
+// Session settings
 LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-Intent intent = new VerIDSessionIntent<>(this, verID, settings);
-intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_ASSET_PATH, "es.xml");
-~~~
 
-Alternatively, if your translation resides elsewhere on the file system, you can specify a path to the XML file.
+// Create an instance of TranslatedStrings pointing to the translation file in the assets folder
+TranslatedStrings translation = new TranslatedStrings(context, "es.xml", Locale.ES);
 
-~~~java
-// Let's say we have "es.xml" in the files directory
-File translation = new File(getFilesDir(), "es.xml");
-
-LivenessDetectionSessionSettings settings = new LivenessDetectionSessionSettings();
-Intent intent = new VerIDSessionIntent<>(this, verID, settings);
-intent.putExtra(VerIDSessionActivity.EXTRA_TRANSLATION_FILE_PATH, translation.getPath());
+// Set the translation as a parameter of the VerIDSession constructor
+VerIDSession session = new VerIDSession(verID, settings, translation);
+// ...
 ~~~
