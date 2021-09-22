@@ -19,6 +19,7 @@ public class TipsActivity extends PageViewActivity implements IStringTranslator 
         if (getIntent() == null) {
             return;
         }
+        getIntent().setExtrasClassLoader(VerIDSessionActivity.class.getClassLoader());
         translatedStrings = getIntent().getParcelableExtra(VerIDSessionActivity.EXTRA_TRANSLATION);
         if (translatedStrings == null) {
             translatedStrings = new TranslatedStrings(this, getIntent());

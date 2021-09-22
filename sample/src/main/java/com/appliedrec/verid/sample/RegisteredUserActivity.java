@@ -86,6 +86,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         if (resultCode == RESULT_OK && (requestCode == REGISTRATION_REQUEST_CODE || requestCode == AUTHENTICATION_REQUEST_CODE) && data != null) {
             // See documentation at
             // https://appliedrecognition.github.io/Ver-ID-UI-Android/com.appliedrec.verid.core.VerIDSessionResult.html
+            data.setExtrasClassLoader(VerIDSessionResult.class.getClassLoader());
             VerIDSessionResult sessionResult = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (sessionResult != null) {
                 if (requestCode == REGISTRATION_REQUEST_CODE && sessionResult.getError() == null) {

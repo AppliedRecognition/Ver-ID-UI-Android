@@ -106,6 +106,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_REGISTER && resultCode == RESULT_OK && data != null) {
+            data.setExtrasClassLoader(VerIDSessionResult.class.getClassLoader());
             VerIDSessionResult result = data.getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
             if (result != null) {
                 if (result.getError() == null) {

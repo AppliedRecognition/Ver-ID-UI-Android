@@ -34,6 +34,7 @@ public class SessionResultActivity extends AppCompatActivity implements IVerIDLo
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_session_result);
+        getIntent().setExtrasClassLoader(VerIDSessionResult.class.getClassLoader());
         sessionResult = getIntent().getParcelableExtra(VerIDSessionActivity.EXTRA_RESULT);
         sessionSettings = getIntent().getParcelableExtra(VerIDSessionActivity.EXTRA_SETTINGS);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();

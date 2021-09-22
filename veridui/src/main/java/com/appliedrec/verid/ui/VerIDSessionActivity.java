@@ -119,6 +119,7 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
         if (intent == null) {
             return;
         }
+        intent.setExtrasClassLoader(VerIDSessionSettings.class.getClassLoader());
         sessionSettings = intent.getParcelableExtra(EXTRA_SETTINGS);
         int instanceId = intent.getIntExtra(EXTRA_VERID_INSTANCE_ID, -1);
         if (getSessionSettings() == null) {
