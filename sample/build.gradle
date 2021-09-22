@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion rootProject.compileSdkVersion
 
     defaultConfig {
         applicationId "com.appliedrec.verid.sample"
         minSdkVersion rootProject.minSdkVersion
-        targetSdkVersion 29
+        targetSdkVersion rootProject.targetSdkVersion
         versionCode rootProject.generateVersionCode()
         versionName rootProject.generateVersionName()
 
@@ -31,6 +31,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    buildToolsVersion rootProject.buildToolsVersion
+    ndkVersion rootProject.ndkVersion
 
     lintOptions {
         abortOnError false

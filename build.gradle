@@ -17,10 +17,14 @@ buildscript {
 ext {
     versionMajor = 1
     versionMinor = 21
-    versionPatch = 6
+    versionPatch = 8
     versionClassifier = null
     versionClassifierVersion = 0
     minSdkVersion = 21
+    buildToolsVersion = "30.0.3"
+    compileSdkVersion = 30
+    targetSdkVersion = 30
+    ndkVersion = '21.0.6113669'
 }
 
 Integer generateVersionCode() {
