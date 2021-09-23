@@ -55,10 +55,14 @@ public class SessionVideoFragment extends Fragment implements TextureView.Surfac
             Uri videoUri = args.getParcelable(ARG_VIDEO_URI);
             if (videoUri != null) {
                 synchronized (mediaPlayerLock) {
-                    mediaPlayer = MediaPlayer.create(context, videoUri);
-                    mediaPlayer.setOnPreparedListener(this);
-                    mediaPlayer.setOnCompletionListener(this);
-                    mediaPlayer.setOnVideoSizeChangedListener(this);
+                    try {
+                        mediaPlayer = MediaPlayer.create(context, videoUri);
+                        mediaPlayer.setOnPreparedListener(this);
+                        mediaPlayer.setOnCompletionListener(this);
+                        mediaPlayer.setOnVideoSizeChangedListener(this);
+                    } catch (Throwable ignored) {
+                        mediaPlayer = null;
+                    }
                 }
             }
         }
