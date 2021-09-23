@@ -944,11 +944,14 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private void stopRecordingVideo() {
         synchronized (mediaRecorderLock) {
             if (mediaRecorder != null) {
-                if (isRecordingVideo) {
-                    mediaRecorder.stop();
+                try {
+                    if (isRecordingVideo) {
+                        mediaRecorder.stop();
+                    }
+                    mediaRecorder.reset();
+                    mediaRecorder.release();
+                } catch (Throwable ignored) {
                 }
-                mediaRecorder.reset();
-                mediaRecorder.release();
                 mediaRecorder = null;
             }
             isRecordingVideo = false;
