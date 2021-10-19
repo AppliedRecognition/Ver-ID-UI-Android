@@ -33,14 +33,14 @@ class Dependency {
 ext {
     versionMajor = 2
     versionMinor = 2
-    versionPatch = 0
+    versionPatch = 1
     versionClassifier = null
     versionClassifierVersion = null
 
     minSdkVersion = 21
     compileSdkVersion = 30
     buildToolsVersion = "30.0.3"
-    targetSdkVersion = 30
+    targetSdkVersion = 31
 
     junitVersion = '1.1.2'
     espressoVersion = '3.3.0'
