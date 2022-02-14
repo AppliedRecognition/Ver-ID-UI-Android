@@ -32,10 +32,13 @@ import com.appliedrec.verid.sample.databinding.ActivityIdentificationDemoBinding
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
+import com.google.common.base.Function;
+import com.google.common.collect.FluentIterable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -113,28 +116,6 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
         this.verID = null;
     }
 
-    private boolean containsFaceVersion(IRecognizable[] faces, VerIDFaceTemplateVersion version) {
-        int faceTemplateVersion = version == VerIDFaceTemplateVersion.V20 ? FaceTemplate.Version.V20_UNENCRYPTED : FaceTemplate.Version.UNENCRYPTED;
-        for (IRecognizable face : faces) {
-            if (face.getVersion() == faceTemplateVersion) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private IRecognizable[] filterFacesByVersion(IRecognizable[] faces, int version) {
-        ArrayList<IRecognizable> filtered = new ArrayList<>();
-        for (IRecognizable face : faces) {
-            if (face.getVersion() == version) {
-                filtered.add(face);
-            }
-        }
-        IRecognizable[] filteredArray = new IRecognizable[filtered.size()];
-        filtered.toArray(filteredArray);
-        return filteredArray;
-    }
-
     private void generateFaces() {
         View focusedView = getCurrentFocus();
         if (focusedView != null) {
@@ -170,14 +151,34 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
             } else {
                 defaultVersion = VerIDFaceTemplateVersion.V16;
             }
-            final VerIDFaceTemplateVersion version;
-            if (defaultVersion == VerIDFaceTemplateVersion.V20 && this.containsFaceVersion(userFaces, VerIDFaceTemplateVersion.V20)) {
-                version = VerIDFaceTemplateVersion.V20;
-                userFaces = this.filterFacesByVersion(userFaces, FaceTemplate.Version.V20_UNENCRYPTED);
+            Function<IRecognizable,VerIDFaceTemplateVersion> templateVersionFromFace = face -> {
+                try {
+                    return VerIDFaceTemplateVersion.fromSerialNumber(face.getVersion());
+                } catch (VerIDCoreException ignore) {
+                    return null;
+                }
+            };
+            VerIDFaceTemplateVersion version = null;
+            FluentIterable<IRecognizable> userFacesIterable = FluentIterable.from(userFaces);
+            FluentIterable<VerIDFaceTemplateVersion> userFaceVersions = userFacesIterable.transform(templateVersionFromFace).filter(Objects::nonNull);
+            if (userFaceVersions.contains(defaultVersion)) {
+                version = defaultVersion;
             } else {
-                version = VerIDFaceTemplateVersion.V16;
-                userFaces = this.filterFacesByVersion(userFaces, FaceTemplate.Version.UNENCRYPTED);
+                for (VerIDFaceTemplateVersion v : FluentIterable.from(VerIDFaceTemplateVersion.values()).filter(v -> v != defaultVersion).toSortedSet((a,b) -> b.getValue() - a.getValue())) {
+                    if (userFaceVersions.contains(v)) {
+                        version = v;
+                        break;
+                    }
+                }
             }
+            final VerIDFaceTemplateVersion targetVersion = version;
+            userFaces = userFacesIterable.filter(face -> {
+                try {
+                    return VerIDFaceTemplateVersion.fromSerialNumber(face.getVersion()) == targetVersion;
+                } catch (VerIDCoreException e) {
+                    return false;
+                }
+            }).toArray(IRecognizable.class);
             System.arraycopy(userFaces, 0, generatedFaces, facesToGenerate, userFaces.length);
             AtomicInteger tasksExecuted = new AtomicInteger(0);
             AtomicInteger faceCounter = new AtomicInteger(0);

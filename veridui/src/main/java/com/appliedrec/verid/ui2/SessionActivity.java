@@ -65,8 +65,6 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
      * The constant REQUEST_CODE_CAMERA_PERMISSION.
      */
     protected static final int REQUEST_CODE_CAMERA_PERMISSION = 10;
-    private static final int REQUEST_CODE_TIPS = 11;
-    private static final int REQUEST_CODE_SESSION_RESULT = 12;
     private ExecutorService backgroundExecutor;
     private final ArrayList<Bitmap> faceImages = new ArrayList<>();
     private CameraWrapper cameraWrapper;
