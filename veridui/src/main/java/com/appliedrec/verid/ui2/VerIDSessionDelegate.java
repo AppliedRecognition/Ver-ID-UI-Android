@@ -6,12 +6,8 @@ import android.view.View;
 
 import androidx.annotation.Keep;
 
-import com.appliedrec.verid.core2.VerID;
-import com.appliedrec.verid.core2.session.IImageIterator;
-import com.appliedrec.verid.core2.session.SessionFunctions;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
-import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.function.Function;
 
@@ -56,9 +52,9 @@ public interface VerIDSessionDelegate extends VerIDSessionInViewDelegate {
     @Keep
     default <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
         if (result.getError().isPresent()) {
-            return (Class<A>) SessionSuccessActivity.class;
-        } else {
             return (Class<A>) SessionFailureActivity.class;
+        } else {
+            return (Class<A>) SessionSuccessActivity.class;
         }
     }
 
