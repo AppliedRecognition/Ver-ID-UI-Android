@@ -43,11 +43,6 @@ import com.appliedrec.verid.ui2.VerIDSessionInView;
 
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
@@ -62,8 +57,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 public class ContinuousLivenessActivity extends AppCompatActivity implements IVerIDLoadObserver, Iterable<FaceBounds>, ISessionView.SessionViewListener, CameraWrapper.Listener {
 
     ActivityContinuousLivenessBinding viewBinding;
-    private ThreadPoolExecutor imageProcessingExecutor;
-    private ExecutorService backgroundExecutor;
     private Disposable faceDetectionDisposable;
     private final LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
     private VerID verID;
@@ -81,12 +74,6 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
 
         stringTranslator = new TranslatedStrings(this, null);
 
-        imageProcessingExecutor = new ThreadPoolExecutor(0, 1, Long.MAX_VALUE, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setName("Ver-ID image processing");
-            return thread;
-        });
-        backgroundExecutor = Executors.newSingleThreadExecutor();
         viewBinding.retryButton.setOnClickListener(view -> startSession());
         viewBinding.idle.setVisibility(View.VISIBLE);
         viewBinding.sessionResult.setVisibility(View.VISIBLE);
@@ -101,14 +88,6 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
             faceDetectionDisposable.dispose();
         }
         faceDetectionDisposable = null;
-        if (imageProcessingExecutor != null) {
-            imageProcessingExecutor.shutdown();
-            imageProcessingExecutor = null;
-        }
-        if (backgroundExecutor != null) {
-            backgroundExecutor.shutdown();
-            backgroundExecutor = null;
-        }
         verID = null;
     }
 

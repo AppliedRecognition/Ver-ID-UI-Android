@@ -15,10 +15,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContract;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
@@ -34,14 +31,16 @@ import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
-import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
+import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -334,6 +333,16 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+        try {
+            File jsonFile = File.createTempFile("verid_", ".json");
+            try (FileOutputStream fileOutputStream = new FileOutputStream(jsonFile)) {
+                SessionResultPackage sessionResultPackage = new SessionResultPackage(session.getVerID(), session.getSettings(), result);
+                sessionResultPackage.archiveToStream(fileOutputStream);
+                // Send us the jsonFile
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
