@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -49,6 +50,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Interfaces with the device's camera
@@ -487,14 +489,15 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {
+        int minArea = 320 * 240;
         HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
         HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
         HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
         HashMap<Float,Size[]> candidates = new HashMap<>();
         Comparator<Size> sizeComparator = (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight();
         for (Map.Entry<Float,ArrayList<Size>> entry : previewAspectRatios.entrySet()) {
-            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(entry.getKey(), imageReaderAspectRatios);
-            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(entry.getKey(), videoAspectRatios);
+            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(entry.getKey(), imageReaderAspectRatios, minArea);
+            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(entry.getKey(), videoAspectRatios, minArea);
             if (imageReaderCandidates.isEmpty() || videoCandidates.isEmpty()) {
                 continue;
             }
@@ -528,12 +531,13 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         return aspectRatios;
     }
 
-    private ArrayList<Size> getSizesMatchingAspectRatio(float aspectRatio, HashMap<Float,ArrayList<Size>> candidates) {
+    private ArrayList<Size> getSizesMatchingAspectRatio(float aspectRatio, HashMap<Float,ArrayList<Size>> candidates, int minArea) {
         float aspectRatioTolerance = 0.01f;
         ArrayList<Size> sizes = new ArrayList<>();
         for (Map.Entry<Float,ArrayList<Size>> entry : candidates.entrySet()) {
             if (Math.abs(entry.getKey() - aspectRatio) < aspectRatioTolerance) {
-                sizes.addAll(entry.getValue());
+                List<Size> applicableSizes = entry.getValue().stream().filter((size) -> size.getWidth() * size.getHeight() >= minArea).collect(Collectors.toList());
+                sizes.addAll(applicableSizes);
             }
         }
         return sizes;
