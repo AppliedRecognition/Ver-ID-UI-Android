@@ -13,7 +13,6 @@
         <activity android:name=".SessionSuccessActivity" />
         <activity android:name=".SessionResultActivity" />
         <activity android:name=".SessionFailureActivity" />
-        <activity android:name=".SessionLivenessDetectionFailureActivity" />
         <activity android:name=".TipsActivity" />
         <activity android:name=".PageViewActivity" />
     </application>

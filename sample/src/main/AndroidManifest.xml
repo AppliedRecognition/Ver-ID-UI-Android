@@ -14,7 +14,7 @@
         android:extractNativeLibs="true"
         tools:replace="android:theme">
         <activity android:name=".IdentificationDemoActivity" />
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -28,7 +28,7 @@
         <activity android:name=".RegisteredUserActivity" />
         <activity android:name=".preferences.SettingsActivity" />
         <activity android:name=".SessionResultActivity" />
-        <activity android:name=".sharing.RegistrationImportReviewActivity">
+        <activity android:name=".sharing.RegistrationImportReviewActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
 
