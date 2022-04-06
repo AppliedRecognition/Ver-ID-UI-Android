@@ -557,10 +557,8 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
         isSurfaceAvailable.set(true);
         synchronized (listenerLock) {
             Surface surface = new Surface(surfaceTexture);
-            Iterator<SessionViewListener> listenerIterator = listeners.iterator();
-            while (listenerIterator.hasNext()) {
-                listenerIterator.next().onPreviewSurfaceCreated(surface);
-                listenerIterator.remove();
+            for (SessionViewListener listener : listeners) {
+                listener.onPreviewSurfaceCreated(surface);
             }
         }
         onViewSizeUpdate();
@@ -575,11 +573,10 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
         isSurfaceAvailable.set(false);
         synchronized (listenerLock) {
-            Iterator<SessionViewListener> listenerIterator = listeners.iterator();
-            while (listenerIterator.hasNext()) {
-                listenerIterator.next().onPreviewSurfaceDestroyed();
-                listenerIterator.remove();
+            for (SessionViewListener listener : listeners) {
+                listener.onPreviewSurfaceDestroyed();
             }
+            listeners.clear();
         }
         return true;
     }
