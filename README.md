@@ -3,6 +3,44 @@
 # Ver-ID UI for Android
 
 <details>
+<summary>What's new in Ver-ID 2.3</summary>
+
+## Added face template diagnostic feature
+You can now run population analysis on your registered user's faces. This may be useful if you're experiencing false acceptance. You can find how similar all faces are to each other and determine whether to raise or lower the authentication threshold.
+
+1. Create an instance of [FaceTemplateDiagnostics](https://appliedrecognition.github.io/Ver-ID-UI-Android/com/appliedrec/verid/core2/util/FaceTemplateDiagnostics.html):
+	
+	```java
+	VerID verID; // Obtained from VerIDFactory
+	FaceTemplateDiagnostics diagnostics = new FaceTemplateDiagnostics(verID);
+	```
+2. Compare all registered faces:
+	
+	```java
+	boolean hashUserNames = false; // Set to true to hash the user names in the output
+	diagnostics.compareRegisteredFaceTemplates(hashUserNames, result -> {
+		try {
+			HashMap<VerIDFaceTemplateVersion,UserFaceComparison[]> comparisons = result.get();
+			// Convert the result to JSON for submitting to further analysis
+			String json = new Gson().toJson(comparisons);
+			// Or find the most similar users among the faces
+			for (VerIDFaceTemplateVersion faceTemplateVersion : VerIDFaceTemplateVersion.values()) {
+				UserFaceComparison[] comparisonsWithSameVersion = comparisons.get(faceTemplateVersion);
+				if (comparisonsWithSameVersion != null && comparisonsWithSameVersion.length > 0) {
+					UserFaceComparison mostSimilarPair = diagnostics.findMostSimilarUsers(comparisonsWithSameVersion);
+					// The most similar users
+					System.out.println("Most similar users are "+mostSimilarPair.getFirst()+" and "+mostSimilarPair.getSecond());
+				}
+			}
+		} catch (Exception e) {
+			// TODO: Handle error
+		}
+	});
+	```
+	
+</details>
+
+<details>
 <summary>What's new in Ver-ID 2.2</summary>
 
 ## Added the ability to load and use custom face attribute classifiers.
@@ -121,6 +159,8 @@ To build this project and to run the sample app you will need a computer with th
 
 - [Android Studio 4](https://developer.android.com/studio) with Gradle plugin version 4.0.0 or newer
 - [Git](https://git-scm.com)
+	
+The SDK runs on Android 5.0 (API level 21) and newer.
 
 ## Installation
 
