@@ -37,7 +37,6 @@ import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -353,43 +352,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
-
-        RectF viewRect = new RectF(0,0, getTextureView().getWidth(), getTextureView().getHeight());
-
-        float rotationDegrees = 0;
-        try {
-            rotationDegrees = (float)getDisplayRotation();
-        } catch (Exception ignored) {
-
-        }
-        float w, h;
-        if ((sensorOrientation - rotationDegrees) % 180 == 0) {
-            w = width;
-            h = height;
-        } else {
-            w = height;
-            h = width;
-        }
-        float viewAspectRatio = viewRect.width()/viewRect.height();
-        float imageAspectRatio = w/h;
-        final PointF scale;
-        if (viewAspectRatio < imageAspectRatio) {
-            scale = new PointF((viewRect.height() / viewRect.width()) * ((float) height / (float) width), 1f);
-        } else {
-            scale = new PointF(1f, (viewRect.width() / viewRect.height()) * ((float) width / (float) height));
-        }
-        if (rotationDegrees % 180 != 0) {
-            float multiplier = viewAspectRatio < imageAspectRatio ? w/h : h/w;
-            scale.x *= multiplier;
-            scale.y *= multiplier;
-        }
-
-        Matrix matrix = new Matrix();
-        matrix.setScale(scale.x, scale.y, viewRect.centerX(), viewRect.centerY());
-        if (rotationDegrees != 0) {
-            matrix.postRotate(0 - rotationDegrees, viewRect.centerX(), viewRect.centerY());
-        }
+        Matrix matrix = CameraPreviewHelper.getViewTransformMatrix(width, height, getTextureView().getWidth(), getTextureView().getHeight(), sensorOrientation, getDisplayRotation());
         getTextureView().setTransform(matrix);
     }
 
