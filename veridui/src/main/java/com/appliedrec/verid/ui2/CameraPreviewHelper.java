@@ -7,7 +7,6 @@ public class CameraPreviewHelper {
 
     public static Matrix getViewTransformMatrix(int imageWidth, int imageHeight, int viewWidth, int viewHeight, int sensorOrientation, int deviceRotation) {
         Matrix matrix = new Matrix();
-        float imageAspectRatio = (float)imageWidth / (float)imageHeight;
         float viewAspectRatio = (float)viewWidth / (float)viewHeight;
         SizeF rotatedSize = new SizeF(viewWidth, viewHeight);
         SizeF correctedImageSize;
@@ -16,11 +15,9 @@ public class CameraPreviewHelper {
         } else {
             correctedImageSize = new SizeF(imageHeight, imageWidth);
         }
+        float imageAspectRatio = correctedImageSize.getWidth() / correctedImageSize.getHeight();
         if (deviceRotation % 180 != 0) {
             rotatedSize = new SizeF(viewHeight, viewWidth);
-        }
-        if (sensorOrientation % 180 != 0) {
-            imageAspectRatio = (float)imageHeight / (float)imageWidth;
         }
         float scale;
         if (imageAspectRatio > viewAspectRatio) {
