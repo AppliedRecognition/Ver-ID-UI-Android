@@ -61,7 +61,7 @@ public class CameraPreviewHelperTest {
         for (DeviceParams params : deviceParams) {
             try (InputStream inputStream = InstrumentationRegistry.getInstrumentation().getContext().getAssets().open(String.format("camera_preview_tests/%s.png", imageNames[i]))) {
                 Bitmap image = BitmapFactory.decodeStream(inputStream);
-                Matrix matrix = CameraPreviewHelper.getViewTransformMatrix(params.imageSize.width, params.imageSize.height, params.viewSize.width, params.viewSize.height, params.sensorOrientation, params.deviceOrientation);
+                Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(params.imageSize.width, params.imageSize.height, params.viewSize.width, params.viewSize.height, params.sensorOrientation, params.deviceOrientation);
                 Bitmap corrected = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
                 RectF viewRect = new RectF(0, 0, params.viewSize.width, params.viewSize.height);
                 matrix.mapRect(viewRect);

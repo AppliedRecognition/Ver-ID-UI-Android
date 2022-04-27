@@ -257,7 +257,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
                 Size[] previewSizes = map.getOutputSizes(previewClass);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                Size[] sizes = getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+                Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
                 Size previewSize = sizes[0];
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
@@ -486,61 +486,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             }
         }
         return cameraManager;
-    }
-
-    private Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {
-        int minArea = 320 * 240;
-        HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
-        HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
-        HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
-        HashMap<Float,Size[]> candidates = new HashMap<>();
-        Comparator<Size> sizeComparator = (lhs, rhs) -> lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight();
-        for (Map.Entry<Float,ArrayList<Size>> entry : previewAspectRatios.entrySet()) {
-            ArrayList<Size> imageReaderCandidates = getSizesMatchingAspectRatio(entry.getKey(), imageReaderAspectRatios, minArea);
-            ArrayList<Size> videoCandidates = getSizesMatchingAspectRatio(entry.getKey(), videoAspectRatios, minArea);
-            if (imageReaderCandidates.isEmpty() || videoCandidates.isEmpty()) {
-                continue;
-            }
-            Size[] sizes = new Size[3];
-            sizes[0] = Collections.max(entry.getValue(), sizeComparator);
-            sizes[1] = Collections.min(imageReaderCandidates, sizeComparator);
-            sizes[2] = Collections.min(videoCandidates, sizeComparator);
-            candidates.put(entry.getKey(), sizes);
-        }
-        if (candidates.isEmpty()) {
-            return new Size[]{previewSizes[0],imageReaderSizes[0],videoSizes[0]};
-        }
-        Map.Entry<Float,Size[]> bestEntry = Collections.min(candidates.entrySet(), (lhs, rhs) -> {
-            float lhsAspectRatioDiff = Math.abs(lhs.getKey() - aspectRatio);
-            float rhsAspectRatioDiff = Math.abs(rhs.getKey() - aspectRatio);
-            return (int)(lhsAspectRatioDiff * 1000f - rhsAspectRatioDiff * 1000f);
-        });
-        return bestEntry.getValue();
-    }
-
-    private HashMap<Float,ArrayList<Size>> getAspectRatioSizes(Size[] sizes) {
-        HashMap<Float,ArrayList<Size>> aspectRatios = new HashMap<>();
-        for (Size size : sizes) {
-            float aspectRatio = (float)size.getWidth()/(float)size.getHeight();
-            if (!aspectRatios.containsKey(aspectRatio)) {
-                aspectRatios.put(aspectRatio, new ArrayList<>());
-            }
-            //noinspection ConstantConditions
-            aspectRatios.get(aspectRatio).add(size);
-        }
-        return aspectRatios;
-    }
-
-    private ArrayList<Size> getSizesMatchingAspectRatio(float aspectRatio, HashMap<Float,ArrayList<Size>> candidates, int minArea) {
-        float aspectRatioTolerance = 0.01f;
-        ArrayList<Size> sizes = new ArrayList<>();
-        for (Map.Entry<Float,ArrayList<Size>> entry : candidates.entrySet()) {
-            if (Math.abs(entry.getKey() - aspectRatio) < aspectRatioTolerance) {
-                List<Size> applicableSizes = entry.getValue().stream().filter((size) -> size.getWidth() * size.getHeight() >= minArea).collect(Collectors.toList());
-                sizes.addAll(applicableSizes);
-            }
-        }
-        return sizes;
     }
 
     private @ExifOrientation int getExifOrientation(int rotationDegrees) {

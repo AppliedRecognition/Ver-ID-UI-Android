@@ -352,7 +352,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        Matrix matrix = CameraPreviewHelper.getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
+        Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
         getTextureView().setTransform(matrix);
     }
 
