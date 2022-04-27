@@ -2,6 +2,8 @@ package com.appliedrec.verid.sample;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.Constraints;
 
 import android.os.Bundle;
 
@@ -18,12 +20,23 @@ public class SessionInSmallViewActivity extends AppCompatActivity implements IVe
     ActivitySessionInSmallViewBinding viewBinding;
     VerID verID;
     VerIDSessionInView<SessionView> verIDSessionInView;
+    public static final String EXTRA_WIDTH = "com.appliedrec.verid.width";
+    public static final String EXTRA_HEIGHT = "com.appliedrec.verid.height";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewBinding = ActivitySessionInSmallViewBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
+        int previewWidth = getIntent().getIntExtra(EXTRA_WIDTH, 300);
+        int previewHeight = getIntent().getIntExtra(EXTRA_HEIGHT, 300);
+        float screenDensity = getResources().getDisplayMetrics().density;
+        ConstraintLayout.LayoutParams layoutParams = new Constraints.LayoutParams((int)((float)previewWidth * screenDensity), (int)((float)previewHeight * screenDensity));
+        layoutParams.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+        layoutParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID;
+        viewBinding.sessionView.setLayoutParams(layoutParams);
     }
 
     @Override
