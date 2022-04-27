@@ -15,6 +15,8 @@ import org.junit.Test;
 
 import java.io.InputStream;
 
+import static org.junit.Assert.*;
+
 public class CameraPreviewHelperTest {
 
     private static class DeviceParams {
@@ -37,12 +39,6 @@ public class CameraPreviewHelperTest {
         DeviceParams nexus9Landscape = new DeviceParams(2048, 1440, 1472, 1104, 90, 90);
         DeviceParams eloLandscape = new DeviceParams(1280, 752, 2592, 1944, 0, 0);
         DeviceParams[] deviceParams = new DeviceParams[]{nexus9Portrait, nexus9Landscape, eloLandscape};
-
-        RectF[] rotatedImageSizes = new RectF[]{
-                new RectF(0, 0, 1536, 1952),
-                new RectF(304, -304, 1744, 1744),
-                new RectF(0, 0, 1280, 752)
-        };
 
         RectF[] finalImageSizes = new RectF[]{
                 new RectF(0, -48, 1536, 2000),
@@ -67,13 +63,12 @@ public class CameraPreviewHelperTest {
                 Bitmap image = BitmapFactory.decodeStream(inputStream);
                 Matrix matrix = CameraPreviewHelper.getViewTransformMatrix(params.imageSize.width, params.imageSize.height, params.viewSize.width, params.viewSize.height, params.sensorOrientation, params.deviceOrientation);
                 Bitmap corrected = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
-//                RectF viewRect = new RectF(0, 0, params.viewSize.width, params.viewSize.height);
-//                Matrix deviceRotationMatrix = new Matrix();
-//                deviceRotationMatrix.setRotate(params.deviceOrientation, viewRect.centerX(), viewRect.centerY());
-//                deviceRotationMatrix.mapRect(viewRect);
-//                assertEquals(rotatedImageSizes[i], viewRect);
-//                matrix.mapRect(viewRect);
-//                assertEquals(finalImageSizes[i], viewRect);
+                RectF viewRect = new RectF(0, 0, params.viewSize.width, params.viewSize.height);
+                matrix.mapRect(viewRect);
+                assertEquals(finalImageSizes[i].top, viewRect.top, 0.1f);
+                assertEquals(finalImageSizes[i].left, viewRect.left, 0.1f);
+                assertEquals(finalImageSizes[i].bottom, viewRect.bottom, 0.1f);
+                assertEquals(finalImageSizes[i].right, viewRect.right, 0.1f);
                 i++;
             }
         }

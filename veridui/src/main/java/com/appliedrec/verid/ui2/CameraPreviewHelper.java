@@ -27,7 +27,7 @@ public class CameraPreviewHelper {
         }
         SizeF finalImageSize = new SizeF(correctedImageSize.getWidth()*scale, correctedImageSize.getHeight()*scale);
         matrix.setRotate(-deviceRotation, (float)viewWidth/2f, (float)viewHeight/2f);
-        matrix.postScale(finalImageSize.getWidth()/rotatedSize.getWidth(), finalImageSize.getHeight()/rotatedSize.getHeight(), finalImageSize.getWidth()/2f, finalImageSize.getHeight()/2f);
+        matrix.postScale(finalImageSize.getWidth()/rotatedSize.getWidth(), finalImageSize.getHeight()/rotatedSize.getHeight(), (float)viewWidth/2f, (float)viewHeight/2f);
         return matrix;
     }
 }
