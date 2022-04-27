@@ -114,6 +114,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             case R.id.action_kiosk_demo:
                 startActivity(new Intent(this, ContinuousLivenessActivity.class));
                 return true;
+            case R.id.action_small_view_session:
+                startActivity(new Intent(this, SessionInSmallViewActivity.class));
         }
         return false;
     }

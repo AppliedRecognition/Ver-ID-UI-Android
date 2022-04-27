@@ -10,4 +10,7 @@
         android:id="@+id/action_export_registration"
         android:title="@string/export_registration"
         android:visible="false" />
+    <item
+        android:id="@+id/action_small_view_session"
+        android:title="Session in small view" />
 </menu>
