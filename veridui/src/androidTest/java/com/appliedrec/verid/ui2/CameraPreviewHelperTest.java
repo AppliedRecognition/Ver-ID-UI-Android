@@ -1,23 +1,35 @@
 package com.appliedrec.verid.ui2;
 
+import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.MediaRecorder;
 
 import com.appliedrec.verid.core2.Size;
 
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.rule.GrantPermissionRule;
 
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.InputStream;
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
 public class CameraPreviewHelperTest {
+
+    @Rule
+    public GrantPermissionRule grantPermissionRule = GrantPermissionRule.grant(Manifest.permission.CAMERA);
 
     private static class DeviceParams {
         final Size viewSize;
@@ -71,6 +83,99 @@ public class CameraPreviewHelperTest {
                 assertEquals(finalImageSizes[i].right, viewRect.right, 0.1f);
                 i++;
             }
+        }
+    }
+
+    @Test
+    public void testSelectCurrentDeviceCameraOutputSizes() throws Exception {
+        CameraManager cameraManager = InstrumentationRegistry.getInstrumentation().getTargetContext().getSystemService(CameraManager.class);
+        String[] cameras = cameraManager.getCameraIdList();
+        assertTrue(cameras.length > 0);
+        Class<?> previewClass = new SessionView(InstrumentationRegistry.getInstrumentation().getTargetContext()).getPreviewClass();
+        float[] aspectRatios = new float[]{
+                1f, 2f/3f, 3f/2f, 16f/9f, 9f/16f
+        };
+        for (String cameraId : cameras) {
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            android.util.Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
+            android.util.Size[] previewSizes = map.getOutputSizes(previewClass);
+            android.util.Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
+            for (float aspectRatio : aspectRatios) {
+                android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+                assertTrue(sizes.length > 0);
+                Float[] sizeAspectRatios = Arrays.stream(sizes).map(size -> (float)size.getWidth()/(float)size.getHeight()).toArray(Float[]::new);
+                assertTrue(sizeAspectRatios.length > 0);
+                float delta = 0.01f;
+                Arrays.stream(sizeAspectRatios).allMatch(sizeAspectRatio -> Math.abs(sizeAspectRatio - sizeAspectRatios[0]) < delta);
+            }
+        }
+    }
+
+    @Test
+    public void testSelectCameraOutputSizes() {
+        // Sizes taken from Nexus 9
+        android.util.Size[] yuvSizes = new android.util.Size[]{
+                new android.util.Size(3280, 2460),
+                new android.util.Size(1640, 1230),
+                new android.util.Size(3264, 2448),
+                new android.util.Size(2592, 1944),
+                new android.util.Size(2048, 1536),
+                new android.util.Size(1920, 1440),
+                new android.util.Size(1920, 1080),
+                new android.util.Size(1440, 1080),
+                new android.util.Size(1280, 960),
+                new android.util.Size(1280, 720),
+                new android.util.Size(720, 480),
+                new android.util.Size(640, 480),
+                new android.util.Size(352, 288),
+                new android.util.Size(320, 240),
+                new android.util.Size(176, 144)
+        };
+        android.util.Size[] previewSizes = new android.util.Size[]{
+                new android.util.Size(3280, 2460),
+                new android.util.Size(1640, 1230),
+                new android.util.Size(3264, 2448),
+                new android.util.Size(2592, 1944),
+                new android.util.Size(2048, 1536),
+                new android.util.Size(1920, 1440),
+                new android.util.Size(1920, 1080),
+                new android.util.Size(1440, 1080),
+                new android.util.Size(1280, 960),
+                new android.util.Size(1280, 720),
+                new android.util.Size(720, 480),
+                new android.util.Size(640, 480),
+                new android.util.Size(352, 288),
+                new android.util.Size(320, 240),
+                new android.util.Size(176, 144)
+        };
+        android.util.Size[] videoSizes = new android.util.Size[]{
+                new android.util.Size(3280, 2460),
+                new android.util.Size(1640, 1230),
+                new android.util.Size(3264, 2448),
+                new android.util.Size(2592, 1944),
+                new android.util.Size(2048, 1536),
+                new android.util.Size(1920, 1440),
+                new android.util.Size(1920, 1080),
+                new android.util.Size(1440, 1080),
+                new android.util.Size(1280, 960),
+                new android.util.Size(1280, 720),
+                new android.util.Size(720, 480),
+                new android.util.Size(640, 480),
+                new android.util.Size(352, 288),
+                new android.util.Size(320, 240),
+                new android.util.Size(176, 144)
+        };
+        float[] aspectRatios = new float[]{
+                1f, 2f/3f, 3f/2f, 16f/9f, 9f/16f
+        };
+        for (float aspectRatio : aspectRatios) {
+            android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+            assertTrue(sizes.length > 0);
+            Float[] sizeAspectRatios = Arrays.stream(sizes).map(size -> (float)size.getWidth()/(float)size.getHeight()).toArray(Float[]::new);
+            assertTrue(sizeAspectRatios.length > 0);
+            float delta = 0.01f;
+            Arrays.stream(sizeAspectRatios).allMatch(sizeAspectRatio -> Math.abs(sizeAspectRatio - sizeAspectRatios[0]) < delta);
         }
     }
 }
