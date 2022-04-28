@@ -57,10 +57,6 @@ public class CameraPreviewHelperTest {
                 new RectF(0, -48, 2048, 1488),
                 new RectF(0, -104, 1280, 856)
         };
-
-        String[] imageNames = new String[]{
-                "Nexus portrait", "Nexus landscape", "Elo landscape"
-        };
         int i=0;
         Paint topLeftPaint = new Paint();
         topLeftPaint.setColor(Color.RED);
@@ -71,18 +67,14 @@ public class CameraPreviewHelperTest {
         Paint bottomRightPaint = new Paint();
         bottomRightPaint.setColor(Color.YELLOW);
         for (DeviceParams params : deviceParams) {
-            try (InputStream inputStream = InstrumentationRegistry.getInstrumentation().getContext().getAssets().open(String.format("camera_preview_tests/%s.png", imageNames[i]))) {
-                Bitmap image = BitmapFactory.decodeStream(inputStream);
-                Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(params.imageSize.width, params.imageSize.height, params.viewSize.width, params.viewSize.height, params.sensorOrientation, params.deviceOrientation);
-                Bitmap corrected = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
-                RectF viewRect = new RectF(0, 0, params.viewSize.width, params.viewSize.height);
-                matrix.mapRect(viewRect);
-                assertEquals(finalImageSizes[i].top, viewRect.top, 0.1f);
-                assertEquals(finalImageSizes[i].left, viewRect.left, 0.1f);
-                assertEquals(finalImageSizes[i].bottom, viewRect.bottom, 0.1f);
-                assertEquals(finalImageSizes[i].right, viewRect.right, 0.1f);
-                i++;
-            }
+            Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(params.imageSize.width, params.imageSize.height, params.viewSize.width, params.viewSize.height, params.sensorOrientation, params.deviceOrientation);
+            RectF viewRect = new RectF(0, 0, params.viewSize.width, params.viewSize.height);
+            matrix.mapRect(viewRect);
+            assertEquals(finalImageSizes[i].top, viewRect.top, 0.1f);
+            assertEquals(finalImageSizes[i].left, viewRect.left, 0.1f);
+            assertEquals(finalImageSizes[i].bottom, viewRect.bottom, 0.1f);
+            assertEquals(finalImageSizes[i].right, viewRect.right, 0.1f);
+            i++;
         }
     }
 
