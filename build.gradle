@@ -38,9 +38,9 @@ ext {
     versionClassifierVersion = null
 
     minSdkVersion = 21
-    compileSdkVersion = 30
+    compileSdkVersion = 31
     buildToolsVersion = "30.0.3"
-    targetSdkVersion = 31
+    targetSdkVersion = 30
 
     junitVersion = '1.1.2'
     espressoVersion = '3.3.0'
