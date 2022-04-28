@@ -352,8 +352,20 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
-        getTextureView().setTransform(matrix);
+        if (getDisplayRotation() % 180 == 0) {
+            android.util.Size textureSize = CameraPreviewHelper.getInstance().getCorrectedTextureSize(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
+            LayoutParams layoutParams = new LayoutParams(getTextureView().getLayoutParams());
+            layoutParams.width = textureSize.getWidth();
+            layoutParams.height = textureSize.getHeight();
+            layoutParams.gravity = Gravity.CENTER;
+            getTextureView().setLayoutParams(layoutParams);
+        } else {
+            LayoutParams layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            layoutParams.gravity = Gravity.CENTER;
+            getTextureView().setLayoutParams(layoutParams);
+            Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
+            getTextureView().setTransform(matrix);
+        }
     }
 
     //region Appearance

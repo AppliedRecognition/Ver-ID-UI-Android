@@ -67,6 +67,30 @@ public class CameraPreviewHelper {
         return matrix;
     }
 
+    public Size getCorrectedTextureSize(int imageWidth, int imageHeight, int viewWidth, int viewHeight, int sensorOrientation, int deviceRotation) {
+        SizeF imageSize;
+        if ((sensorOrientation - deviceRotation) % 180 == 0) {
+            imageSize = new SizeF(imageWidth, imageHeight);
+        } else {
+            imageSize = new SizeF(imageHeight, imageWidth);
+        }
+        float imageAspectRatio = imageSize.getWidth() / imageSize.getHeight();
+        float viewAspectRatio = (float)viewWidth / (float)viewHeight;
+        float scale;
+        if (imageAspectRatio > viewAspectRatio) {
+            scale = (float) viewHeight / imageSize.getHeight();
+        } else {
+            scale = (float) viewWidth / imageSize.getWidth();
+        }
+        SizeF viewSize;
+        if (deviceRotation % 180 == 0) {
+            viewSize = new SizeF(imageSize.getWidth() * scale, imageSize.getHeight() * scale);
+        } else {
+            viewSize = new SizeF(imageSize.getHeight() * scale, imageSize.getWidth() * scale);
+        }
+        return new Size((int)viewSize.getWidth(), (int)viewSize.getHeight());
+    }
+
     /**
      * Select a set of camera output sizes
      * @param previewSizes Preview size candidates
