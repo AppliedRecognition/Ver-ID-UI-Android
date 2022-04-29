@@ -17,12 +17,12 @@ buildscript {
 ext {
     versionMajor = 1
     versionMinor = 21
-    versionPatch = 8
+    versionPatch = 9
     versionClassifier = null
     versionClassifierVersion = 0
     minSdkVersion = 21
     buildToolsVersion = "30.0.3"
-    compileSdkVersion = 30
+    compileSdkVersion = 31
     targetSdkVersion = 30
     ndkVersion = '21.0.6113669'
 }
