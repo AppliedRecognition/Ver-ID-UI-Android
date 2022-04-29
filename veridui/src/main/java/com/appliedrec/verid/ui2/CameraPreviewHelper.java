@@ -67,6 +67,17 @@ public class CameraPreviewHelper {
         return matrix;
     }
 
+    /**
+     * Get camera preview texture size corrected to match the device and camera sensor orientation
+     * @param imageWidth Width of the image obtained from the camera
+     * @param imageHeight Height of the image obtained from the camera
+     * @param viewWidth Width of the texture containing the camera preview
+     * @param viewHeight Height of the texture containing the camera preview
+     * @param sensorOrientation Camera sensor orientation
+     * @param deviceRotation Device rotation
+     * @return Size
+     * @since 2.4.0
+     */
     public Size getCorrectedTextureSize(int imageWidth, int imageHeight, int viewWidth, int viewHeight, int sensorOrientation, int deviceRotation) {
         SizeF imageSize;
         if ((sensorOrientation - deviceRotation) % 180 == 0) {
@@ -96,11 +107,21 @@ public class CameraPreviewHelper {
      * @param previewSizes Preview size candidates
      * @param imageReaderSizes Image reader size candidates
      * @param videoSizes Video size candidates
-     * @param aspectRatio Desired aspect ratio
-     * @return Set of output sizes best matching the aspect ratio
+     * @param viewWidth Width of the view containing the camera preview
+     * @param viewHeight Height of the view containing the camera preview
+     * @param sensorRotation Camera sensor rotation in degrees
+     * @param deviceRotation Device rotation
+     * @return Set of output sizes best matching the view size
      * @since 2.4.0
      */
-    public Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, float aspectRatio) {
+    public Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, int viewWidth, int viewHeight, int sensorRotation, int deviceRotation) {
+        float aspectRatio;
+        if ((sensorRotation - deviceRotation) % 180 == 0) {
+            aspectRatio = (float)viewWidth/(float)viewHeight;
+        } else {
+            aspectRatio = (float)viewHeight/(float)viewWidth;
+        }
+        int viewArea = viewWidth * viewHeight;
         int minArea = 320 * 240;
         HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
         HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
@@ -114,7 +135,7 @@ public class CameraPreviewHelper {
                 continue;
             }
             Size[] sizes = new Size[3];
-            sizes[0] = Collections.max(entry.getValue(), sizeComparator);
+            sizes[0] = Collections.min(entry.getValue(), Comparator.comparingInt(size -> Math.abs(size.getWidth() * size.getHeight() - viewArea)));
             sizes[1] = Collections.min(imageReaderCandidates, sizeComparator);
             sizes[2] = Collections.min(videoCandidates, sizeComparator);
             candidates.put(entry.getKey(), sizes);
@@ -122,11 +143,7 @@ public class CameraPreviewHelper {
         if (candidates.isEmpty()) {
             return new Size[]{previewSizes[0],imageReaderSizes[0],videoSizes[0]};
         }
-        Map.Entry<Float,Size[]> bestEntry = Collections.min(candidates.entrySet(), (lhs, rhs) -> {
-            float lhsAspectRatioDiff = Math.abs(lhs.getKey() - aspectRatio);
-            float rhsAspectRatioDiff = Math.abs(rhs.getKey() - aspectRatio);
-            return (int)(lhsAspectRatioDiff * 1000f - rhsAspectRatioDiff * 1000f);
-        });
+        Map.Entry<Float,Size[]> bestEntry = Collections.min(candidates.entrySet(), Comparator.comparingInt(entry -> Math.abs(entry.getValue()[0].getWidth() * entry.getValue()[0].getHeight() - viewArea)));
         return bestEntry.getValue();
     }
 

@@ -84,8 +84,12 @@ public class CameraPreviewHelperTest {
         String[] cameras = cameraManager.getCameraIdList();
         assertTrue(cameras.length > 0);
         Class<?> previewClass = new SessionView(InstrumentationRegistry.getInstrumentation().getTargetContext()).getPreviewClass();
-        float[] aspectRatios = new float[]{
-                1f, 2f/3f, 3f/2f, 16f/9f, 9f/16f
+        android.util.Size[] viewSizes = new android.util.Size[]{
+                new android.util.Size(600, 600),
+                new android.util.Size(800, 600),
+                new android.util.Size(600, 800),
+                new android.util.Size(1280, 752),
+                new android.util.Size(1920, 1080)
         };
         for (String cameraId : cameras) {
             CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
@@ -93,8 +97,8 @@ public class CameraPreviewHelperTest {
             android.util.Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
             android.util.Size[] previewSizes = map.getOutputSizes(previewClass);
             android.util.Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-            for (float aspectRatio : aspectRatios) {
-                android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+            for (android.util.Size viewSize : viewSizes) {
+                android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, viewSize.getWidth(), viewSize.getHeight(), 0, 0);
                 assertTrue(sizes.length > 0);
                 Float[] sizeAspectRatios = Arrays.stream(sizes).map(size -> (float)size.getWidth()/(float)size.getHeight()).toArray(Float[]::new);
                 assertTrue(sizeAspectRatios.length > 0);
@@ -158,11 +162,15 @@ public class CameraPreviewHelperTest {
                 new android.util.Size(320, 240),
                 new android.util.Size(176, 144)
         };
-        float[] aspectRatios = new float[]{
-                1f, 2f/3f, 3f/2f, 16f/9f, 9f/16f
+        android.util.Size[] viewSizes = new android.util.Size[]{
+                new android.util.Size(600, 600),
+                new android.util.Size(800, 600),
+                new android.util.Size(600, 800),
+                new android.util.Size(1280, 752),
+                new android.util.Size(1920, 1080)
         };
-        for (float aspectRatio : aspectRatios) {
-            android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+        for (android.util.Size viewSize : viewSizes) {
+            android.util.Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, viewSize.getWidth(), viewSize.getHeight(), 0, 0);
             assertTrue(sizes.length > 0);
             Float[] sizeAspectRatios = Arrays.stream(sizes).map(size -> (float)size.getWidth()/(float)size.getHeight()).toArray(Float[]::new);
             assertTrue(sizeAspectRatios.length > 0);

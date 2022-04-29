@@ -257,7 +257,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
                 Size[] previewSizes = map.getOutputSizes(previewClass);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, aspectRatio);
+                Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, width, height, sensorOrientation, displayRotation);
                 Size previewSize = sizes[0];
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
