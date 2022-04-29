@@ -13,9 +13,6 @@
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
         android:extractNativeLibs="true"
         tools:replace="android:theme">
-        <activity
-            android:name=".SessionInSmallViewActivity"
-            android:exported="false" />
         <activity android:name=".IdentificationDemoActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>

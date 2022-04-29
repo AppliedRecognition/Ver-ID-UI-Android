@@ -118,34 +118,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             case R.id.action_kiosk_demo:
                 startActivity(new Intent(this, ContinuousLivenessActivity.class));
                 return true;
-            case R.id.action_small_view_session:
-                EditText width = new EditText(this);
-                width.setHint("Width");
-                width.setText("300");
-                width.setInputType(InputType.TYPE_CLASS_NUMBER);
-                EditText height = new EditText(this);
-                height.setHint("Height");
-                height.setText("300");
-                height.setInputType(InputType.TYPE_CLASS_NUMBER);
-                LinearLayout linearLayout = new LinearLayout(this);
-                linearLayout.setOrientation(LinearLayout.VERTICAL);
-                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                float screenDensity = getResources().getDisplayMetrics().density;
-                layoutParams.leftMargin = layoutParams.rightMargin = (int)(16f * screenDensity);
-                linearLayout.addView(width, layoutParams);
-                linearLayout.addView(height, layoutParams);
-                new AlertDialog.Builder(this)
-                        .setTitle("Set view size")
-                        .setView(linearLayout)
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(android.R.string.ok, (view, dialog) -> {
-                            Intent intent = new Intent(this, SessionInSmallViewActivity.class);
-                            intent.putExtra(SessionInSmallViewActivity.EXTRA_WIDTH, Integer.parseInt(width.getText().toString()));
-                            intent.putExtra(SessionInSmallViewActivity.EXTRA_HEIGHT, Integer.parseInt(height.getText().toString()));
-                            startActivity(intent);
-                        })
-                        .create()
-                        .show();
         }
         return false;
     }
