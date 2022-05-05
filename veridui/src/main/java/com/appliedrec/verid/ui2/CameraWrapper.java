@@ -252,8 +252,6 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 }
                 int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
 
-                float aspectRatio = sensorOrientation % 180 == 0 ? 3f/4f : 4f/3f;
-
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
                 Size[] previewSizes = map.getOutputSizes(previewClass);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);

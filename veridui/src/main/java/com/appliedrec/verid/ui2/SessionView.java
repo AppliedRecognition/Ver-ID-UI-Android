@@ -1,15 +1,19 @@
 package com.appliedrec.verid.ui2;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RoundRectShape;
+import android.os.Build;
 import android.util.AttributeSet;
+import android.util.SizeF;
 import android.view.Gravity;
 import android.view.Surface;
 import android.view.TextureView;
@@ -352,20 +356,9 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        if (getDisplayRotation() % 180 == 0) {
-            android.util.Size textureSize = CameraPreviewHelper.getInstance().getCorrectedTextureSize(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
-            LayoutParams layoutParams = new LayoutParams(getTextureView().getLayoutParams());
-            layoutParams.width = textureSize.getWidth();
-            layoutParams.height = textureSize.getHeight();
-            layoutParams.gravity = Gravity.CENTER;
-            getTextureView().setLayoutParams(layoutParams);
-        } else {
-            LayoutParams layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            layoutParams.gravity = Gravity.CENTER;
-            getTextureView().setLayoutParams(layoutParams);
-            Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
-            getTextureView().setTransform(matrix);
-        }
+        getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
+        Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
+        getTextureView().setTransform(matrix);
     }
 
     //region Appearance
@@ -541,7 +534,7 @@ public class SessionView extends FrameLayout implements ISessionView, TextureVie
 
     @Override
     public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-
+        surface.setDefaultBufferSize(width, height);
     }
 
     @Override
