@@ -3,6 +3,14 @@
 # Ver-ID UI for Android
 
 <details>
+<summary>What's new in Ver-ID 2.4</summary>
+
+## Added a diagnostic method to compare given face templates
+[`compareUserFaceTemplates`](https://appliedrecognition.github.io/Ver-ID-UI-Android/com/appliedrec/verid/core2/util/FaceTemplateDiagnostics.html#compareUserFaceTemplates(java.util.Map,com.appliedrec.verid.core2.util.ResultCallback)) accepts a map of users and their face templates. The advantage of this method over others in the class is that it doesn't require the face templates to be of registered users.
+	
+### Please note that version 2.4.0 has a bug where camera previews appear stretched on some devices. This bug has been fixed in 2.4.1.
+</details>
+<details>
 <summary>What's new in Ver-ID 2.3</summary>
 
 ## Added face template diagnostic feature
