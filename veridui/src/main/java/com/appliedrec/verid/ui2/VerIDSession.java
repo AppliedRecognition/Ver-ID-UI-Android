@@ -309,6 +309,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
                 }
             });
             sessionParameters.setSessionResult(sessionResult.get());
+            getDelegate().map(VerIDSessionInViewDelegate::getCapturedImageMinimumArea).ifPresent(sessionParameters::setMinImageArea);
             getTextSpeaker().ifPresent(sessionParameters::setTextSpeaker);
             sessionActivity.setSessionParameters(sessionParameters);
         });

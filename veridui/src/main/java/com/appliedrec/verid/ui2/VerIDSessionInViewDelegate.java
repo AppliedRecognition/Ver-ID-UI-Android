@@ -75,4 +75,13 @@ public interface VerIDSessionInViewDelegate {
     default SessionFunctions createSessionFunctions(IVerIDSession<?> session, VerID verID, VerIDSessionSettings sessionSettings) {
         return new SessionFunctions(verID, sessionSettings);
     }
+
+    /**
+     * @return Minimum image area (width x height) to capture for face detection and recognition (in pixels).
+     * @since 2.5.0
+     */
+    @Keep
+    default int getCapturedImageMinimumArea() {
+        return 640 * 480;
+    }
 }
