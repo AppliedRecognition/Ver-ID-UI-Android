@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.appliedrec.verid.core2.Face;
 import com.appliedrec.verid.core2.FaceDetectionImage;
 import com.appliedrec.verid.core2.IFaceTracking;
+import com.appliedrec.verid.core2.Image;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.FaceBounds;
@@ -109,7 +110,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
     @Override
     public void onVerIDLoaded(VerID verid) {
         verID = verid;
-        imageIterator = new VerIDImageIterator(verID);
+        imageIterator = new VerIDImageIterator(this);
     }
 
     @Override
@@ -122,11 +123,10 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         if (faceDetectionDisposable != null && !faceDetectionDisposable.isDisposed()) {
             faceDetectionDisposable.dispose();
         }
-        IFaceTracking<FaceDetectionImage> faceTracking = startFaceTracking();
+        IFaceTracking<Image> faceTracking = startFaceTracking();
         faceDetectionDisposable = Flowable.fromObservable(Observable.fromIterable(imageIterator), BackpressureStrategy.LATEST)
                 .map(image -> {
-                    VerIDImage<FaceDetectionImage> verIDImage = (VerIDImage<FaceDetectionImage>) image;
-                    Face face = faceTracking.trackFaceInImage(verIDImage.createFaceDetectionImage());
+                    Face face = faceTracking.trackFaceInImage(image.provideVerIDImage());
                     return face != null;
                 })
                 .takeUntil(predicate)

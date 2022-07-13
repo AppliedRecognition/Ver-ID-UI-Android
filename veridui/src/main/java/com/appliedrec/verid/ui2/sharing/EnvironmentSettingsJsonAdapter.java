@@ -14,6 +14,7 @@ public class EnvironmentSettingsJsonAdapter implements JsonSerializer<Environmen
     @Override
     public JsonElement serialize(EnvironmentSettings src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("faceDetectorVersion", src.getFaceDetectorVersion());
         jsonObject.addProperty("confidenceThreshold", src.getConfidenceThreshold());
         jsonObject.addProperty("faceTemplateExtractionThreshold", src.getFaceTemplateExtractionThreshold());
         jsonObject.addProperty("authenticationThreshold", src.getAuthenticationThreshold());
@@ -25,10 +26,11 @@ public class EnvironmentSettingsJsonAdapter implements JsonSerializer<Environmen
     @Override
     public EnvironmentSettings deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();
+        int faceDetectorVersion = jsonObject.get("faceDetectorVersion").getAsInt();
         float confidenceThreshold = jsonObject.get("confidenceThreshold").getAsFloat();
         float faceTemplateExtractionThreshold = jsonObject.get("faceTemplateExtractionThreshold").getAsFloat();
         float authenticationThreshold = jsonObject.get("authenticationThreshold").getAsFloat();
         String veridVersion = jsonObject.get("veridVersion").getAsString();
-        return new EnvironmentSettings(confidenceThreshold, faceTemplateExtractionThreshold, authenticationThreshold, veridVersion);
+        return new EnvironmentSettings(faceDetectorVersion, confidenceThreshold, faceTemplateExtractionThreshold, authenticationThreshold, veridVersion);
     }
 }

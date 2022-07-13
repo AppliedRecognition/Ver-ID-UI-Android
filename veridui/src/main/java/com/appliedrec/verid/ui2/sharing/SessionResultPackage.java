@@ -6,10 +6,12 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 
 import androidx.annotation.Keep;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.appliedrec.verid.core2.FaceDetection;
 import com.appliedrec.verid.core2.IFaceDetection;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDImageBitmap;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
@@ -56,8 +58,9 @@ public class SessionResultPackage {
         this.context = verID.getContext().orElseThrow(Exception::new).getApplicationContext();
         this.settings = settings;
         this.result = result;
-        IFaceDetection<?> faceDetection = verID.getFaceDetection();
+        IFaceDetection faceDetection = verID.getFaceDetection();
         this.environmentSettings = new EnvironmentSettings(
+                ((FaceDetection) faceDetection).detRecLib.getSettings().getDetectorVersion(),
                 ((FaceDetection) faceDetection).detRecLib.getSettings().getConfidenceThreshold(),
                 ((FaceDetection) faceDetection).getFaceExtractQualityThreshold(),
                 ((FaceDetection) faceDetection).getLandmarkTrackingQualityThreshold(),
@@ -189,7 +192,9 @@ public class SessionResultPackage {
                     ArrayList<FaceCapture> faceCaptures = new ArrayList<>();
                     int i = 0;
                     for (FaceCapture faceCapture : result.getFaceCaptures()) {
-                        FaceCapture fc = new FaceCapture(faceCapture.getFace(), faceCapture.getBearing(), images.get(i++));
+                        Bitmap bitmap = images.get(i++);
+                        VerIDImageBitmap verIDImage = new VerIDImageBitmap(bitmap, ExifInterface.ORIENTATION_NORMAL);
+                        FaceCapture fc = new FaceCapture(faceCapture.getFace(), faceCapture.getBearing(), bitmap, verIDImage.provideVerIDImage());
                         faceCaptures.add(fc);
                     }
                     VerIDSessionException exception = result.getError().orElse(null);

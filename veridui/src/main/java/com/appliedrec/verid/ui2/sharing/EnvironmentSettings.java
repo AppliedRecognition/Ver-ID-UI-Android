@@ -6,15 +6,21 @@ import com.google.gson.annotations.JsonAdapter;
 public class EnvironmentSettings {
 
     private final float confidenceThreshold;
+    private final int faceDetectorVersion;
     private final float faceTemplateExtractionThreshold;
     private final float authenticationThreshold;
     private final String veridVersion;
 
-    public EnvironmentSettings(float confidenceThreshold, float faceTemplateExtractionThreshold, float authenticationThreshold, String veridVersion) {
+    public EnvironmentSettings(int faceDetectorVersion, float confidenceThreshold, float faceTemplateExtractionThreshold, float authenticationThreshold, String veridVersion) {
+        this.faceDetectorVersion = faceDetectorVersion;
         this.confidenceThreshold = confidenceThreshold;
         this.faceTemplateExtractionThreshold = faceTemplateExtractionThreshold;
         this.authenticationThreshold = authenticationThreshold;
         this.veridVersion = veridVersion;
+    }
+
+    public int getFaceDetectorVersion() {
+        return faceDetectorVersion;
     }
 
     public float getConfidenceThreshold() {

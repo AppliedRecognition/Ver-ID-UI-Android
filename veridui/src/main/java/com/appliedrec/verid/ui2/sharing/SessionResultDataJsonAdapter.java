@@ -1,9 +1,11 @@
 package com.appliedrec.verid.ui2.sharing;
 
 import android.graphics.Bitmap;
+import android.media.ExifInterface;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.RecognizableFace;
+import com.appliedrec.verid.core2.VerIDImageBitmap;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.SessionDiagnostics;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
@@ -75,7 +77,9 @@ public class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSession
                 JsonObject faceCapture = element.getAsJsonObject();
                 RecognizableFace face = context.deserialize(faceCapture.get("face"), RecognizableFace.class);
                 Bearing bearing = context.deserialize(faceCapture.get("bearing"), Bearing.class);
-                faceCaptures.add(new FaceCapture(face, bearing, Bitmap.createBitmap((int)Math.ceil(face.getBounds().right), (int)Math.ceil(face.getBounds().bottom), Bitmap.Config.ARGB_8888)));
+                Bitmap bitmap = Bitmap.createBitmap((int)Math.ceil(face.getBounds().right), (int)Math.ceil(face.getBounds().bottom), Bitmap.Config.ARGB_8888);
+                VerIDImageBitmap image = new VerIDImageBitmap(bitmap, ExifInterface.ORIENTATION_NORMAL);
+                faceCaptures.add(new FaceCapture(face, bearing, bitmap, image.provideVerIDImage()));
             }
             sessionResult = new VerIDSessionResult(faceCaptures, startTime, endTime, diagnostics);
             if (sessionException != null) {

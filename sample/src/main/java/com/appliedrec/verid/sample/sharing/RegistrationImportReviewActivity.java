@@ -1,6 +1,8 @@
 package com.appliedrec.verid.sample.sharing;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -10,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.util.Pair;
 
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.proto.Registration;
 import com.appliedrec.verid.sample.IVerIDLoadObserver;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.R;
@@ -29,7 +32,7 @@ public class RegistrationImportReviewActivity extends AppCompatActivity implemen
 
     public static final String EXTRA_IMPORTED_FACE_COUNT = "importedFaceCount";
     private ProfilePhotoHelper profilePhotoHelper;
-    private RegistrationData registrationData;
+    private Registration registrationData;
     private RegistrationImport registrationImport;
     private VerID verID;
     private ArrayList<Disposable> disposables = new ArrayList<>();
@@ -70,7 +73,9 @@ public class RegistrationImportReviewActivity extends AppCompatActivity implemen
                     .subscribe(
                             usersAndRegData -> {
                                 registrationData = usersAndRegData.second;
-                                viewBinding.imageView.setImageBitmap(registrationData.getProfilePicture());
+                                byte[] imageData = registrationData.getImage().toByteArray();
+                                Bitmap profilePicture = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+                                viewBinding.imageView.setImageBitmap(profilePicture);
                                 viewBinding.button.setEnabled(true);
                                 viewBinding.registration.setVisibility(View.VISIBLE);
                                 if (usersAndRegData.first.length == 0) {
@@ -108,7 +113,7 @@ public class RegistrationImportReviewActivity extends AppCompatActivity implemen
     private void onImported() {
         Intent data = new Intent();
         if (registrationData != null) {
-            data.putExtra(EXTRA_IMPORTED_FACE_COUNT, registrationData.getFaceTemplates().length);
+            data.putExtra(EXTRA_IMPORTED_FACE_COUNT, registrationData.getFacesCount());
         }
         setResult(RESULT_OK, data);
         finish();

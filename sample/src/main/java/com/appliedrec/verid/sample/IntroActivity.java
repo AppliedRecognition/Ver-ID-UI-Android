@@ -3,6 +3,7 @@ package com.appliedrec.verid.sample;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -24,8 +26,11 @@ import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.sample.preferences.MimeTypes;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
+import com.appliedrec.verid.sample.sharing.RegistrationImportContract;
+import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
@@ -33,6 +38,10 @@ import com.appliedrec.verid.ui2.PageViewActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Objects;
 
 public class IntroActivity extends PageViewActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
@@ -73,12 +82,24 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
         return true;
     }
 
-    private ActivityResultLauncher<Intent> registrationImport = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new RegistrationImportActivityResultCallback(registerForActivityResult(new RegistrationImportReviewActivityResultContract(), result -> {
-        if (result != null) {
+    private void reviewRegistrationImport(Uri uri) {
+        Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
+        intent.setDataAndType(uri, MimeTypes.REGISTRATION.getType());
+        registrationImportReview.launch(intent);
+    }
+
+    private final ActivityResultLauncher<Void> registrationImport = registerForActivityResult(new RegistrationImportContract(), uri -> {
+        if (uri != null) {
+            reviewRegistrationImport(uri);
+        }
+    });
+
+    private final ActivityResultLauncher<Intent> registrationImportReview = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result != null && result.getResultCode() == RESULT_OK) {
             startActivity(new Intent(this, RegisteredUserActivity.class));
             finish();
         }
-    })));
+    });
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -93,9 +114,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
             return true;
         }
         if (item.getItemId() == R.id.action_import) {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("application/verid-registration");
-            registrationImport.launch(intent);
+            registrationImport.launch(null);
             return true;
         }
         if (item.getItemId() == R.id.action_settings) {

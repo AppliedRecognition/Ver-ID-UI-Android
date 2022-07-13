@@ -16,6 +16,8 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
+import com.appliedrec.verid.core2.FaceDetection;
+import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
@@ -24,15 +26,38 @@ import com.appliedrec.verid.sample.R;
 
 import static android.content.Context.CAMERA_SERVICE;
 
+import java.util.Locale;
+import java.util.Objects;
+
 public class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+
+    public static SettingsFragment newInstance(VerID verID) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("verid", verID.getInstanceId());
+        SettingsFragment fragment = new SettingsFragment();
+        fragment.setArguments(bundle);
+        return fragment;
+    }
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         Context context = getPreferenceManager().getContext();
         SharedPreferences sharedPreferences = getPreferenceManager().getSharedPreferences();
-        if (context == null || sharedPreferences == null) {
+        Bundle args = getArguments();
+        if (sharedPreferences == null || args == null || !args.containsKey("verid")) {
             return;
         }
+        VerID verID;
+        try {
+            verID = VerID.getInstance(args.getInt("verid", -1));
+        } catch (Exception e) {
+            verID = null;
+        }
+        if (verID == null || !(verID.getFaceDetection() instanceof FaceDetection)) {
+            return;
+        }
+
+        LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
         PreferenceScreen preferenceScreen = getPreferenceManager().createPreferenceScreen(context);
 
         // ABOUT
@@ -64,28 +89,90 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         securityCategory.addPreference(securityProfilePref);
 
         // FACE DETECTION
+        int i = 0;
+        FaceDetection faceDetection = (FaceDetection) verID.getFaceDetection();
+
         PreferenceCategory faceDetectionCategory = new PreferenceCategory(context);
         faceDetectionCategory.setTitle(R.string.face_detection);
         preferenceScreen.addPreference(faceDetectionCategory);
-        Preference faceDetectionProfilePref = new Preference(context);
-        faceDetectionProfilePref.setTitle(R.string.face_detection_profile);
-        faceDetectionProfilePref.setKey(PreferenceKeys.FACE_DETECTION_PROFILE);
-        faceDetectionProfilePref.setFragment(FaceDetectionSettingsFragment.class.getName());
-        faceDetectionProfilePref.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), getString(R.string.normal)));
-        faceDetectionCategory.addPreference(faceDetectionProfilePref);
-        LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
+
+        ListPreference confidenceThresholdPreference = new ListPreference(context);
+        confidenceThresholdPreference.setEntryValues(R.array.confidence_threshold_values);
+        confidenceThresholdPreference.setEntries(R.array.confidence_threshold_values);
+        confidenceThresholdPreference.setTitle(R.string.confidence_threshold);
+        confidenceThresholdPreference.setKey(PreferenceKeys.CONFIDENCE_THRESHOLD);
+        for (CharSequence val : confidenceThresholdPreference.getEntryValues()) {
+            if (val.toString().equals(String.format(Locale.ROOT, "%.02f", faceDetection.detRecLib.getSettings().getConfidenceThreshold()))) {
+                confidenceThresholdPreference.setValueIndex(i);
+                break;
+            }
+            i++;
+        }
+        confidenceThresholdPreference.setSummaryProvider(pref -> sharedPreferences.getString(pref.getKey(), String.format(Locale.ROOT, "%.02f", faceDetection.detRecLib.getSettings().getConfidenceThreshold())));
+        faceDetectionCategory.addPreference(confidenceThresholdPreference);
+
+        ListPreference faceDetectorVersionPreference = new ListPreference(context);
+        faceDetectorVersionPreference.setEntryValues(R.array.face_detector_version_values);
+        faceDetectorVersionPreference.setEntries(R.array.face_detector_versions);
+        faceDetectorVersionPreference.setTitle(R.string.face_detector_version);
+        faceDetectorVersionPreference.setKey(PreferenceKeys.FACE_DETECTOR_VERSION);
+        i=0;
+        for (CharSequence val : faceDetectorVersionPreference.getEntryValues()) {
+            if (val.toString().equals(String.format(Locale.ROOT, "%d", faceDetection.detRecLib.getSettings().getDetectorVersion()))) {
+                faceDetectorVersionPreference.setValueIndex(i);
+                break;
+            }
+            i ++;
+        }
+        faceDetectorVersionPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%d", faceDetection.detRecLib.getSettings().getDetectorVersion())));
+        faceDetectionCategory.addPreference(faceDetectorVersionPreference);
+
+        ListPreference faceTemplateExtractionThresholdPreference = new ListPreference(context);
+        faceTemplateExtractionThresholdPreference.setEntries(R.array.face_template_extraction_thresholds);
+        faceTemplateExtractionThresholdPreference.setEntryValues(R.array.face_template_extraction_thresholds);
+        faceTemplateExtractionThresholdPreference.setTitle(R.string.face_template_extraction_threshold);
+        faceTemplateExtractionThresholdPreference.setKey(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD);
+        i=0;
+        for (CharSequence val : faceTemplateExtractionThresholdPreference.getEntryValues()) {
+            if (val.toString().equals(String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getFaceExtractQualityThreshold()))) {
+                faceTemplateExtractionThresholdPreference.setValueIndex(i);
+                break;
+            }
+            i++;
+        }
+        faceTemplateExtractionThresholdPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getFaceExtractQualityThreshold())));
+        faceDetectionCategory.addPreference(faceTemplateExtractionThresholdPreference);
+
+        ListPreference landmarkTrackingThresholdPreference = new ListPreference(context);
+        landmarkTrackingThresholdPreference.setEntries(R.array.face_template_extraction_thresholds);
+        landmarkTrackingThresholdPreference.setEntryValues(R.array.face_template_extraction_thresholds);
+        landmarkTrackingThresholdPreference.setTitle(R.string.face_landmark_tracking_threshold);
+        landmarkTrackingThresholdPreference.setKey(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD);
+        i=0;
+        for (CharSequence val : landmarkTrackingThresholdPreference.getEntryValues()) {
+            if (val.toString().equals(String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getLandmarkTrackingQualityThreshold()))) {
+                landmarkTrackingThresholdPreference.setValueIndex(i);
+                break;
+            }
+            i++;
+        }
+        landmarkTrackingThresholdPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getLandmarkTrackingQualityThreshold())));
+        faceDetectionCategory.addPreference(landmarkTrackingThresholdPreference);
+
         Preference faceWidthPref = new Preference(context);
         faceWidthPref.setKey(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION);
         faceWidthPref.setTitle(R.string.face_bounds_width);
         faceWidthPref.setFragment(FaceSizeSettingsFragment.class.getName());
-        faceWidthPref.setSummary(String.format("%.0f%% of view width", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100));
+        faceWidthPref.setSummary(String.format(Locale.ROOT, "%.0f%% of view width", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100));
         faceDetectionCategory.addPreference(faceWidthPref);
+
         Preference faceHeightPref = new Preference(context);
         faceHeightPref.setKey(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION);
         faceHeightPref.setTitle(R.string.face_bounds_height);
         faceHeightPref.setFragment(FaceSizeSettingsFragment.class.getName());
-        faceHeightPref.setSummary(String.format("%.0f%% of view height", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100));
+        faceHeightPref.setSummary(String.format(Locale.ROOT, "%.0f%% of view height", sharedPreferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100));
         faceDetectionCategory.addPreference(faceHeightPref);
+
         SwitchPreferenceCompat enableMaskDetectionPref = new SwitchPreferenceCompat(context);
         enableMaskDetectionPref.setKey(PreferenceKeys.ENABLE_MASK_DETECTION);
         enableMaskDetectionPref.setTitle(R.string.enable_face_covering_detection);
@@ -102,7 +189,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         registrationFaceCountPref.setEntries(R.array.registration_face_count_titles);
         registrationFaceCountPref.setEntryValues(R.array.registration_face_count_values);
         RegistrationSessionSettings registrationSessionSettings = new RegistrationSessionSettings("");
-        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format("%d",registrationSessionSettings.getFaceCaptureCount()));
+        String registrationFaceCount = sharedPreferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, String.format(Locale.ROOT, "%d",registrationSessionSettings.getFaceCaptureCount()));
         registrationFaceCountPref.setValue(registrationFaceCount);
         registrationFaceCountPref.setSummaryProvider(ListPreference.SimpleSummaryProvider.getInstance());
         registrationCategory.addPreference(registrationFaceCountPref);
@@ -111,11 +198,6 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         enableEncryptionPref.setKey(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION);
         enableEncryptionPref.setChecked(sharedPreferences.getBoolean(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION, true));
         registrationCategory.addPreference(enableEncryptionPref);
-        SwitchPreferenceCompat migrateToV20FaceTemplates = new SwitchPreferenceCompat(context);
-        migrateToV20FaceTemplates.setTitle(R.string.migrate_to_v20_face_templates);
-        migrateToV20FaceTemplates.setKey(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES);
-        migrateToV20FaceTemplates.setChecked(sharedPreferences.getBoolean(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES, false));
-        registrationCategory.addPreference(migrateToV20FaceTemplates);
 
         // ACCESSIBILITY
         PreferenceCategory accessibilityCategory = new PreferenceCategory(context);
@@ -160,13 +242,13 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getPreferenceManager().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
+        Objects.requireNonNull(getPreferenceManager().getSharedPreferences()).registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        getPreferenceManager().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
+        Objects.requireNonNull(getPreferenceManager().getSharedPreferences()).unregisterOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -175,9 +257,9 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
             LivenessDetectionSessionSettings livenessDetectionSessionSettings = new LivenessDetectionSessionSettings();
             String summary;
             if (s.equals(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION)) {
-                summary = String.format("%.0f%% of view height", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100);
+                summary = String.format(Locale.ROOT, "%.0f%% of view height", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewHeight()) * 100);
             } else {
-                summary = String.format("%.0f%% of view width", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100);
+                summary = String.format(Locale.ROOT, "%.0f%% of view width", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100);
             }
             Preference preference = findPreference(s);
             if (preference != null) {

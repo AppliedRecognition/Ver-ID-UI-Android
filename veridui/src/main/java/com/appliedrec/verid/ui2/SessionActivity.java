@@ -251,7 +251,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Override
     public void setSessionParameters(SessionParameters sessionParameters) {
         this.sessionParameters = sessionParameters;
-        IImageIterator imageIterator = sessionParameters.getImageIteratorFactory().apply(sessionParameters.getVerID());
+        IImageIterator imageIterator = sessionParameters.getImageIteratorFactory().apply(this);
         cameraWrapper = new CameraWrapper(this, sessionParameters.getCameraLocation(), imageIterator, sessionParameters.getVideoRecorder().orElse(null));
         cameraWrapper.setCapturedImageMinimumArea(sessionParameters.getMinImageArea());
         Session.Builder<?> sessionBuilder = new Session.Builder<>(sessionParameters.getVerID(), sessionParameters.getSessionSettings(), imageIterator, this);

@@ -106,6 +106,7 @@
     <string name="face_quality">Face quality</string>
     <string name="confidence_threshold">Confidence threshold</string>
     <string name="face_template_extraction_threshold">Face template extraction threshold</string>
+    <string name="face_landmark_tracking_threshold">Face landmark tracking threshold</string>
     <string name="verid_failed_to_load">Ver-ID failed to load</string>
     <string name="record_session_video">Record session video</string>
     <string name="use_camerax_api">Use CameraX API</string>
@@ -114,4 +115,5 @@
     <string name="prefer_surface_view">Prefer surface view for camera preview</string>
     <string name="enable_face_covering_detection">Enable face covering detection</string>
     <string name="migrate_to_v20_face_templates">Migrate to v20 face templates</string>
+    <string name="face_detector_version">Face detector version</string>
 </resources>

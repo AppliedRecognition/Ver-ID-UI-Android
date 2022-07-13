@@ -40,7 +40,7 @@ public class SessionParameters {
     private Observer<FaceDetectionResult> faceDetectionResultObserver;
     private Observer<FaceCapture> faceCaptureObserver;
     private Observer<VerIDSessionResult> sessionResultObserver;
-    private Function<VerID, IImageIterator> imageIteratorFactory = VerIDImageIterator::new;
+    private Function<Context, IImageIterator> imageIteratorFactory = VerIDImageIterator::new;
     private BiFunction<VerIDSessionResult, Activity, Intent> resultIntentSupplier;
     private Function<Activity, Intent> tipsIntentSupplier;
     private Runnable onSessionFinishedRunnable;
@@ -149,12 +149,12 @@ public class SessionParameters {
     }
 
     @Keep
-    public Function<VerID, IImageIterator> getImageIteratorFactory() {
+    public Function<Context, IImageIterator> getImageIteratorFactory() {
         return imageIteratorFactory;
     }
 
     @Keep
-    public void setImageIteratorFactory(@NonNull Function<VerID, IImageIterator> imageIteratorFactory) {
+    public void setImageIteratorFactory(@NonNull Function<Context, IImageIterator> imageIteratorFactory) {
         this.imageIteratorFactory = imageIteratorFactory;
     }
 

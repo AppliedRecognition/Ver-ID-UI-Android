@@ -9,17 +9,22 @@ import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
 import com.appliedrec.verid.core2.IRecognizable;
-import com.appliedrec.verid.core2.RecognizableSubject;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDCoreException;
+import com.appliedrec.verid.proto.FaceTemplate;
+import com.appliedrec.verid.proto.Registration;
 import com.appliedrec.verid.sample.BuildConfig;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.VerIDUser;
-import com.google.gson.Gson;
-import com.google.gson.stream.JsonWriter;
+import com.appliedrec.verid.sample.preferences.MimeTypes;
+import com.appliedrec.verid.serialization.ProtobufTypeConverter;
+import com.google.protobuf.ByteString;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class RegistrationExport {
 
@@ -32,46 +37,27 @@ public class RegistrationExport {
     }
 
     @WorkerThread
-    private RegistrationData createRegistrationData() throws Exception {
-        RegistrationData registrationData = new RegistrationData();
-        IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
-        RecognizableSubject[] subjects = new RecognizableSubject[faces.length];
-        int i = 0;
-        for (IRecognizable face : faces) {
-            RecognizableSubject subject = new RecognizableSubject(face.getRecognitionData(), face.getVersion());
-            subjects[i++] = subject;
+    public void writeToUri(Uri uri) throws VerIDCoreException, IOException {
+        Registration registration = createRegistrationData();
+        try (OutputStream outputStream = verID.getContext().get().getContentResolver().openOutputStream(uri)) {
+            registration.writeTo(outputStream);
         }
-        Bitmap photo = profilePhotoHelper.getProfilePhoto();
-        registrationData.setFaceTemplates(subjects);
-        registrationData.setProfilePicture(photo);
-        return registrationData;
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @WorkerThread
-    public Intent createShareIntent(Context context) throws Exception {
-        RegistrationData registrationData = createRegistrationData();
-        File file = new File(context.getCacheDir(), "registrations");
-        file.mkdirs();
-        File registrationFile = new File(file, "Registration.verid");
-        if (registrationFile.exists()) {
-            registrationFile.delete();
-        }
-        try (FileWriter fileWriter = new FileWriter(registrationFile)) {
-            Gson gson = new Gson();
-            try (JsonWriter jsonWriter = gson.newJsonWriter(fileWriter)) {
-                gson.toJson(registrationData, RegistrationData.class, jsonWriter);
-                jsonWriter.flush();
-                Uri registrationUri = SampleAppFileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID+".fileprovider", registrationFile);
-                if (registrationUri == null) {
-                    throw new IOException();
-                }
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                intent.setDataAndType(registrationUri, "application/verid-registration");
-                intent.putExtra(Intent.EXTRA_STREAM, registrationUri);
-                return intent;
+    private Registration createRegistrationData() throws IOException, VerIDCoreException {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Bitmap photo = profilePhotoHelper.getProfilePhoto();
+            photo.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+            ProtobufTypeConverter converter = new ProtobufTypeConverter();
+            Registration.Builder builder = Registration.newBuilder()
+                    .setImage(ByteString.copyFrom(outputStream.toByteArray()))
+                    .setSystemInfo(converter.getCurrentSystemInfo(verID));
+            IRecognizable[] faces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID);
+            for (IRecognizable face : faces) {
+                builder.addFaces(FaceTemplate.newBuilder().setData(ByteString.copyFrom(face.getRecognitionData())).setVersion(face.getVersion()));
             }
+            return builder.build();
         }
     }
 }
