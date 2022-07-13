@@ -227,6 +227,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onPreviewSurfaceCreated(Surface surface) {
+        getDelegate().map(VerIDSessionInViewDelegate::getCapturedImageMinimumArea).ifPresent(size -> cameraWrapper.setCapturedImageMinimumArea(size));
         cameraWrapper.addListener(this);
         cameraWrapper.setPreviewSurface(surface);
         cameraWrapper.start(sessionView.getWidth(), sessionView.getHeight(), sessionView.getDisplayRotation());

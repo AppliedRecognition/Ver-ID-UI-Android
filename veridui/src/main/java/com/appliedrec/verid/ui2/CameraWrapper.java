@@ -107,6 +107,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private final ArrayList<Listener> listeners = new ArrayList<>();
     private final AtomicBoolean isCameraOpen = new AtomicBoolean(false);
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
+    private final CameraPreviewHelper cameraPreviewHelper = new CameraPreviewHelper();
 
     private static final NormalizedSize SIZE_1080P = new NormalizedSize(1920, 1080);
 
@@ -252,12 +253,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 }
                 int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
 
-                float aspectRatio = sensorOrientation % 180 == 0 ? 3f/4f : 4f/3f;
-
                 Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
                 Size[] previewSizes = map.getOutputSizes(previewClass);
                 Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                Size[] sizes = CameraPreviewHelper.getInstance().getOutputSizes(previewSizes, yuvSizes, videoSizes, width, height, sensorOrientation, displayRotation);
+                Size[] sizes = cameraPreviewHelper.getOutputSizes(previewSizes, yuvSizes, videoSizes, width, height, sensorOrientation, displayRotation);
                 Size previewSize = sizes[0];
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
@@ -322,6 +321,14 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     //endregion
+
+    public void setCapturedImageMinimumArea(int area) {
+        cameraPreviewHelper.setMinImageArea(area);
+    }
+
+    public int getCapturedImageMinimumArea() {
+        return cameraPreviewHelper.getMinImageArea();
+    }
 
     private void onError(VerIDSessionException exception) {
         new Handler(Looper.getMainLooper()).post(() -> {

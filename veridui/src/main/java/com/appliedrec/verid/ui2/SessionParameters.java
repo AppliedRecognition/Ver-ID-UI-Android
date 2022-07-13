@@ -50,6 +50,7 @@ public class SessionParameters {
     private VerIDSessionResult sessionResult;
     private Function<VerIDSessionException, Boolean> shouldRetryOnFailure;
     private ITextSpeaker textSpeaker;
+    private int minImageArea = CameraPreviewHelper.getInstance().getMinImageArea();
 
     /**
      * Constructor
@@ -240,5 +241,15 @@ public class SessionParameters {
     @Keep
     public void setTextSpeaker(ITextSpeaker textSpeaker) {
         this.textSpeaker = textSpeaker;
+    }
+
+    @Keep
+    public int getMinImageArea() {
+        return minImageArea;
+    }
+
+    @Keep
+    public void setMinImageArea(int minImageArea) {
+        this.minImageArea = minImageArea;
     }
 }

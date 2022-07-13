@@ -19,8 +19,11 @@ import java.util.stream.Collectors;
 public class CameraPreviewHelper {
 
     private static class InstanceHolder {
-        private static CameraPreviewHelper cameraPreviewHelper = new CameraPreviewHelper();
+        private static final CameraPreviewHelper cameraPreviewHelper = new CameraPreviewHelper();
     }
+
+    private int minImageArea = 640 * 480;
+    private final Object minImageAreaLock = new Object();
 
     /**
      * @return Singleton instance of `CameraPreviewHelper`
@@ -28,6 +31,27 @@ public class CameraPreviewHelper {
      */
     public static CameraPreviewHelper getInstance() {
         return InstanceHolder.cameraPreviewHelper;
+    }
+
+    /**
+     * @return Minimum area (width x height in pixels) of images collected by the camera
+     * @since 2.5.0
+     */
+    public int getMinImageArea() {
+        synchronized (minImageAreaLock) {
+            return minImageArea;
+        }
+    }
+
+    /**
+     * Set minimum area (width x height in pixels) of images the camera should collect
+     * @param minImageArea Area (width x height in pixels)
+     * @since 2.5.0
+     */
+    public void setMinImageArea(int minImageArea) {
+        synchronized (minImageAreaLock) {
+            this.minImageArea = minImageArea;
+        }
     }
 
     /**
@@ -115,14 +139,8 @@ public class CameraPreviewHelper {
      * @since 2.4.0
      */
     public Size[] getOutputSizes(Size[] previewSizes, Size[] imageReaderSizes, Size[] videoSizes, int viewWidth, int viewHeight, int sensorRotation, int deviceRotation) {
-        float aspectRatio;
-        if ((sensorRotation - deviceRotation) % 180 == 0) {
-            aspectRatio = (float)viewWidth/(float)viewHeight;
-        } else {
-            aspectRatio = (float)viewHeight/(float)viewWidth;
-        }
         int viewArea = viewWidth * viewHeight;
-        int minArea = 320 * 240;
+        int minArea = getMinImageArea();
         HashMap<Float,ArrayList<Size>> previewAspectRatios = getAspectRatioSizes(previewSizes);
         HashMap<Float,ArrayList<Size>> imageReaderAspectRatios = getAspectRatioSizes(imageReaderSizes);
         HashMap<Float,ArrayList<Size>> videoAspectRatios = getAspectRatioSizes(videoSizes);
