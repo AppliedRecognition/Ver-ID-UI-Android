@@ -1,7 +1,5 @@
 package com.appliedrec.verid.sample.sharing;
 
-import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 
@@ -13,16 +11,12 @@ import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
 import com.appliedrec.verid.proto.FaceTemplate;
 import com.appliedrec.verid.proto.Registration;
-import com.appliedrec.verid.sample.BuildConfig;
 import com.appliedrec.verid.sample.ProfilePhotoHelper;
 import com.appliedrec.verid.sample.VerIDUser;
-import com.appliedrec.verid.sample.preferences.MimeTypes;
 import com.appliedrec.verid.serialization.ProtobufTypeConverter;
 import com.google.protobuf.ByteString;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 

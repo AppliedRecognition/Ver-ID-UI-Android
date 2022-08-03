@@ -4,11 +4,9 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewTreeObserver;
@@ -42,12 +40,8 @@ import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
-import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,7 +54,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     private RegistrationExport registrationExport;
     private ExecutorService backgroundExecutor;
     private ActivityRegisteredUserBinding viewBinding;
-    private AtomicInteger sessionRunCount = new AtomicInteger(0);
+    private final AtomicInteger sessionRunCount = new AtomicInteger(0);
     private final int sessionMaxRetryCount = 2;
 
     @Override
@@ -202,7 +196,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     private void registerMoreFaces() {
         RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (preferences != null) {
             settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
@@ -338,6 +331,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+        /**
+        // Reporting session results to Applied Recognition
         try {
             File jsonFile = File.createTempFile("verid_", ".json");
             try (FileOutputStream fileOutputStream = new FileOutputStream(jsonFile)) {
@@ -348,6 +343,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         } catch (Exception exception) {
             exception.printStackTrace();
         }
+         **/
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -390,6 +386,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         return sessionRunCount.getAndIncrement() < sessionMaxRetryCount;
     }
 
+//    // To use alternative session UI
 //    @Override
 //    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
 //        return context -> {
