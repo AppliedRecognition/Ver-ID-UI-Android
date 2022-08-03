@@ -23,6 +23,7 @@ import com.appliedrec.verid.core2.VerIDFactoryDelegate;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,19 +54,25 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         }
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean encryptionEnabled = preferences.getBoolean(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION, true);
-        boolean useV20FaceTemplates = preferences.getBoolean(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES, false);
-        UserManagementFactory userManagementFactory = new UserManagementFactory(this, encryptionEnabled, useV20FaceTemplates);
+        UserManagementFactory userManagementFactory = new UserManagementFactory(this, encryptionEnabled, false);
         FaceDetectionRecognitionSettings faceDetectionRecognitionSettings = new FaceDetectionRecognitionSettings(null);
         if (preferences.contains(PreferenceKeys.CONFIDENCE_THRESHOLD)) {
-            faceDetectionRecognitionSettings.setConfidenceThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.CONFIDENCE_THRESHOLD, "-0.5")));
+            faceDetectionRecognitionSettings.setConfidenceThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.CONFIDENCE_THRESHOLD, String.format(Locale.ROOT, "%.02f", faceDetectionRecognitionSettings.getConfidenceThreshold()))));
         }
         if (preferences.contains(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD)) {
-            faceDetectionRecognitionSettings.setFaceExtractQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD, "8.0")));
+            faceDetectionRecognitionSettings.setFaceExtractQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD, String.format(Locale.ROOT, "%.01f", faceDetectionRecognitionSettings.getFaceExtractQualityThreshold()))));
+        }
+        if (preferences.contains(PreferenceKeys.FACE_DETECTOR_VERSION)) {
+            faceDetectionRecognitionSettings.setDetectorVersion(Integer.parseInt(preferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, Integer.toString(faceDetectionRecognitionSettings.getDetectorVersion()))));
+        }
+        if (preferences.contains(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD)) {
+            faceDetectionRecognitionSettings.setLandmarkTrackingQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD, String.format(Locale.ROOT, "%.01f", faceDetectionRecognitionSettings.getLandmarkTrackingQualityThreshold()))));
         }
         FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, faceDetectionRecognitionSettings);
-        faceDetectionRecognitionFactory.setDefaultFaceTemplateVersion(useV20FaceTemplates ? VerIDFaceTemplateVersion.V20 : VerIDFaceTemplateVersion.V16);
-        VerIDFactory verIDFactory = new VerIDFactory(this, (VerIDFactoryDelegate)this);
+        faceDetectionRecognitionFactory.setDefaultFaceTemplateVersion(VerIDFaceTemplateVersion.getLatest());
+        VerIDFactory verIDFactory = new VerIDFactory(this, this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
+        verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
         verIDFactory.setFaceRecognitionFactory(faceDetectionRecognitionFactory);
         verIDFactory.createVerID();
     }
@@ -78,7 +85,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
             }
             return;
         }
-        if (key.equals(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD) || key.equals(PreferenceKeys.CONFIDENCE_THRESHOLD) || key.equals(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION) || key.equals(PreferenceKeys.MIGRATE_TO_V20_FACE_TEMPLATES)) {
+        if (key.equals(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD) || key.equals(PreferenceKeys.CONFIDENCE_THRESHOLD) || key.equals(PreferenceKeys.ENABLE_FACE_TEMPLATE_ENCRYPTION) || key.equals(PreferenceKeys.FACE_DETECTOR_VERSION)) {
             // Wait 100 ms in case more preferences were changed at the same time
             mainHandler.removeCallbacks(reloadRunnable);
             mainHandler.postDelayed(reloadRunnable, 100);

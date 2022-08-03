@@ -92,7 +92,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     @Keep
     public void start() {
         if (isSessionRunning.compareAndSet(false, true)) {
-            IImageIterator imageIterator = getDelegate().map(delegate -> delegate.createImageIteratorFactory(this).apply(verID)).orElse(new VerIDImageIterator(verID));
+            IImageIterator imageIterator = getDelegate().map(delegate -> delegate.createImageIteratorFactory(this).apply(getSessionView().getContext())).orElse(new VerIDImageIterator(getSessionView().getContext()));
             cameraWrapper = new CameraWrapper(sessionView.getContext(), getDelegate().map(delegate -> delegate.getSessionCameraLocation(this)).orElse(CameraLocation.FRONT), imageIterator, getDelegate().map(delegate -> delegate.shouldSessionRecordVideo(this)).orElse(false) ? new SessionVideoRecorder() : null);
             cameraWrapper.setPreviewClass(sessionView.getPreviewClass());
             SessionPrompts sessionPrompts = new SessionPrompts(stringTranslator);

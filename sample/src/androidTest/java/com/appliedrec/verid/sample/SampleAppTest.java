@@ -23,11 +23,11 @@ import androidx.test.rule.GrantPermissionRule;
 import com.appliedrec.verid.core2.AntiSpoofingException;
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.Face;
+import com.appliedrec.verid.core2.Image;
 import com.appliedrec.verid.core2.RecognizableFace;
 import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
-import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.VerIDImageBitmap;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
 import com.appliedrec.verid.core2.session.FaceAlignmentDetection;
@@ -47,7 +47,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.ui2.SessionLivenessDetectionFailureActivity;
+import com.appliedrec.verid.ui2.SessionActivity;
 import com.appliedrec.verid.ui2.VerIDSession;
 
 import org.junit.After;
@@ -215,7 +215,7 @@ public class SampleAppTest {
     public void test_authenticate_showsResult() throws Exception {
         VerID verID = getSampleAppVerID();
         VerIDImageBitmap image = createVerIDImage();
-        Face[] faces = verID.getFaceDetection().detectFacesInImage(image.createFaceDetectionImage(), 1, 0);
+        Face[] faces = verID.getFaceDetection().detectFacesInImage(image, 1, 0);
         assertEquals(1, faces.length);
         RecognizableFace[] recognizableFaces = verID.getFaceRecognition().createRecognizableFacesFromFaces(faces, image);
         verID.getUserManagement().assignFacesToUser(recognizableFaces, VerIDUser.DEFAULT_USER_ID);
@@ -277,13 +277,13 @@ public class SampleAppTest {
 
     private <T extends VerIDSessionSettings> VerIDSession<T> runSession(VerID verID, T settings, VerIDSessionException exception) {
         registeredUserActivityIntentsTestRule.launchActivity(null);
-        VerIDSession<T> session = new VerIDSession<>(verID, settings);
+        VerIDSession session = new VerIDSession(verID, settings);
         SessionFunctions sessionFunctions = new SessionFunctions(verID, settings) {
 
             @Override
-            public Function<Pair<VerIDImage<?>, FaceBounds>, SessionFaceTracking> getSessionFaceTrackingAccumulator() {
+            public Function<Pair<Image, FaceBounds>, SessionFaceTracking> getSessionFaceTrackingAccumulator() {
                 return imageFaceBoundsPair -> {
-                    getSessionFaceTracking().image = createVerIDImage();
+                    getSessionFaceTracking().image = imageFaceBoundsPair.first;
                     getSessionFaceTracking().defaultFaceBounds = imageFaceBoundsPair.second;
                     return getSessionFaceTracking();
                 };
@@ -381,10 +381,10 @@ public class SampleAppTest {
 
     private FaceDetectionResult createFaceDetectionResult(VerID verID, Bearing requestedBearing) {
         FaceDetectionResult faceDetectionResult = new FaceDetectionResult(FaceDetectionStatus.FACE_ALIGNED, requestedBearing);
-        VerIDImageBitmap image = createVerIDImage();
+        Image image = createVerIDImage().provideVerIDImage();
         faceDetectionResult.setImage(image);
         try {
-            Face[] faces = verID.getFaceDetection().detectFacesInImage(image.createFaceDetectionImage(), 1, 0);
+            Face[] faces = verID.getFaceDetection().detectFacesInImage(image, 1, 0);
             if (faces.length == 0) {
                 throw new VerIDSessionException(VerIDSessionException.Code.OTHER);
             }

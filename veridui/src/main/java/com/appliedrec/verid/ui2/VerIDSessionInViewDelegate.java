@@ -1,5 +1,7 @@
 package com.appliedrec.verid.ui2;
 
+import android.content.Context;
+
 import androidx.annotation.Keep;
 
 import com.appliedrec.verid.core2.VerID;
@@ -61,7 +63,7 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default Function<VerID, IImageIterator> createImageIteratorFactory(IVerIDSession<?> session) {
+    default Function<Context, IImageIterator> createImageIteratorFactory(IVerIDSession<?> session) {
         return VerIDImageIterator::new;
     }
 

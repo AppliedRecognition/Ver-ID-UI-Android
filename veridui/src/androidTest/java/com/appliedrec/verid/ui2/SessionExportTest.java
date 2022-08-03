@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.EulerAngle;
 import com.appliedrec.verid.core2.Face;
+import com.appliedrec.verid.core2.Image;
 import com.appliedrec.verid.core2.RecognizableFace;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDFactory;
@@ -81,7 +82,7 @@ public class SessionExportTest {
             }
             RecognizableFace face = new RecognizableFace(new Face(new RectF(10, 10, 50, 60), new EulerAngle(0, 0, 0), new PointF(15, 15), new PointF(45, 15), new byte[178], 10f, new PointF[0], new float[10]), new byte[128]);
             Bitmap image = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888);
-            faceCaptures.add(new FaceCapture(face, bearing, image));
+            faceCaptures.add(new FaceCapture(face, bearing, image, new Image(image)));
         }
         VerIDSessionResult result = new VerIDSessionResult(faceCaptures, System.currentTimeMillis()-1000, System.currentTimeMillis(), null);
         SessionResultPackage sessionResultPackage = new SessionResultPackage(verID, sessionSettings,result);

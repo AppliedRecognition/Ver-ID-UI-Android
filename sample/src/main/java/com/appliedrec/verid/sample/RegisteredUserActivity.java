@@ -4,18 +4,13 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcelable;
-import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -26,26 +21,27 @@ import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDCoreException;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
+import com.appliedrec.verid.sample.preferences.MimeTypes;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
+import com.appliedrec.verid.sample.sharing.RegistrationImportContract;
+import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
-import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,7 +54,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     private RegistrationExport registrationExport;
     private ExecutorService backgroundExecutor;
     private ActivityRegisteredUserBinding viewBinding;
-    private AtomicInteger sessionRunCount = new AtomicInteger(0);
+    private final AtomicInteger sessionRunCount = new AtomicInteger(0);
     private final int sessionMaxRetryCount = 2;
 
     @Override
@@ -200,7 +196,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     private void registerMoreFaces() {
         RegistrationSessionSettings settings = new RegistrationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-        // Setting showResult to false will prevent the activity from displaying a result at the end of the session
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (preferences != null) {
             settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REGISTRATION_FACE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
@@ -246,56 +241,55 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     //region Registration import and export
 
-    private ActivityResultLauncher<Intent> registrationImport = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new RegistrationImportActivityResultCallback(registerForActivityResult(new RegistrationImportReviewActivityResultContract(), result -> {
-        if (result != null) {
+    private void reviewRegistrationImport(Uri uri) {
+        Intent intent = new Intent(this, RegistrationImportReviewActivity.class);
+        intent.setDataAndType(uri, MimeTypes.REGISTRATION.getType());
+        registrationImportReview.launch(intent);
+    }
+
+    private final ActivityResultLauncher<Void> registrationImport = registerForActivityResult(new RegistrationImportContract(), uri -> {
+        if (uri != null) {
+            reviewRegistrationImport(uri);
+        }
+    });
+
+    private final ActivityResultLauncher<Intent> registrationImportReview = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+        if (result != null && result.getResultCode() == RESULT_OK) {
             loadProfilePicture();
             Toast.makeText(this, R.string.registration_imported, Toast.LENGTH_SHORT).show();
         }
-    })));
+    });
 
     private void importRegistration() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("application/verid-registration");
-        registrationImport.launch(intent);
+        registrationImport.launch(null);
     }
 
-    private void exportRegistration() {
-        executeInBackground(() -> {
-            if (registrationExport != null) {
+    private final ActivityResultLauncher<String> registrationExportLauncher = registerForActivityResult(new ActivityResultContracts.CreateDocument(), uri -> {
+        if (uri != null) {
+            executeInBackground(() -> {
                 try {
-                    Intent intent = registrationExport.createShareIntent(this);
+                    registrationExport.writeToUri(uri);
                     runOnUiThread(() -> {
                         if (isDestroyed()) {
                             return;
                         }
-                        ArrayList<Intent> consumers = new ArrayList<>();
-                        for (ResolveInfo resolveInfo : getPackageManager().queryIntentActivities(intent, 0)) {
-                            String packageName = resolveInfo.activityInfo.packageName;
-                            if (!packageName.equals(getPackageName())) {
-                                Intent consumerIntent = new Intent(intent);
-                                consumerIntent.setPackage(resolveInfo.activityInfo.packageName);
-                                consumers.add(consumerIntent);
-                            }
-                        }
-                        if (consumers.isEmpty()) {
+                        Toast.makeText(this, "Registration exported", Toast.LENGTH_SHORT).show();
+                    });
+                } catch (VerIDCoreException | IOException e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> {
+                        if (isDestroyed()) {
                             return;
                         }
-                        if (consumers.size() > 1) {
-                            Intent chooser = Intent.createChooser(consumers.remove(0), "Share registration");
-                            Parcelable[] intents = new Parcelable[consumers.size()];
-                            consumers.toArray(intents);
-                            chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, intents);
-                            startActivity(chooser);
-                        } else {
-                            startActivity(consumers.get(0));
-                        }
-
+                        Toast.makeText(this, "Failed to create registration file", Toast.LENGTH_SHORT).show();
                     });
-                } catch (Exception e) {
-                    Toast.makeText(this, "Failed to create registration file", Toast.LENGTH_SHORT).show();
                 }
-            }
-        });
+            });
+        }
+    });
+
+    private void exportRegistration() {
+        registrationExportLauncher.launch("Faces.registration");
     }
 
     //endregion
@@ -337,6 +331,8 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+        /**
+        // Reporting session results to Applied Recognition
         try {
             File jsonFile = File.createTempFile("verid_", ".json");
             try (FileOutputStream fileOutputStream = new FileOutputStream(jsonFile)) {
@@ -347,6 +343,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
         } catch (Exception exception) {
             exception.printStackTrace();
         }
+         **/
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -388,6 +385,16 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     public boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
         return sessionRunCount.getAndIncrement() < sessionMaxRetryCount;
     }
+
+//    // To use alternative session UI
+//    @Override
+//    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
+//        return context -> {
+//            SessionViewWithSeparateFaceAnd3DHead sessionView = new SessionViewWithSeparateFaceAnd3DHead(context);
+//            sessionView.setAngleBearingEvaluation(new AngleBearingEvaluation(session.getSettings(), 5f, 5f));
+//            return (V) sessionView;
+//        };
+//    }
 
     private void executeInBackground(Runnable runnable) {
         if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
