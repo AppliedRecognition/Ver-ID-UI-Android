@@ -24,7 +24,7 @@ ext.sampledependencies = [
         new Dependency("androidx.appcompat","appcompat","1.4.2"),
         new Dependency("com.google.android.material","material","1.6.1"),
         new Dependency("com.google.guava","guava",guavaVersion),
-        //new Dependency("com.github.AppliedRecognition","Ver-ID-Serialization-Android","1.0.0")
+        new Dependency("com.appliedrec.verid","serialization","1.0.0")
 ]
 
 ext.coreLibraryDesugaringDependencies = [
