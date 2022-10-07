@@ -67,6 +67,10 @@ dependencies {
     for (dep in sampleAndroidTestDependencies) {
         androidTestImplementation dep.toString()
     }
+    implementation("com.appliedrec.verid:serialization:1.0.0") {
+        transitive=false
+    }
+    implementation 'com.google.protobuf:protobuf-javalite:[3.8.0,4['
     androidTestUtil "androidx.test:orchestrator:${rootProject.androidTestVersion}"
 
     annotationProcessor "androidx.room:room-compiler:${rootProject.roomVersion}"
