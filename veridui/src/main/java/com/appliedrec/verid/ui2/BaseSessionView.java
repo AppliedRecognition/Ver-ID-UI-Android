@@ -32,6 +32,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private final AtomicReference<Size> viewSizeRef = new AtomicReference<>();
     private final AtomicReference<FaceExtents> defaultFaceExtents = new AtomicReference<>();
     private final AtomicBoolean isSurfaceAvailable = new AtomicBoolean(false);
+    private final Matrix cameraPreviewMatrix = new Matrix();
     private @ColorInt int overlayBackgroundColor = 0x80000000;
     private @ColorInt int ovalColor = 0xFFFFFFFF;
     private @ColorInt int ovalColorHighlighted = 0xFF36AF00;
@@ -153,8 +154,12 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
         getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
-        Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
-        getTextureView().setTransform(matrix);
+        cameraPreviewMatrix.set(CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation()));
+        getTextureView().setTransform(cameraPreviewMatrix);
+    }
+
+    protected Matrix getCameraPreviewMatrix() {
+        return cameraPreviewMatrix;
     }
 
     protected final int dpToPx(int dp) {
