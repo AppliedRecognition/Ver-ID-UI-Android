@@ -83,6 +83,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         synchronized (sessionViewLock) {
             sessionView = (T) getSessionParameters().map(SessionParameters::getSessionViewFactory).orElseThrow(RuntimeException::new).apply(this);
             sessionView.setDefaultFaceExtents(getDefaultFaceExtents());
+            sessionView.setSessionSettings(getSessionParameters().map(SessionParameters::getSessionSettings).orElse(new LivenessDetectionSessionSettings()));
             sessionView.addListener(this);
             sessionViewLock.notifyAll();
         }
@@ -330,13 +331,20 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
                 return;
             }
         }
-        if (getSessionParameters().map(SessionParameters::getSessionResultDisplayIndicator).orElse(result1 -> false).apply(result) && getSessionParameters().map(SessionParameters::getResultIntentSupplier).isPresent()) {
-            Intent intent = getSessionParameters().map(SessionParameters::getResultIntentSupplier).get().apply(result, this);
-            sessionResultLauncher.launch(intent);
+        Runnable onViewFinished = () -> {
+            if (getSessionParameters().map(SessionParameters::getSessionResultDisplayIndicator).orElse(result1 -> false).apply(result) && getSessionParameters().map(SessionParameters::getResultIntentSupplier).isPresent()) {
+                Intent intent = getSessionParameters().map(SessionParameters::getResultIntentSupplier).get().apply(result, this);
+                sessionResultLauncher.launch(intent);
 
-        } else if (getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).isPresent()) {
-            getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).get().run();
-            finish();
+            } else if (getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).isPresent()) {
+                getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).get().run();
+                finish();
+            }
+        };
+        if (getSessionView().isPresent()) {
+            sessionView.willFinishWithResult(result, onViewFinished);
+        } else {
+            onViewFinished.run();
         }
     }
 
@@ -520,6 +528,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Override
     public void onCameraPreviewSize(int width, int height, int sensorOrientation) {
         sessionView.setPreviewSize(width, height, sensorOrientation);
+        sessionView.setCameraPreviewMirrored(getSessionParameters().map(params -> params.getCameraLocation() == CameraLocation.FRONT).orElse(true));
     }
 
     @Override

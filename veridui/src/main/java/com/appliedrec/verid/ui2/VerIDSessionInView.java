@@ -58,6 +58,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     public VerIDSessionInView(@NonNull VerID verID, @NonNull VerIDSessionSettings sessionSettings, @NonNull T sessionView, @NonNull IStringTranslator stringTranslator) {
         this.verID = verID;
         this.sessionView = sessionView;
+        this.sessionView.setSessionSettings(sessionSettings);
         this.sessionSettings = sessionSettings;
         this.stringTranslator = stringTranslator;
         originalFaceExtents = sessionView.getDefaultFaceExtents();
@@ -115,6 +116,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
                     .setFinishCallback(this::onSessionResult)
                     .build();
             sessionView.setDefaultFaceExtents(sessionSettings.getExpectedFaceExtents());
+            sessionView.setCameraPreviewMirrored(getDelegate().map(delegate -> delegate.getSessionCameraLocation(this) == CameraLocation.FRONT).orElse(true));
             sessionView.addListener(this);
         }
     }

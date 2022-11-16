@@ -3,8 +3,12 @@ package com.appliedrec.verid.ui2;
 import android.content.Context;
 
 import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.livenessdetection.LivenessDetection;
+import com.appliedrec.verid.core2.livenessdetection.ScreenArtifactDetector;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.SessionFunctions;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;

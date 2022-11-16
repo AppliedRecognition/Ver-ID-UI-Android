@@ -15,10 +15,12 @@ ext.uidependencies = [
         new Dependency("androidx.lifecycle","lifecycle-common-java8","[2.2.0,3.0.0["),
         new Dependency("androidx.multidex","multidex","[2.0.1,3.0.0["),
         new Dependency("androidx.dynamicanimation", "dynamicanimation", "[1.0.0,2.0.0["),
-//        new Dependency("com.google.android.filament", "filament-android", "[1.27.1,2.0.0["),
-//        new Dependency("com.google.android.filament", "gltfio-android", "[1.27.1,2.0.0["),
-//        new Dependency("com.google.android.filament", "filament-utils-android", "[1.27.1,2.0.0["),
-        new Dependency("io.github.sceneview", "sceneview", "0.9.0")
+        new Dependency("com.google.android.filament", "filament-android", "[1.27.2,2.0.0["),
+        new Dependency("com.google.android.filament", "gltfio-android", "[1.27.2,2.0.0["),
+        new Dependency("com.google.android.filament", "filament-utils-android", "[1.27.2,2.0.0["),
+        new Dependency("dev.romainguy", "kotlin-math", "[1.5.1,2.0.0["),
+
+//        new Dependency("io.github.sceneview", "sceneview", "0.9.0")
 ]
 
 ext.coreLibraryDesugaringDependencies = [

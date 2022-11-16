@@ -1,5 +1,9 @@
 package com.appliedrec.verid.ui2;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.TimeInterpolator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
@@ -12,7 +16,10 @@ import android.util.AttributeSet;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AnimationSet;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Keep;
@@ -30,9 +37,12 @@ import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.VerIDCoreException;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.FaceDetectionStatus;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
 
 import java.util.Arrays;
 import java.util.List;
+
+import io.github.sceneview.SceneView;
 
 /**
  * Default implementation of {@link ISessionView}
@@ -45,14 +55,15 @@ public class SessionView extends BaseSessionView {
     private TextView instructionTextView;
     private FaceOvalView faceOvalView;
     private ImageView faceImageView;
-    private HeadView headView;
+    private SceneView headView;
     private OvalMaskView ovalMaskView;
     private MaskedFrameLayout faceViewsContainer;
     private boolean plotFaceLandmarks = false;
-    private final Matrix faceBoundsMatrix = new Matrix();
     private Long nextAvailableViewChangeTime;
     private Long latestMisalignTime;
     private SpringAnimation[] faceImageViewAnimations = new SpringAnimation[0];
+    private boolean isFinishing = false;
+    private int faceCaptureCount = 0;
 
     /**
      * Constructor
@@ -93,7 +104,7 @@ public class SessionView extends BaseSessionView {
         instructionTextView.setId(View.generateViewId());
         instructionTextView.setPadding(padding, padding, padding, padding);
         instructionTextView.setTextAlignment(TEXT_ALIGNMENT_CENTER);
-        instructionTextView.setTextAppearance(getContext(), R.style.TextAppearance_AppCompat_Headline);
+        instructionTextView.setTextAppearance(R.style.TextAppearance_AppCompat_Headline);
         instructionTextView.setTextColor(getResources().getColor(android.R.color.black));
         instructionTextView.setBackgroundResource(R.drawable.rounded_corner_white);
         instructionTextView.setVisibility(GONE);
@@ -114,9 +125,13 @@ public class SessionView extends BaseSessionView {
         faceOvalView.setId(View.generateViewId());
         faceViewsContainer.addView(faceOvalView);
 
-        headView = new HeadView(getContext());
-        headView.setId(View.generateViewId());
-        faceViewsContainer.addView(headView);
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            new Handler(Looper.getMainLooper()).post(() -> {
+//                headView = HeadViewSetup.createHeadView(getContext(), Objects.requireNonNull(ViewTreeLifecycleOwner.get(this)));
+//                headView.setId(View.generateViewId());
+//                faceViewsContainer.addView(headView);
+//            });
+//        }
     }
 
     /**
@@ -143,6 +158,7 @@ public class SessionView extends BaseSessionView {
     public SessionView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         this(context, attrs);
     }
+
 
     private LayoutParams createLayoutParamsWithViewCenteredInParent(int width, int height) {
         LayoutParams layoutParams = new LayoutParams(width, height);
@@ -192,6 +208,9 @@ public class SessionView extends BaseSessionView {
             if (faceDetectionResult == null) {
                 return;
             }
+            if (isFinishing || faceCaptureCount >= getSessionSettings().getFaceCaptureCount()) {
+                return;
+            }
             if (faceDetectionResult.getStatus() != FaceDetectionStatus.FACE_ALIGNED && nextAvailableViewChangeTime != null && nextAvailableViewChangeTime > System.currentTimeMillis()) {
                 return;
             }
@@ -207,13 +226,21 @@ public class SessionView extends BaseSessionView {
 
             switch (faceDetectionResult.getStatus()) {
                 case FACE_ALIGNED:
+                    faceCaptureCount ++;
                     latestMisalignTime = null;
-                    headView.setVisibility(View.GONE);
+                    if (headView != null) {
+                        headView.setVisibility(View.GONE);
+                    }
                     if (faceDetectionResult.getFace().isPresent()) {
                         try {
                             Bitmap image = faceDetectionResult.getImage().provideBitmap();
                             Face face = faceDetectionResult.getFace().get();
                             Bitmap faceImage = ImageUtils.cropImageToFace(image, face);
+                            if (isCameraPreviewMirrored()) {
+                                Matrix matrix = new Matrix();
+                                matrix.setScale(-1, 1);
+                                faceImage = Bitmap.createBitmap(faceImage, 0, 0, faceImage.getWidth(), faceImage.getHeight(), matrix, false);
+                            }
                             faceImageView.setImageBitmap(faceImage);
                             faceImageView.setVisibility(View.VISIBLE);
                             textureView.setVisibility(View.INVISIBLE);
@@ -230,8 +257,13 @@ public class SessionView extends BaseSessionView {
                                 faceImageViewAnimations[i++] = new SpringAnimation(faceImageView, property).setSpring(springForce).setStartValue(0.9f);
                             }
                             faceImageViewAnimations[0].addEndListener((DynamicAnimation animation, boolean canceled, float value, float velocity) -> {
-                                faceImageView.setVisibility(View.INVISIBLE);
-                                textureView.setVisibility(View.VISIBLE);
+                                if (faceCaptureCount < getSessionSettings().getFaceCaptureCount()) {
+                                    faceImageView.setVisibility(View.INVISIBLE);
+                                    textureView.setVisibility(View.VISIBLE);
+                                } else {
+                                    getInstructionTextView().setVisibility(View.GONE);
+                                    showAnimatedProgressOnImageViewUsingFace(face);
+                                }
                                 faceImageViewAnimations = new SpringAnimation[0];
                             });
                             for (SpringAnimation animation : faceImageViewAnimations) {
@@ -246,23 +278,27 @@ public class SessionView extends BaseSessionView {
                 case FACE_FIXED:
                     latestMisalignTime = null;
                     faceOvalView.setVisibility(View.INVISIBLE);
-                    headView.setVisibility(View.INVISIBLE);
+                    if (headView != null) {
+                        headView.setVisibility(View.INVISIBLE);
+                    }
                     break;
                 case FACE_MISALIGNED:
                     faceOvalView.setVisibility(View.VISIBLE);
-                    if (shouldDisplayCGHeadGuidance() && latestMisalignTime != null && latestMisalignTime + 2000 < System.currentTimeMillis() && faceDetectionResult.getFaceAngle().isPresent() && faceDetectionResult.getRequestedAngle().isPresent()) {
-                        long turnDuration = 1000;
-                        headView.setVisibility(View.VISIBLE);
-                        textureView.setVisibility(View.INVISIBLE);
-                        nextAvailableViewChangeTime = System.currentTimeMillis() + turnDuration;
-                        headView.animateFromAngleToAngle(faceDetectionResult.getFaceAngle().get(), faceDetectionResult.getRequestedAngle().get(), turnDuration, () -> {
+                    if (headView != null) {
+                        if (shouldDisplayCGHeadGuidance() && latestMisalignTime != null && latestMisalignTime + 2000 < System.currentTimeMillis() && faceDetectionResult.getFaceAngle().isPresent() && faceDetectionResult.getRequestedAngle().isPresent()) {
+                            long turnDuration = 1000;
+                            headView.setVisibility(View.VISIBLE);
+                            textureView.setVisibility(View.INVISIBLE);
+                            nextAvailableViewChangeTime = System.currentTimeMillis() + turnDuration;
+                            HeadViewSetup.animateHead(headView, faceDetectionResult.getFaceAngle().get(), faceDetectionResult.getRequestedAngle().get(), turnDuration, () -> {
+                                headView.setVisibility(View.INVISIBLE);
+                                faceOvalView.setVisibility(View.VISIBLE);
+                                textureView.setVisibility(View.VISIBLE);
+                                latestMisalignTime = null;
+                            });
+                        } else {
                             headView.setVisibility(View.INVISIBLE);
-                            faceOvalView.setVisibility(View.VISIBLE);
-                            textureView.setVisibility(View.VISIBLE);
-                            latestMisalignTime = null;
-                        });
-                    } else {
-                        headView.setVisibility(View.INVISIBLE);
+                        }
                     }
                     if (latestMisalignTime == null) {
                         latestMisalignTime = System.currentTimeMillis();
@@ -270,7 +306,9 @@ public class SessionView extends BaseSessionView {
                     break;
                 default:
                     latestMisalignTime = null;
-                    headView.setVisibility(View.INVISIBLE);
+                    if (headView != null) {
+                        headView.setVisibility(View.INVISIBLE);
+                    }
                     if (faceDetectionResult.getFaceBounds().isPresent()) {
                         faceOvalView.setVisibility(View.VISIBLE);
                         faceOvalView.setStrokeVisible(true);
@@ -360,6 +398,17 @@ public class SessionView extends BaseSessionView {
         });
     }
 
+    private void showAnimatedProgressOnImageViewUsingFace(Face face) {
+        ProgressBar progressBar = new ProgressBar(getContext());
+        faceViewsContainer.addView(progressBar, createLayoutParamsWithViewCenteredInParent(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+//        FaceProcessingIndicatorView processingIndicatorView = new FaceProcessingIndicatorView(getContext());
+//        faceViewsContainer.addView(processingIndicatorView, createLayoutParamsWithViewCenteredInParent(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+//        if (isCameraPreviewMirrored()) {
+//            face = face.flipped(new Size(faceViewsContainer.getWidth(), faceViewsContainer.getHeight()));
+//        }
+//        processingIndicatorView.setFace(face);
+    }
+
     private boolean shouldDisplayCGHeadGuidance() {
         return true;
     }
@@ -405,6 +454,72 @@ public class SessionView extends BaseSessionView {
         return new Size(getWidth(), getHeight());
     }
 
+    @Override
+    public void willFinishWithResult(VerIDSessionResult result, Runnable completionCallback) {
+        isFinishing = true;
+        instructionTextView.setVisibility(View.GONE);
+        if (!result.getError().isPresent() && result.getFaceCaptures().length > 0) {
+            faceOvalView.setVisibility(View.GONE);
+            faceImageView.setVisibility(View.VISIBLE);
+            onCompletionAnimateView(faceImageView, completionCallback);
+        } else {
+            faceImageView.setVisibility(View.GONE);
+            faceOvalView.setVisibility(View.VISIBLE);
+            onCompletionAnimateView(faceOvalView, completionCallback);
+        }
+    }
+
+    private void onCompletionAnimateView(View view, Runnable completionCallback) {
+        for (SpringAnimation animation : faceImageViewAnimations) {
+            animation.cancel();
+        }
+        ObjectAnimator scaleXAnimator = ObjectAnimator.ofFloat(view, View.SCALE_X, 1.0f, 0.0f);
+        ObjectAnimator scaleYAnimator = ObjectAnimator.ofFloat(view, View.SCALE_Y, 1.0f, 0.0f);
+        AnimatorSet scaleAnimator = new AnimatorSet();
+        scaleAnimator.setDuration(1000);
+        scaleAnimator.setInterpolator(new DecelerateInterpolator());
+        scaleAnimator.playTogether(scaleXAnimator, scaleYAnimator);
+        scaleAnimator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(@NonNull Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(@NonNull Animator animation) {
+                completionCallback.run();
+            }
+
+            @Override
+            public void onAnimationCancel(@NonNull Animator animation) {
+                completionCallback.run();
+            }
+
+            @Override
+            public void onAnimationRepeat(@NonNull Animator animation) {
+
+            }
+        });
+        scaleAnimator.start();
+
+//        SpringForce springForce = new SpringForce(0).setStiffness(SpringForce.STIFFNESS_MEDIUM).setDampingRatio(SpringForce.DAMPING_RATIO_LOW_BOUNCY);
+//        DynamicAnimation.ViewProperty[] animatedProperties = new DynamicAnimation.ViewProperty[2];
+//        animatedProperties[0] = DynamicAnimation.SCALE_X;
+//        animatedProperties[1] = DynamicAnimation.SCALE_Y;
+//        int i=0;
+//        faceImageViewAnimations = new SpringAnimation[2];
+//        for (DynamicAnimation.ViewProperty property : animatedProperties) {
+//            faceImageViewAnimations[i++] = new SpringAnimation(view, property).setSpring(springForce).setStartValue(1.0f);
+//        }
+//        faceImageViewAnimations[0].addEndListener((DynamicAnimation animation, boolean canceled, float value, float velocity) -> {
+//            faceImageViewAnimations = new SpringAnimation[0];
+//            completionCallback.run();
+//        });
+//        for (SpringAnimation animation : faceImageViewAnimations) {
+//            animation.animateToFinalPosition(0.01f);
+//        }
+    }
+
     private void updateFaceOvalSizeFromFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
         Rect faceOvalBounds = new Rect();
         faceDetectionResult.getDefaultFaceBounds().translatedToImageSize(getViewSize()).round(faceOvalBounds);
@@ -417,8 +532,8 @@ public class SessionView extends BaseSessionView {
     private void drawArrowFromFaceDetectionResult(FaceDetectionResult faceDetectionResult) {
         EulerAngle offsetAngle = faceDetectionResult.getOffsetAngleFromBearing();
         if (faceDetectionResult.getStatus() == FaceDetectionStatus.FACE_MISALIGNED && offsetAngle != null) {
-            float angle = (float)Math.atan2(0f-offsetAngle.getPitch(), offsetAngle.getYaw());
-            float distance = (float)Math.hypot(offsetAngle.getYaw(), 0-offsetAngle.getPitch()) * 2f;
+            float angle = (float)Math.atan2(offsetAngle.getPitch(), offsetAngle.getYaw());
+            float distance = (float)Math.hypot(offsetAngle.getYaw(), offsetAngle.getPitch()) * 2f;
             faceOvalView.setVisibility(View.VISIBLE);
             faceOvalView.setStrokeVisible(false);
             faceOvalView.drawArrow(angle, distance);
@@ -443,9 +558,7 @@ public class SessionView extends BaseSessionView {
                     return matrix;
                 }
                 RectF faceRect = getDefaultFaceRectFromFaceDetectionResult(faceDetectionResult);
-                float viewScale = faceRect.width() / faceBounds.width();
-                matrix.postTranslate(faceRect.centerX() - faceBounds.centerX(), faceRect.centerY() - faceBounds.centerY());
-                matrix.postScale(viewScale, viewScale);
+                matrix.setRectToRect(faceBounds, faceRect, Matrix.ScaleToFit.CENTER);
                 break;
         }
         return matrix;

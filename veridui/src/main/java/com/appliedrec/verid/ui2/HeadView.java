@@ -2,39 +2,25 @@ package com.appliedrec.verid.ui2;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.Choreographer;
-import android.view.Surface;
-import android.view.SurfaceView;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.Interpolator;
 
 import androidx.annotation.Nullable;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.appliedrec.verid.core2.EulerAngle;
 import com.google.android.filament.Camera;
-import com.google.android.filament.Engine;
-import com.google.android.filament.EntityManager;
-import com.google.android.filament.Filament;
 import com.google.android.filament.LightManager;
-import com.google.android.filament.MaterialInstance;
-import com.google.android.filament.Renderer;
-import com.google.android.filament.Scene;
-import com.google.android.filament.SwapChain;
-import com.google.android.filament.View;
-import com.google.android.filament.Viewport;
-import com.google.android.filament.android.DisplayHelper;
-import com.google.android.filament.android.UiHelper;
-import com.google.android.filament.utils.ModelViewer;
-import com.google.ar.sceneform.CameraNode;
+import com.google.android.filament.gltfio.FilamentAsset;
 
 import dev.romainguy.kotlin.math.Float3;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.node.LightNode;
 import io.github.sceneview.node.ModelNode;
+import kotlin.Unit;
 
+@TargetApi(28)
 public class HeadView extends SceneView {
 
 //    private Choreographer choreographer;
@@ -58,7 +44,7 @@ public class HeadView extends SceneView {
 //        }
 //    };
 
-    private final ModelNode headNode;
+    private ModelNode headNode;
     private boolean isAnimating = false;
 
     public HeadView(Context context) {
@@ -67,20 +53,17 @@ public class HeadView extends SceneView {
 
     public HeadView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        headNode = new ModelNode();
-        headNode.loadModelAsync(context, null, "head1.obj", false, null, null, (error) -> {
-            return null;
-        }, (asset) -> {
-            return null;
+        FilamentAsset model = getModelLoader().createModel("head1.glb");
+        headNode = new ModelNode(this, model);
+        headNode.setPosition(new Float3(0, 0, -10));
+        addChildNode(headNode);
+
+        getCamera().setProjection(30, 3.0/4.0, 0.0, 10.0, Camera.Fov.VERTICAL);
+
+        LightNode lightNode = new LightNode(this, LightManager.Type.POINT, (builder) -> {
+            return Unit.INSTANCE;
         });
-        headNode.setModelPosition(new Float3(0, 0, -10));
-        addChild(headNode);
-        CameraNode cameraNode = new CameraNode();
-        cameraNode.setVerticalFovDegrees(30);
-        cameraNode.lookAt(headNode, new Float3(0,0,0), false);
-        addChild(cameraNode);
-        LightNode lightNode = new LightNode(new Float3(0, 10, 10), new Float3(), new Float3());
-        addChild(lightNode);
+        addChildNode(lightNode);
 //        Filament.init();
 //        surfaceView = new SurfaceView(getContext());
 //        addView(surfaceView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
