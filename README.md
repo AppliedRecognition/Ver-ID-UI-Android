@@ -240,7 +240,7 @@ The SDK runs on Android 5.0 (API level 21) and newer.
     }
     dependencies {
         coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
-	    implementation 'com.appliedrec.verid:ui2:2.0.0'
+	    implementation 'com.appliedrec.verid:ui2:2.6.2'
     }
     ~~~
     

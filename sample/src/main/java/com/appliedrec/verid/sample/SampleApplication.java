@@ -95,7 +95,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     //region Ver-ID factory delegate
 
     @Override
-    public void onVerIDCreated(VerIDFactory factory, VerID environment) {
+    public void onVerIDCreated(@NonNull VerIDFactory factory, @NonNull VerID environment) {
         verID.set(environment);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         if (preferences.contains(PreferenceKeys.AUTHENTICATION_THRESHOLD)) {
@@ -108,7 +108,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     }
 
     @Override
-    public void onVerIDCreationFailed(VerIDFactory factory, Exception error) {
+    public void onVerIDCreationFailed(@NonNull VerIDFactory factory, @NonNull Exception error) {
         Intent intent = new Intent(this, ErrorActivity.class);
         intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.verid_failed_to_load));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

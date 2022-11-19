@@ -4,11 +4,8 @@ import android.content.Context;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.appliedrec.verid.core2.VerID;
-import com.appliedrec.verid.core2.livenessdetection.LivenessDetection;
-import com.appliedrec.verid.core2.livenessdetection.ScreenArtifactDetector;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.SessionFunctions;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
@@ -28,7 +25,7 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result);
+    void onSessionFinished(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result);
 
     /**
      * Called to see whether to use speech to communicate the session prompts to the user
@@ -37,7 +34,7 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
+    default boolean shouldSessionSpeakPrompts(@NonNull IVerIDSession<?> session) {
         return false;
     }
 
@@ -48,7 +45,8 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
+    @NonNull
+    default CameraLocation getSessionCameraLocation(@NonNull IVerIDSession<?> session) {
         return CameraLocation.FRONT;
     }
 
@@ -58,7 +56,7 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default boolean shouldSessionRecordVideo(IVerIDSession<?> session) {
+    default boolean shouldSessionRecordVideo(@NonNull IVerIDSession<?> session) {
         return false;
     }
 
@@ -67,7 +65,8 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default Function<Context, IImageIterator> createImageIteratorFactory(IVerIDSession<?> session) {
+    @NonNull
+    default Function<Context, IImageIterator> createImageIteratorFactory(@NonNull IVerIDSession<?> session) {
         return VerIDImageIterator::new;
     }
 
@@ -78,7 +77,8 @@ public interface VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default SessionFunctions createSessionFunctions(IVerIDSession<?> session, VerID verID, VerIDSessionSettings sessionSettings) {
+    @NonNull
+    default SessionFunctions createSessionFunctions(@NonNull IVerIDSession<?> session, @NonNull VerID verID, @NonNull VerIDSessionSettings sessionSettings) {
         return new SessionFunctions(verID, sessionSettings);
     }
 

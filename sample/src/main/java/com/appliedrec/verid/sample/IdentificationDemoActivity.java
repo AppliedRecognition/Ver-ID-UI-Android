@@ -235,7 +235,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+    public void onSessionFinished(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
             UserIdentification userIdentification = new UserIdentification(verID);
             IRecognizable face = faceCapture.getFace();
@@ -348,7 +348,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     }
 
     @Override
-    public void onSessionCanceled(IVerIDSession<?> session) {
+    public void onSessionCanceled(@NonNull IVerIDSession<?> session) {
         isSessionRunning.set(false);
         invalidateOptionsMenu();
         if (viewBinding == null) {

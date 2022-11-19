@@ -23,8 +23,7 @@ ext.sampledependencies = [
         new Dependency("com.google.protobuf","protobuf-javalite","3.8.0"),
         new Dependency("androidx.appcompat","appcompat","1.4.2"),
         new Dependency("com.google.android.material","material","1.6.1"),
-        new Dependency("com.google.guava","guava",guavaVersion),
-//        new Dependency("com.appliedrec.verid","serialization","1.0.0")
+        new Dependency("com.google.guava","guava",guavaVersion)
 ]
 
 ext.coreLibraryDesugaringDependencies = [
