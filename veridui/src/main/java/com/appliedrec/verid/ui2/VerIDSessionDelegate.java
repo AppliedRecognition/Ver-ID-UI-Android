@@ -5,6 +5,7 @@ import android.content.Context;
 import android.view.View;
 
 import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
 
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
@@ -24,7 +25,7 @@ public interface VerIDSessionDelegate extends VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default void onSessionCanceled(IVerIDSession<?> session) {
+    default void onSessionCanceled(@NonNull IVerIDSession<?> session) {
     }
 
     /**
@@ -35,22 +36,25 @@ public interface VerIDSessionDelegate extends VerIDSessionInViewDelegate {
      * @since 2.0.0
      */
     @Keep
-    default boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
+    default boolean shouldSessionDisplayResult(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         return false;
     }
 
     @Keep
-    default <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(IVerIDSession<?> session) {
+    @NonNull
+    default <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(@NonNull IVerIDSession<?> session) {
         return context -> (V) new SessionView(context);
     }
 
     @Keep
-    default <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass(IVerIDSession<?> session) {
+    @NonNull
+    default <A extends Activity & ISessionActivity> Class<A> getSessionActivityClass(@NonNull IVerIDSession<?> session) {
         return (Class<A>) SessionActivity.class;
     }
 
     @Keep
-    default <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
+    @NonNull
+    default <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         if (result.getError().isPresent()) {
             return (Class<A>) SessionFailureActivity.class;
         } else {
@@ -59,12 +63,13 @@ public interface VerIDSessionDelegate extends VerIDSessionInViewDelegate {
     }
 
     @Keep
-    default SessionFailureDialogFactory createSessionFailureDialogFactory(IVerIDSession<?> session) {
+    @NonNull
+    default SessionFailureDialogFactory createSessionFailureDialogFactory(@NonNull IVerIDSession<?> session) {
         return new DefaultSessionFailureDialogFactory();
     }
 
     @Keep
-    default boolean shouldRetrySessionAfterFailure(IVerIDSession<?> session, VerIDSessionException exception) {
+    default boolean shouldRetrySessionAfterFailure(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionException exception) {
         return false;
     }
 }

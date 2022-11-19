@@ -171,7 +171,7 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public void onSessionFinished(IVerIDSession<?> session, VerIDSessionResult result) {
+    public void onSessionFinished(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         if (!result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -186,22 +186,24 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     }
 
     @Override
-    public boolean shouldSessionDisplayResult(IVerIDSession<?> session, VerIDSessionResult result) {
+    public boolean shouldSessionDisplayResult(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         return result.getError().isPresent();
     }
 
+    @NonNull
     @Override
-    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(IVerIDSession<?> session, VerIDSessionResult result) {
+    public <A extends Activity & ISessionActivity> Class<A> getSessionResultActivityClass(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         return (Class<A>) SessionResultActivity.class;
     }
 
     @Override
-    public boolean shouldSessionSpeakPrompts(IVerIDSession<?> session) {
+    public boolean shouldSessionSpeakPrompts(@NonNull IVerIDSession<?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.SPEAK_PROMPTS, false);
     }
 
+    @NonNull
     @Override
-    public CameraLocation getSessionCameraLocation(IVerIDSession<?> session) {
+    public CameraLocation getSessionCameraLocation(@NonNull IVerIDSession<?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.USE_BACK_CAMERA, false) ? CameraLocation.BACK : CameraLocation.FRONT;
     }
 
