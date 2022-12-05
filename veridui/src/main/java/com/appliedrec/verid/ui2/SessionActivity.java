@@ -32,6 +32,7 @@ import com.appliedrec.verid.core2.Size;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
+import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
@@ -48,6 +49,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Activity used to control Ver-ID sessions
@@ -74,6 +76,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     private SessionPrompts sessionPrompts;
     private final AtomicBoolean isSessionRunning = new AtomicBoolean(false);
     private SessionParameters sessionParameters;
+    private AtomicInteger faceCaptureCount = new AtomicInteger(0);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -145,8 +148,10 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     protected void startSession() {
         if (isSessionRunning.compareAndSet(false, true)) {
+            faceCaptureCount.set(0);
             try {
                 startCamera();
+                getSessionView().ifPresent(ISessionView::onSessionStarted);
             } catch (Exception ignore) {
 
             }
@@ -265,11 +270,13 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     protected void onFaceDetection(@NonNull FaceDetectionResult faceDetectionResult) {
         getSessionParameters().flatMap(SessionParameters::getFaceDetectionResultObserver).ifPresent(observer -> observer.onChanged(faceDetectionResult));
+
+        String prompt = sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null);
         runOnUiThread(() -> {
             if (sessionView == null) {
                 return;
             }
-            sessionView.setFaceDetectionResult(faceDetectionResult, sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null));
+            sessionView.setFaceDetectionResult(faceDetectionResult, prompt);
         });
     }
 
@@ -293,7 +300,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         }
     }
 
-    private ActivityResultLauncher<Intent> sessionResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+    private final ActivityResultLauncher<Intent> sessionResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         getSessionParameters().flatMap(SessionParameters::getOnSessionFinishedRunnable).ifPresent(Runnable::run);
         finish();
     });

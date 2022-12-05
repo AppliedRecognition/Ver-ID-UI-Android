@@ -75,6 +75,12 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format(Locale.ROOT, "%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
             sessionResult.getSessionDiagnostics().ifPresent(diagnostics -> transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format(Locale.ROOT, "%.01f faces/second", (float)diagnostics.getDiagnosticImages().length/(float)sessionResult.getSessionDuration(TimeUnit.MILLISECONDS)*1000f))));
             if (sessionResult instanceof AuthenticationSessionResult) {
+                ((AuthenticationSessionResult)sessionResult).getComparisonScore().ifPresent(score -> {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Comparison score", String.format(Locale.ROOT, "%.02f", score)));
+                });
+                ((AuthenticationSessionResult)sessionResult).getAuthenticationScoreThreshold().ifPresent(score -> {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Authentication score threshold", String.format(Locale.ROOT, "%.02f", score)));
+                });
                 ((AuthenticationSessionResult)sessionResult).getComparisonFaceTemplateVersion().ifPresent(faceTemplateVersion -> {
                     transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template version", String.format(Locale.ROOT, "%d", faceTemplateVersion.getValue())));
                 });
@@ -94,7 +100,6 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             if (sessionResultPackage != null) {
                 transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Environment"));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Ver-ID version", sessionResultPackage.getEnvironmentSettings().getVeridVersion()));
-                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Authentication threshold", String.format(Locale.ROOT, "%.01f", sessionResultPackage.getEnvironmentSettings().getAuthenticationThreshold())));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template extraction threshold", String.format(Locale.ROOT, "%.01f", sessionResultPackage.getEnvironmentSettings().getFaceTemplateExtractionThreshold())));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detector version", String.format(Locale.ROOT, "%d", sessionResultPackage.getEnvironmentSettings().getFaceDetectorVersion())));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Confidence threshold", String.format(Locale.ROOT, "%.01f", sessionResultPackage.getEnvironmentSettings().getConfidenceThreshold())));

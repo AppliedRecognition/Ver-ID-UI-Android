@@ -13,6 +13,7 @@ import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
+import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.Session;
@@ -24,6 +25,7 @@ import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Session that uses a session view to render the camera preview and detected face
@@ -45,6 +47,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     private final MutableLiveData<FaceDetectionResult> faceDetectionLiveData = new MutableLiveData<>();
     private final MutableLiveData<FaceCapture> faceCaptureLiveData = new MutableLiveData<>();
     private final MutableLiveData<VerIDSessionResult> sessionResultLiveData = new MutableLiveData<>();
+    private final AtomicInteger faceCaptureCount = new AtomicInteger(0);
 
     /**
      * Constructor
@@ -59,6 +62,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
         this.verID = verID;
         this.sessionView = sessionView;
         this.sessionView.setSessionSettings(sessionSettings);
+        this.sessionView.setVisibility(View.GONE);
         this.sessionSettings = sessionSettings;
         this.stringTranslator = stringTranslator;
         originalFaceExtents = sessionView.getDefaultFaceExtents();
@@ -93,6 +97,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     @Keep
     public void start() {
         if (isSessionRunning.compareAndSet(false, true)) {
+            faceCaptureCount.set(0);
             IImageIterator imageIterator = getDelegate().map(delegate -> delegate.createImageIteratorFactory(this).apply(getSessionView().getContext())).orElse(new VerIDImageIterator(getSessionView().getContext()));
             cameraWrapper = new CameraWrapper(sessionView.getContext(), getDelegate().map(delegate -> delegate.getSessionCameraLocation(this)).orElse(CameraLocation.FRONT), imageIterator, getDelegate().map(delegate -> delegate.shouldSessionRecordVideo(this)).orElse(false) ? new SessionVideoRecorder() : null);
             cameraWrapper.setPreviewClass(sessionView.getPreviewClass());
@@ -115,8 +120,10 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
                     .setFaceCaptureCallback(faceCaptureLiveData::postValue)
                     .setFinishCallback(this::onSessionResult)
                     .build();
+            sessionView.setVisibility(View.VISIBLE);
             sessionView.setDefaultFaceExtents(sessionSettings.getExpectedFaceExtents());
             sessionView.setCameraPreviewMirrored(getDelegate().map(delegate -> delegate.getSessionCameraLocation(this) == CameraLocation.FRONT).orElse(true));
+            sessionView.onSessionStarted();
             sessionView.addListener(this);
         }
     }
@@ -124,6 +131,7 @@ public class VerIDSessionInView<T extends View & ISessionView> implements IVerID
     private void onSessionResult(VerIDSessionResult result) {
         stop();
         sessionResultLiveData.postValue(result);
+        sessionView.setVisibility(View.GONE);
         getDelegate().ifPresent(delegate -> delegate.onSessionFinished(this, result));
     }
 

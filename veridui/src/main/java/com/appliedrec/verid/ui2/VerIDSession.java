@@ -26,6 +26,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import java.lang.ref.WeakReference;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -48,6 +49,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     private ResourceCallback idlingResourceCallback;
     private final SessionPrompts sessionPrompts;
     private ISessionVideoRecorder videoRecorder;
+    private AtomicInteger faceCaptureCount = new AtomicInteger(0);
 
     static final AtomicLong lastSessionId = new AtomicLong(0);
 
@@ -86,6 +88,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     @Keep
     public void start() {
         isIdle.set(false);
+        faceCaptureCount.set(0);
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
                 if (isStarted.get()) {

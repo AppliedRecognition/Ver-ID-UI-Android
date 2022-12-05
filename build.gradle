@@ -32,12 +32,12 @@ class Dependency {
 
 ext {
     versionMajor = 2
-    versionMinor = 6
-    versionPatch = 3
+    versionMinor = 7
+    versionPatch = 0
     versionClassifier = null
     versionClassifierVersion = null
 
-    minSdkVersion = 21
+    minSdkVersion = 24
     targetSdkVersion = 33
     buildToolsVersion = "30.0.3"
     compileSdkVersion = 33

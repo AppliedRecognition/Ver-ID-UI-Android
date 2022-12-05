@@ -146,4 +146,7 @@ public interface ISessionView extends Iterator<FaceBounds> {
     default void willFinishWithResult(VerIDSessionResult result, Runnable completionCallback) {
         completionCallback.run();
     }
+
+    default void onSessionStarted() {
+    }
 }
