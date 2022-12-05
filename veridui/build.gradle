@@ -36,9 +36,6 @@ apply from: "../veridui-dependencies.gradle"
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    def lifecycle_version = "2.5.0-alpha03"
-    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
     implementation "com.appliedrec.verid:core2:${rootProject.generateVersionName()}"
     for (dep in coreLibraryDesugaringDependencies) {
         coreLibraryDesugaring dep.toString()

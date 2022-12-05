@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -38,6 +40,7 @@ import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
+import com.appliedrec.verid.ui2.MaskedFrameLayout;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
@@ -156,40 +159,27 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     //region Authentication
 
     private void authenticate() {
-        new AlertDialog.Builder(this)
-                .setItems(new String[]{
-                        "English", "Français"
-                }, (DialogInterface dialogInterface, int i) -> {
-                    SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                    AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
-                    // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
-                    // The higher the count the more confident we can be of a live face at the expense of usability
-                    // Note that 1 is added to the setting to include the initial mandatory straight pose
-                    if (preferences != null) {
-                        settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
-                        settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
-                        settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
-                        settings.setExpectedFaceExtents(new FaceExtents(
-                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
-                                preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
-                        ));
-                        settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
-                    }
-                    settings.setSessionDiagnosticsEnabled(true);
-                    sessionRunCount.set(0);
-                    VerIDSession authenticationSession;
-                    if (i == 1) {
-                        TranslatedStrings translatedStrings = new TranslatedStrings(this, "fr.xml", Locale.FRENCH);
-                        authenticationSession = new VerIDSession(verID, settings, translatedStrings);
-                    } else {
-                        authenticationSession = new VerIDSession(verID, settings);
-                    }
-                    authenticationSession.setDelegate(this);
-                    authenticationSession.start();
-                })
-                .setTitle("Select language")
-                .create()
-                .show();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        AuthenticationSessionSettings settings = new AuthenticationSessionSettings(VerIDUser.DEFAULT_USER_ID);
+        // This setting dictates how many poses the user will be required to move her/his head to to ensure liveness
+        // The higher the count the more confident we can be of a live face at the expense of usability
+        // Note that 1 is added to the setting to include the initial mandatory straight pose
+        if (preferences != null) {
+            settings.setFaceCaptureCount(Integer.parseInt(preferences.getString(PreferenceKeys.REQUIRED_POSE_COUNT, Integer.toString(settings.getFaceCaptureCount()))));
+            settings.setYawThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(settings.getYawThreshold()))));
+            settings.setPitchThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(settings.getPitchThreshold()))));
+            settings.setExpectedFaceExtents(new FaceExtents(
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_WIDTH_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewWidth()),
+                    preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
+            ));
+            settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
+        }
+        settings.setSessionDiagnosticsEnabled(true);
+        sessionRunCount.set(0);
+        VerIDSession authenticationSession;
+        authenticationSession = new VerIDSession(verID, settings);
+        authenticationSession.setDelegate(this);
+        authenticationSession.start();
     }
     //endregion
 

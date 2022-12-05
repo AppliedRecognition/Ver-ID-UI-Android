@@ -20,6 +20,7 @@ import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
+import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,11 +33,14 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private final AtomicReference<Size> viewSizeRef = new AtomicReference<>();
     private final AtomicReference<FaceExtents> defaultFaceExtents = new AtomicReference<>();
     private final AtomicBoolean isSurfaceAvailable = new AtomicBoolean(false);
+    private final Matrix cameraPreviewMatrix = new Matrix();
     private @ColorInt int overlayBackgroundColor = 0x80000000;
     private @ColorInt int ovalColor = 0xFFFFFFFF;
     private @ColorInt int ovalColorHighlighted = 0xFF36AF00;
     private @ColorInt int textColor = 0xFF000000;
     private @ColorInt int textColorHighlighted = 0xFFFFFFFF;
+    private VerIDSessionSettings sessionSettings;
+    private boolean isCameraPreviewMirrored = true;
 
     public BaseSessionView(@NonNull Context context) {
         this(context, null);
@@ -71,6 +75,24 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Keep
     public void setDefaultFaceExtents(@NonNull FaceExtents faceExtents) {
         defaultFaceExtents.set(faceExtents);
+    }
+
+    @Override
+    public void setSessionSettings(VerIDSessionSettings sessionSettings) {
+        this.sessionSettings = sessionSettings;
+    }
+
+    public VerIDSessionSettings getSessionSettings() {
+        return sessionSettings;
+    }
+
+    @Override
+    public void setCameraPreviewMirrored(boolean mirrored) {
+        this.isCameraPreviewMirrored = mirrored;
+    }
+
+    public boolean isCameraPreviewMirrored() {
+        return this.isCameraPreviewMirrored;
     }
 
     /**
@@ -153,8 +175,12 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
         getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
-        Matrix matrix = CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation());
-        getTextureView().setTransform(matrix);
+        cameraPreviewMatrix.set(CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation()));
+        getTextureView().setTransform(cameraPreviewMatrix);
+    }
+
+    protected Matrix getCameraPreviewMatrix() {
+        return cameraPreviewMatrix;
     }
 
     protected final int dpToPx(int dp) {

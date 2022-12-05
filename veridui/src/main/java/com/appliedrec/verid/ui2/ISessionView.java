@@ -8,6 +8,8 @@ import androidx.annotation.Keep;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
 import com.appliedrec.verid.core2.session.FaceExtents;
+import com.appliedrec.verid.core2.session.VerIDSessionResult;
+import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.Iterator;
 import java.util.List;
@@ -125,4 +127,26 @@ public interface ISessionView extends Iterator<FaceBounds> {
      */
     @Keep
     FaceExtents getDefaultFaceExtents();
+
+    /**
+     * @param sessionSettings Session settings
+     * @since 2.7.0
+     */
+    @Keep
+    default void setSessionSettings(VerIDSessionSettings sessionSettings) {}
+
+    /**
+     * @param mirrored Whether camera preview is mirrored (flipped horizontally)
+     * @since 2.7.0
+     */
+    @Keep
+    default void setCameraPreviewMirrored(boolean mirrored) {}
+
+    @Keep
+    default void willFinishWithResult(VerIDSessionResult result, Runnable completionCallback) {
+        completionCallback.run();
+    }
+
+    default void onSessionStarted() {
+    }
 }

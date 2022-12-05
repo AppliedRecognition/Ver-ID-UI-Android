@@ -23,11 +23,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.appliedrec.verid.core2.Face;
-import com.appliedrec.verid.core2.FaceDetectionImage;
 import com.appliedrec.verid.core2.IFaceTracking;
 import com.appliedrec.verid.core2.Image;
 import com.appliedrec.verid.core2.VerID;
-import com.appliedrec.verid.core2.VerIDImage;
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
@@ -37,10 +35,10 @@ import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.CameraWrapper;
 import com.appliedrec.verid.ui2.ISessionView;
 import com.appliedrec.verid.ui2.IStringTranslator;
-import com.appliedrec.verid.ui2.SessionView;
 import com.appliedrec.verid.ui2.TranslatedStrings;
 import com.appliedrec.verid.ui2.VerIDImageIterator;
 import com.appliedrec.verid.ui2.VerIDSessionInView;
+import com.appliedrec.verid.ui2.SessionView;
 
 import java.util.Iterator;
 import java.util.Objects;
@@ -79,6 +77,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         viewBinding.idle.setVisibility(View.VISIBLE);
         viewBinding.sessionResult.setVisibility(View.VISIBLE);
         viewBinding.sessionView.setDefaultFaceExtents(sessionSettings.getExpectedFaceExtents());
+        viewBinding.sessionView.setAlpha(0f);
     }
 
     @Override
@@ -170,6 +169,7 @@ public class ContinuousLivenessActivity extends AppCompatActivity implements IVe
         }
         if (isSessionRunning.compareAndSet(false, true)) {
             viewBinding.sessionResult.setVisibility(View.GONE);
+            viewBinding.sessionView.setAlpha(1f);
             verIDSessionInView = new VerIDSessionInView<>(verID, sessionSettings, viewBinding.sessionView, stringTranslator);
             verIDSessionInView.getSessionResultLiveData().observe(this, this::onSessionResult);
             verIDSessionInView.start();

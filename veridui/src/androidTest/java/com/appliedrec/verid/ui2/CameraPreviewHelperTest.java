@@ -1,8 +1,6 @@
 package com.appliedrec.verid.ui2;
 
 import android.Manifest;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -21,7 +19,6 @@ import androidx.test.rule.GrantPermissionRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.InputStream;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
