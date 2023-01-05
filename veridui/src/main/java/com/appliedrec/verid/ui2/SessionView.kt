@@ -1,6 +1,7 @@
 package com.appliedrec.verid.ui2
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.RectF
@@ -27,7 +28,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.*
@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.appliedrec.verid.core2.ImageUtils
@@ -43,6 +45,7 @@ import com.appliedrec.verid.core2.Size
 import com.appliedrec.verid.core2.session.FaceDetectionResult
 import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
+import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
 import kotlinx.coroutines.*
 import kotlin.math.*
 
@@ -60,7 +63,14 @@ class SessionView @JvmOverloads constructor(
     private val ovalMaskView: OvalMaskView
 
     init {
-        setBackgroundColor(Color.White.toArgb())
+        when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_NO -> {
+                setBackgroundColor(Color.White.toArgb())
+            } // Night mode is not active, we're using the light theme
+            Configuration.UI_MODE_NIGHT_YES -> {
+                setBackgroundColor(Color.Black.toArgb())
+            } // Night mode is active, we're using dark theme
+        }
         textureView = TextureView(context).apply {
             surfaceTextureListener = this@SessionView
             id = View.generateViewId()
@@ -70,7 +80,7 @@ class SessionView @JvmOverloads constructor(
         }
         val composeView = ComposeView(context).apply {
             setContent {
-                MaterialTheme {
+                VerIDTheme {
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -85,19 +95,24 @@ class SessionView @JvmOverloads constructor(
                                 isFinishing = isFinishing,
                                 modifier = Modifier
                                     .align(Alignment.Center)
-                                    .size(
-                                        width = faceOvalBounds.width().dp,
-                                        height = faceOvalBounds.height().dp
+                                    .requiredSize(
+                                        width = with(LocalDensity.current) {
+                                            faceOvalBounds.width().toDp()
+                                        },
+                                        height = with(LocalDensity.current) {
+                                            faceOvalBounds.height().toDp()
+                                        }
                                     ))
-                            if (prompt != null) {
+                            if (prompt != null && faceCaptureCount < sessionSettings.faceCaptureCount) {
                                 Text(
                                     text = prompt!!,
                                     style = typography.headlineMedium,
                                     textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier
                                         .align(Alignment.TopCenter)
                                         .fillMaxWidth()
-                                        .background(Color.White)
+                                        .background(MaterialTheme.colorScheme.background)
                                         .padding(top = 16.dp)
                                 )
                             }
@@ -297,39 +312,39 @@ fun FaceDetectionResultView(
                         bitmap = faceImage.asImageBitmap(),
                         contentDescription = "Face",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = modifier
                     )
-//                    if (isLastFaceCapture) {
-                        val face = if (isPreviewMirrored) faceDetectionResult.face.get().flipped(Size(faceImage.width, faceImage.height)) else faceDetectionResult.face.get()
-                        val faceBounds = face.bounds
-                        val imageScale = max(parentSize.width.toFloat() / faceImage.width.toFloat(), parentSize.height.toFloat() / faceImage.height.toFloat())
-                        val xOffset = 0f - faceBounds.left * imageScale
-                        val yOffset = 0f - faceBounds.top * imageScale
-                        val matrix = Matrix()
-                        matrix.postScale(imageScale, imageScale)
-                        matrix.postTranslate(xOffset - (parentSize.width.toFloat() / 2f - faceImage.width.toFloat() * imageScale / 2f), yOffset - (parentSize.height.toFloat() / 2f - faceImage.height.toFloat() * imageScale / 2f))
-                        val faceLandmarks = face.landmarks.map { point ->
-                            val vec = arrayOf(point.x, point.y).toFloatArray()
-                            matrix.mapPoints(vec)
-                            Offset(vec[0], vec[1])
-                        }
-                        var landmark by remember { mutableStateOf(faceLandmarks[17]) }
-                        LaunchedEffect(key1 = isLastFaceCapture) {
-                            var i = 18
-                            while (i < faceLandmarks.size) {
-                                delay(100)
-                                landmark = faceLandmarks[i]
-                                if (i == faceLandmarks.size - 1) {
-                                    i = 17
-                                } else {
-                                    i++
-                                }
+                    val face = if (isPreviewMirrored) faceDetectionResult.face.get().flipped(Size(faceImage.width, faceImage.height)) else faceDetectionResult.face.get()
+                    val faceBounds = face.bounds
+                    val imageScale = max(parentSize.width.toFloat() / faceImage.width.toFloat(), parentSize.height.toFloat() / faceImage.height.toFloat())
+                    val xOffset = 0f - faceBounds.left * imageScale
+                    val yOffset = 0f - faceBounds.top * imageScale
+                    val matrix = Matrix()
+                    matrix.postScale(imageScale, imageScale)
+                    matrix.postTranslate(xOffset - (parentSize.width.toFloat() / 2f - faceImage.width.toFloat() * imageScale / 2f), yOffset - (parentSize.height.toFloat() / 2f - faceImage.height.toFloat() * imageScale / 2f))
+                    matrix.postTranslate(with(LocalDensity.current) { -3.dp.toPx() }, with(LocalDensity.current) { -3.dp.toPx() })
+                    val faceLandmarks = face.landmarks.map { point ->
+                        val vec = arrayOf(point.x, point.y).toFloatArray()
+                        matrix.mapPoints(vec)
+                        Offset(vec[0], vec[1])
+                    }
+                    var landmark by remember { mutableStateOf(faceLandmarks[17]) }
+                    val landmarkSize = with(LocalDensity.current) { DpSize(6.dp, 6.dp).toSize() }
+                    LaunchedEffect(key1 = isLastFaceCapture) {
+                        var i = 18
+                        while (i < faceLandmarks.size) {
+                            delay(100)
+                            landmark = faceLandmarks[i]
+                            if (i == faceLandmarks.size - 1) {
+                                i = 17
+                            } else {
+                                i++
                             }
                         }
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            drawOval(Color.White, topLeft = landmark, size = this.size.copy(6f, 6f))
-                        }
-//                    }
+                    }
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawOval(Color.White, topLeft = landmark, size = landmarkSize)
+                    }
                 }
             }
         }
@@ -375,11 +390,12 @@ fun FaceDetectionResultView(
                         repeatMode = RepeatMode.Reverse
                     )
                 )
+                val ovalColour = MaterialTheme.colorScheme.primary
                 Canvas(modifier = modifier
                     .onSizeChanged {
                         parentSize = it
                     }, onDraw = {
-                        drawOval(color = Color.Black, style = Stroke(width = strokeWidth))
+                        drawOval(color = ovalColour, style = Stroke(width = strokeWidth))
                     }
                 )
             }

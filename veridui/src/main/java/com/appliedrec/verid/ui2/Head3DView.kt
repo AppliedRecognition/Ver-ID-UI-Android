@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.appliedrec.verid.core2.EulerAngle
@@ -60,10 +61,11 @@ fun Head3DView(
         })
         .background(Color.Gray)
     ) {
+        val yOffset = with(LocalDensity.current) { (size.height.toFloat() * 0.1f).toDp() }
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Face turning",
-            modifier = Modifier.fillMaxSize().offset(y = (size.height.toFloat() * 0.1f).dp),
+            modifier = Modifier.fillMaxSize().offset(y = yOffset),
             contentScale = ContentScale.Crop
         )
     }
