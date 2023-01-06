@@ -328,14 +328,19 @@ fun FaceDetectionResultView(
                         matrix.mapPoints(vec)
                         Offset(vec[0], vec[1])
                     }
-                    var landmark by remember { mutableStateOf(faceLandmarks[17]) }
+                    val startPoints = listOf(0,17,22,27,31,36,42,48,60)
+                    val closePoints = listOf(21,26,30,35,41,47,59,67)
+                    var landmark by remember { mutableStateOf(Pair(faceLandmarks[17], faceLandmarks[18])) }
                     val landmarkSize = with(LocalDensity.current) { DpSize(6.dp, 6.dp).toSize() }
+                    val strokeWidth = with(LocalDensity.current) { 6.dp.toPx() }
                     LaunchedEffect(key1 = isLastFaceCapture) {
                         var i = 18
-                        while (i < faceLandmarks.size) {
-                            delay(100)
-                            landmark = faceLandmarks[i]
-                            if (i == faceLandmarks.size - 1) {
+                        while (i < faceLandmarks.size - 1) {
+                            delay(50)
+                            if (!closePoints.contains(i)) {
+                                landmark = Pair(faceLandmarks[i], faceLandmarks[i+1])
+                            }
+                            if (i == faceLandmarks.size - 2) {
                                 i = 17
                             } else {
                                 i++
@@ -343,7 +348,8 @@ fun FaceDetectionResultView(
                         }
                     }
                     Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawOval(Color.White, topLeft = landmark, size = landmarkSize)
+                        drawLine(Color.White, start = landmark.first, end = landmark.second, strokeWidth = strokeWidth, cap = StrokeCap.Round)
+//                        drawOval(Color.White, topLeft = landmark, size = landmarkSize)
                     }
                 }
             }
@@ -383,8 +389,8 @@ fun FaceDetectionResultView(
             if (faceDetectionResult.faceBounds.isPresent) {
                 val transition = rememberInfiniteTransition()
                 val strokeWidth by transition.animateFloat(
-                    initialValue = 10f,
-                    targetValue = 16f,
+                    initialValue = with(LocalDensity.current) { 10.dp.toPx() },
+                    targetValue = with(LocalDensity.current) { 16.dp.toPx() },
                     animationSpec = infiniteRepeatable(
                         animation = tween(1000, easing = EaseInOut),
                         repeatMode = RepeatMode.Reverse
