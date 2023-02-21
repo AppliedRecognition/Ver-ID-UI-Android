@@ -3,17 +3,20 @@ package com.appliedrec.verid.sample;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.text.TextUtilsCompat;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.AuthenticationSessionResult;
+import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
@@ -26,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -84,6 +88,26 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
                 ((AuthenticationSessionResult)sessionResult).getComparisonFaceTemplateVersion().ifPresent(faceTemplateVersion -> {
                     transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template version", String.format(Locale.ROOT, "%d", faceTemplateVersion.getValue())));
                 });
+            }
+            ArrayList<String> spoofDeviceConfidenceScores = new ArrayList<>();
+            ArrayList<String> moireConfidenceScores = new ArrayList<>();
+            for (FaceCapture faceCapture : sessionResult.getFaceCaptures()) {
+                Float spoofDeviceConfidence = faceCapture.getDiagnosticInfo().getSpoofDeviceConfidence();
+                if (spoofDeviceConfidence != null) {
+                    spoofDeviceConfidenceScores.add(String.format(Locale.ROOT, "%.02f", spoofDeviceConfidence));
+                } else if (faceCapture.getDiagnosticInfo().getSpoofDevices() != null) {
+                    spoofDeviceConfidenceScores.add(String.format(Locale.ROOT, "%.02f", 0f));
+                }
+                Float moireConfidence = faceCapture.getDiagnosticInfo().getMoireConfidence();
+                if (moireConfidence != null) {
+                    moireConfidenceScores.add(String.format(Locale.ROOT, "%.02f", moireConfidence));
+                }
+            }
+            if (!spoofDeviceConfidenceScores.isEmpty()) {
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Spoof confidence (object)", TextUtils.join(", ", spoofDeviceConfidenceScores)));
+            }
+            if (!moireConfidenceScores.isEmpty()) {
+                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Spoof confidence (moire)", TextUtils.join(", ", moireConfidenceScores)));
             }
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Settings"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format(Locale.ROOT, "%d seconds", sessionSettings.getMaxDuration(TimeUnit.SECONDS))));

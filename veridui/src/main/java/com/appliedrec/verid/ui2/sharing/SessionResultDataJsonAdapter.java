@@ -33,6 +33,9 @@ public class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSession
             JsonObject face = new JsonObject();
             face.add("face", context.serialize(attachment.getFace(), RecognizableFace.class));
             face.add("bearing", context.serialize(attachment.getBearing(), Bearing.class));
+            if (!attachment.getDiagnosticInfo().isEmpty()) {
+                face.add("diagnostic_info", context.serialize(attachment.getDiagnosticInfo()));
+            }
             faces.add(face);
         }
         jsonObject.add("face_captures", faces);
@@ -79,7 +82,12 @@ public class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSession
                 Bearing bearing = context.deserialize(faceCapture.get("bearing"), Bearing.class);
                 Bitmap bitmap = Bitmap.createBitmap((int)Math.ceil(face.getBounds().right), (int)Math.ceil(face.getBounds().bottom), Bitmap.Config.ARGB_8888);
                 VerIDImageBitmap image = new VerIDImageBitmap(bitmap, ExifInterface.ORIENTATION_NORMAL);
-                faceCaptures.add(new FaceCapture(face, bearing, bitmap, image.provideVerIDImage()));
+                FaceCapture capture = new FaceCapture(face, bearing, bitmap, image.provideVerIDImage());
+                if (faceCapture.has("diagnostic_info")) {
+                    FaceCapture.DiagnosticInfo diagnosticInfo = context.deserialize(faceCapture.get("diagnostic_info"), FaceCapture.DiagnosticInfo.class);
+                    capture.setDiagnosticInfo(diagnosticInfo);
+                }
+                faceCaptures.add(capture);
             }
             sessionResult = new VerIDSessionResult(faceCaptures, startTime, endTime, diagnostics);
             if (sessionException != null) {
