@@ -21,7 +21,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -47,6 +49,7 @@ import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
 import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
 import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
 
 class SessionView @JvmOverloads constructor(
@@ -97,10 +100,14 @@ class SessionView @JvmOverloads constructor(
                                     .align(Alignment.Center)
                                     .requiredSize(
                                         width = with(LocalDensity.current) {
-                                            faceOvalBounds.width().toDp()
+                                            faceOvalBounds
+                                                .width()
+                                                .toDp()
                                         },
                                         height = with(LocalDensity.current) {
-                                            faceOvalBounds.height().toDp()
+                                            faceOvalBounds
+                                                .height()
+                                                .toDp()
                                         }
                                     ))
                             if (prompt != null && faceCaptureCount < sessionSettings.faceCaptureCount) {
@@ -314,42 +321,23 @@ fun FaceDetectionResultView(
                         contentScale = ContentScale.Crop,
                         modifier = modifier
                     )
-                    val face = if (isPreviewMirrored) faceDetectionResult.face.get().flipped(Size(faceImage.width, faceImage.height)) else faceDetectionResult.face.get()
-                    val faceBounds = face.bounds
-                    val imageScale = max(parentSize.width.toFloat() / faceImage.width.toFloat(), parentSize.height.toFloat() / faceImage.height.toFloat())
-                    val xOffset = 0f - faceBounds.left * imageScale
-                    val yOffset = 0f - faceBounds.top * imageScale
-                    val matrix = Matrix()
-                    matrix.postScale(imageScale, imageScale)
-                    matrix.postTranslate(xOffset - (parentSize.width.toFloat() / 2f - faceImage.width.toFloat() * imageScale / 2f), yOffset - (parentSize.height.toFloat() / 2f - faceImage.height.toFloat() * imageScale / 2f))
-                    matrix.postTranslate(with(LocalDensity.current) { -3.dp.toPx() }, with(LocalDensity.current) { -3.dp.toPx() })
-                    val faceLandmarks = face.landmarks.map { point ->
-                        val vec = arrayOf(point.x, point.y).toFloatArray()
-                        matrix.mapPoints(vec)
-                        Offset(vec[0], vec[1])
-                    }
-                    val startPoints = listOf(0,17,22,27,31,36,42,48,60)
-                    val closePoints = listOf(21,26,30,35,41,47,59,67)
-                    var landmark by remember { mutableStateOf(Pair(faceLandmarks[17], faceLandmarks[18])) }
-                    val landmarkSize = with(LocalDensity.current) { DpSize(6.dp, 6.dp).toSize() }
-                    val strokeWidth = with(LocalDensity.current) { 6.dp.toPx() }
-                    LaunchedEffect(key1 = isLastFaceCapture) {
-                        var i = 18
-                        while (i < faceLandmarks.size - 1) {
-                            delay(50)
-                            if (!closePoints.contains(i)) {
-                                landmark = Pair(faceLandmarks[i], faceLandmarks[i+1])
-                            }
-                            if (i == faceLandmarks.size - 2) {
-                                i = 17
-                            } else {
-                                i++
-                            }
-                        }
-                    }
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawLine(Color.White, start = landmark.first, end = landmark.second, strokeWidth = strokeWidth, cap = StrokeCap.Round)
-//                        drawOval(Color.White, topLeft = landmark, size = landmarkSize)
+                    if (isLastFaceCapture) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+//                        val face = if (isPreviewMirrored) faceDetectionResult.face.get().flipped(Size(faceImage.width, faceImage.height)) else faceDetectionResult.face.get()
+//                        val faceBounds = face.bounds
+//                        val imageScale = max(parentSize.width.toFloat() / faceImage.width.toFloat(), parentSize.height.toFloat() / faceImage.height.toFloat())
+//                        val xOffset = 0f - faceBounds.left * imageScale
+//                        val yOffset = 0f - faceBounds.top * imageScale
+//                        val matrix = Matrix()
+//                        matrix.postScale(imageScale, imageScale)
+//                        matrix.postTranslate(xOffset - (parentSize.width.toFloat() / 2f - faceImage.width.toFloat() * imageScale / 2f), yOffset - (parentSize.height.toFloat() / 2f - faceImage.height.toFloat() * imageScale / 2f))
+//                        matrix.postTranslate(with(LocalDensity.current) { -3.dp.toPx() }, with(LocalDensity.current) { -3.dp.toPx() })
+//                        val faceLandmarks = face.landmarks.map { point ->
+//                            val vec = arrayOf(point.x, point.y).toFloatArray()
+//                            matrix.mapPoints(vec)
+//                            Offset(vec[0], vec[1])
+//                        }
+//                        ProcessingAnimation(landmarks = faceLandmarks, modifier = Modifier.fillMaxSize())
                     }
                 }
             }
@@ -406,6 +394,59 @@ fun FaceDetectionResultView(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ProcessingAnimation(
+    landmarks: List<Offset>,
+    modifier: Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val landmark by infiniteTransition.animateValue(
+        initialValue = Pair(landmarks[17], landmarks[18]),
+        targetValue = Pair(landmarks[landmarks.size-2], landmarks[landmarks.size-1]),
+        typeConverter = TwoWayConverter({ AnimationVector4D(it.first.x, it.first.y, it.second.x, it.second.y) }, { Pair(
+            Offset(it.v1, it.v2), Offset(it.v3, it.v4)) }),
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+    val closePoints = listOf(21,26,30,35,41,47,59,67)
+    val strokeWidth = with(LocalDensity.current) { 6.dp.toPx() }
+//    LaunchedEffect(Unit) {
+//        launch(Dispatchers.Default) {
+//            var i = 18
+//            while (i < landmarks.size - 1) {
+//                delay(50)
+//                if (!closePoints.contains(i)) {
+//                    launch(Dispatchers.Main) {
+//                        landmark = Pair(landmarks[i], landmarks[i + 1])
+//                    }
+//                }
+//                if (i == landmarks.size - 2) {
+//                    i = 17
+//                } else {
+//                    i++
+//                }
+//            }
+//        }
+//    }
+    LandmarkCanvas(start = landmark.first, end = landmark.second, strokeWidth = strokeWidth, modifier = modifier.fillMaxSize())
+}
+
+@Composable
+fun LandmarkCanvas(
+    start: Offset,
+    end: Offset,
+    strokeWidth: Float,
+    modifier: Modifier
+) {
+    Canvas(
+        modifier = modifier.fillMaxSize()
+    ) {
+        drawLine(Color.White, start = start, end = end, strokeWidth = strokeWidth, cap = StrokeCap.Round)
     }
 }
 
