@@ -123,6 +123,7 @@ public class VerIDImageIterator implements IImageIterator {
      * @deprecated Use {@link #VerIDImageIterator(Context)}
      */
     @Keep
+    @Deprecated
     public VerIDImageIterator(VerID verID) {
         this.imageUtils = new ImageUtils(verID.getContext().get());
     }
