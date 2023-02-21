@@ -1,0 +1,12 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'com.appliedrec.verid.versions'
+            implementationClass = 'com.appliedrec.VeridVersionPlugin'
+        }
+    }
+}

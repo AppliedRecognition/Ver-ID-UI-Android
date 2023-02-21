@@ -1,18 +1,22 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'
+    id 'com.appliedrec.veridbuild'
 }
 
 android {
-    compileSdkVersion rootProject.compileSdkVersion
-    buildToolsVersion rootProject.buildToolsVersion
+    compileSdkVersion versions.compileSdkVersion
+    buildToolsVersion versions.buildToolsVersion
+
     defaultConfig {
-        minSdkVersion rootProject.minSdkVersion
-        targetSdkVersion rootProject.targetSdkVersion
-        versionCode rootProject.generateVersionCode()
-        versionName rootProject.generateVersionName()
+        minSdkVersion versions.minSdkVersion
+        targetSdkVersion versions.targetSdkVersion
+        versionCode versions.versionCode
+        versionName versions.versionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -20,46 +24,11 @@ android {
         }
     }
 
-    compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    buildFeatures {
-        viewBinding = true
-        compose = true
-    }
-
-    lintOptions {
-        abortOnError false
-    }
     kotlinOptions {
-        jvmTarget = '1.8'
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion '1.1.1'
-    }
-    packagingOptions {
-        resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-        }
+        jvmTarget = versions.kotlinJvmTarget
     }
 }
 
-apply from: "../veridui-dependencies.gradle"
-
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "com.appliedrec.verid:core2:${rootProject.generateVersionName()}"
-    for (dep in coreLibraryDesugaringDependencies) {
-        coreLibraryDesugaring dep.toString()
-    }
-    for (dep in uidependencies) {
-        implementation dep.toString()
-    }
-    for (dep in uiAndroidTestDependencies) {
-        implementation dep.toString()
-    }
-    annotationProcessor "androidx.room:room-compiler:$rootProject.roomVersion"
+    api "com.appliedrec.verid:core2:${versions.versionName}"
 }
