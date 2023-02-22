@@ -1,4 +1,4 @@
-![Maven metadata URL](https://img.shields.io/maven-metadata/v/https/dev.ver-id.com/artifactory/gradle-release/com/appliedrec/verid/ui2/maven-metadata.xml.svg)
+![Maven Central](https://img.shields.io/maven-central/v/com.appliedrec.verid/ui2)
 
 # Ver-ID UI for Android
 
@@ -170,7 +170,7 @@ To build this project and to run the sample app you will need a computer with th
 	
 The SDK runs on Android 5.0 (API level 21) and newer.
 
-## Installation
+## Running the sample app
 
 1. Open a shell console and enter the following commands:
 
@@ -183,11 +183,21 @@ The SDK runs on Android 5.0 (API level 21) and newer.
 
 ## Adding Ver-ID to your own project
 
-1. [Register your app](https://dev.ver-id.com/licensing/). You will need your app's package name.
-2. Registering your app will generate an evaluation licence for your app. The licence is valid for 30 days. If you need a production licence please [contact Applied Recognition](mailto:sales@appliedrec.com).
-2. When you finish the registration you'll receive a file called **Ver-ID identity.p12** and a password. Copy the password to a secure location.
-3. Copy the **Ver-ID identity.p12** into your app's assets folder. A common location is **your\_app_module/src/main/assets**.
-8. Ver-ID will need the password you received at registration.
+1. Ensure `mavenCentral()` is in your project's repositories.
+2. Add the following entries in your app module's **gradle.build** file:
+    
+    ~~~groovy
+    dependencies {
+        implementation 'com.appliedrec.verid:native2:2.8.1'
+        implementation 'com.appliedrec.verid:core2:2.8.1'
+        implementation 'com.appliedrec.verid:ui2:2.8.1'
+    }
+    ~~~
+3. [Register your app](https://dev.ver-id.com/licensing/). You will need your app's package name.
+4. Registering your app will generate an evaluation licence for your app. The licence is valid for 30 days. If you need a production licence please [contact Applied Recognition](mailto:sales@appliedrec.com).
+5. When you finish the registration you'll receive a file called **Ver-ID identity.p12** and a password. Copy the password to a secure location.
+6. Copy the **Ver-ID identity.p12** into your app's assets folder. A common location is **your\_app_module/src/main/assets**.
+7. Ver-ID will need the password you received at registration.
     - You can either specify the password when you create an instance of `VerIDSDKIdentity` that you pass to `VerIDFactory`:
 
         ~~~java
@@ -220,29 +230,6 @@ The SDK runs on Android 5.0 (API level 21) and newer.
         }
         ~~~
     - Constructing `VerIDFactory` without an instance of `VerIDSDKIdentity` assumes that the **Ver-ID identity.p12** file is in the app's **assets** folder and the password is in the **AndroidManifest.xml**.
-1. Add the following entries in your app module's **gradle.build** file:
-    
-    ~~~groovy
-    repositories {
-        maven {
-            url 'https://dev.ver-id.com/artifactory/gradle-release'
-        }
-    }
-    android {
-        defaultConfig {
-            multiDexEnabled true
-        }
-        compileOptions {
-            coreLibraryDesugaringEnabled true
-            sourceCompatibility JavaVersion.VERSION_1_8
-            targetCompatibility JavaVersion.VERSION_1_8
-        }
-    }
-    dependencies {
-        coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
-	    implementation 'com.appliedrec.verid:ui2:2.6.2'
-    }
-    ~~~
     
 ## Migrating from Ver-ID 1
 Please consult [this document](Migrating from Ver-ID 1 to Ver-ID 2.md).

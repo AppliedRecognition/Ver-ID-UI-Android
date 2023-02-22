@@ -34,6 +34,7 @@ android {
 
 dependencies {
     debugApi project(':veridui')
-    debugImplementation "com.appliedrec.verid:core2:${versions.getVersionName()}"
     releaseImplementation "com.appliedrec.verid:ui2:${versions.getVersionName()}"
+    implementation "com.appliedrec.verid:native2:${versions.getVersionName()}"
+    implementation "com.appliedrec.verid:core2:${versions.getVersionName()}"
 }

@@ -47,4 +47,5 @@ object VerIDDependencies {
     const val PYTORCH_ANDROID_TORCHVISION = "org.pytorch:pytorch_android_torchvision_lite:1.12.2"
     const val MOCKITO_CORE = "org.mockito:mockito-core:2.28.2"
     const val MOCKITO_ANDROID = "org.mockito:mockito-android:2.28.2"
+    const val LIVENESS_DETECTION = "com.appliedrec.verid:liveness-detection:[1.0.0,2.0.0["
 }
