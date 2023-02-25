@@ -23,6 +23,7 @@ import com.appliedrec.verid.core2.VerIDFactoryDelegate;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -70,6 +71,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         }
         FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, faceDetectionRecognitionSettings);
         faceDetectionRecognitionFactory.setDefaultFaceTemplateVersion(VerIDFaceTemplateVersion.getLatest());
+        faceDetectionRecognitionFactory.setFaceTemplateVersions(EnumSet.of(VerIDFaceTemplateVersion.getLatest()));
         VerIDFactory verIDFactory = new VerIDFactory(this, this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
         verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
