@@ -18,7 +18,6 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.FaceRecognition;
-import com.appliedrec.verid.core2.FaceTemplate;
 import com.appliedrec.verid.core2.IRecognizable;
 import com.appliedrec.verid.core2.IdentifiedFace;
 import com.appliedrec.verid.core2.UserIdentification;
