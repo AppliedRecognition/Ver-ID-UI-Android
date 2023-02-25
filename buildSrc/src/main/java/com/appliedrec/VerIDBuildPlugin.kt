@@ -13,13 +13,26 @@ class VerIDBuildPlugin: Plugin<Project> {
         project.extensions.create("versions", VerIDVersionExtension::class.java)
         val androidComponents = project.extensions.getByType(AndroidComponentsExtension::class.java)
         androidComponents.finalizeDsl { extension ->
-            extension.compileOptions.isCoreLibraryDesugaringEnabled = true
-            extension.compileOptions.sourceCompatibility = JavaVersion.VERSION_11
-            extension.compileOptions.targetCompatibility = JavaVersion.VERSION_11
-            extension.buildFeatures.viewBinding = true
-            extension.buildFeatures.compose = true
+            extension.compileOptions.sourceCompatibility = JavaVersion.VERSION_1_8
+            extension.compileOptions.targetCompatibility = JavaVersion.VERSION_1_8
+            when (project.name) {
+                "sample" -> {
+                    extension.compileOptions.isCoreLibraryDesugaringEnabled = true
+                    extension.buildFeatures.viewBinding = true
+                    extension.buildFeatures.compose = true
+                    extension.composeOptions.kotlinCompilerExtensionVersion = project.extensions.getByType(VerIDVersionExtension::class.java).kotlinCompilerExtensionVersion
+                }
+                "veridui" -> {
+                    extension.compileOptions.isCoreLibraryDesugaringEnabled = true
+                    extension.buildFeatures.viewBinding = true
+                    extension.buildFeatures.compose = true
+                    extension.composeOptions.kotlinCompilerExtensionVersion = project.extensions.getByType(VerIDVersionExtension::class.java).kotlinCompilerExtensionVersion
+                }
+                "veridcore" -> {
+                    extension.compileOptions.isCoreLibraryDesugaringEnabled = true
+                }
+            }
             extension.lint.abortOnError = false
-            extension.composeOptions.kotlinCompilerExtensionVersion = project.extensions.getByType(VerIDVersionExtension::class.java).kotlinCompilerExtensionVersion
             extension.packagingOptions.resources.excludes.add("/META-INF/{AL2.0,LGPL2.1}")
             extension.packagingOptions.resources.excludes.add("META-INF/androidx.exifinterface_exifinterface.version")
             when (project.name) {
@@ -70,6 +83,7 @@ class VerIDBuildPlugin: Plugin<Project> {
                 project.dependencies.add("implementation", VerIDDependencies.PROTOBUF_JAVALITE)
                 project.dependencies.add("implementation", VerIDDependencies.MULTIDEX)
                 project.dependencies.add("implementation", VerIDDependencies.ESPRESSO_CORE)
+                project.dependencies.add("implementation", VerIDDependencies.COMPOSE_RUNTIME)
                 project.dependencies.add("androidTestImplementation", VerIDDependencies.TEST_JUNIT)
                 project.dependencies.add("androidTestImplementation", VerIDDependencies.TEST_RUNNER)
                 project.dependencies.add("androidTestImplementation", VerIDDependencies.TEST_RULES)
@@ -78,25 +92,23 @@ class VerIDBuildPlugin: Plugin<Project> {
                 project.dependencies.add("androidTestUtil", VerIDDependencies.TEST_ORCHESTRATOR)
             }
             "veridcore" -> {
+                project.dependencies.add("coreLibraryDesugaring", VerIDDependencies.DESUGAR_JDK_LIBS)
                 project.dependencies.add("api", VerIDDependencies.RXJAVA)
                 project.dependencies.add("api", VerIDDependencies.RXANDROID)
                 project.dependencies.add("api", VerIDDependencies.VERID_IDENTITY)
+                project.dependencies.add("api", VerIDDependencies.LIVENESS_DETECTION)
+                project.dependencies.add("api", VerIDDependencies.LIFECYCLE_LIVEDATA_CORE)
                 project.dependencies.add("implementation", VerIDDependencies.RELINKER)
                 project.dependencies.add("implementation", VerIDDependencies.CBOR)
                 project.dependencies.add("implementation", VerIDDependencies.GSON)
                 project.dependencies.add("implementation", VerIDDependencies.GUAVA)
                 project.dependencies.add("implementation", VerIDDependencies.EXIFINTERFACE)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_LITE)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_SUPPORT)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_METADATA)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_TASK_VISION)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_GPU)
-                project.dependencies.add("implementation", VerIDDependencies.TENSORFLOW_GPU_DELEGATE)
-                project.dependencies.add("implementation", VerIDDependencies.PYTORCH_ANDROID_LITE)
-                project.dependencies.add("implementation", VerIDDependencies.PYTORCH_ANDROID_TORCHVISION)
                 project.dependencies.add("implementation", VerIDDependencies.TEST_MONITOR)
-                project.dependencies.add("implementation", VerIDDependencies.ROOM_RUNTIME)
+//                project.dependencies.add("implementation", VerIDDependencies.ROOM_KTX)
                 project.dependencies.add("implementation", VerIDDependencies.COMPOSE_RUNTIME)
+                project.dependencies.add("implementation", VerIDDependencies.ANDROIDX_COLLECTION)
+                project.dependencies.add("implementation", VerIDDependencies.ANDROIDX_CORE)
+                project.dependencies.add("implementation", VerIDDependencies.ROOM_RUNTIME)
                 project.dependencies.add("testImplementation", VerIDDependencies.JUNIT)
                 project.dependencies.add("testImplementation", VerIDDependencies.MOCKITO_CORE)
                 project.dependencies.add("testImplementation", VerIDDependencies.MOCKITO_ANDROID)
@@ -104,6 +116,8 @@ class VerIDBuildPlugin: Plugin<Project> {
                 project.dependencies.add("androidTestImplementation", VerIDDependencies.GSON)
                 project.dependencies.add("androidTestImplementation", VerIDDependencies.ROOM_TESTING)
                 project.dependencies.add("annotationProcessor", VerIDDependencies.ROOM_COMPILER)
+                project.dependencies.add("kapt", VerIDDependencies.ROOM_COMPILER)
+//                project.dependencies.add("ksp", VerIDDependencies.ROOM_COMPILER)
             }
         }
     }
