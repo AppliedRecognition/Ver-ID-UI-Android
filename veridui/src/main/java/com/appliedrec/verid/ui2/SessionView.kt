@@ -21,9 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -39,7 +37,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.appliedrec.verid.core2.ImageUtils
@@ -49,7 +46,6 @@ import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
 import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
 import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
 import kotlin.math.*
 
 class SessionView @JvmOverloads constructor(
@@ -380,7 +376,7 @@ fun FaceDetectionResultView(
                     initialValue = with(LocalDensity.current) { 10.dp.toPx() },
                     targetValue = with(LocalDensity.current) { 16.dp.toPx() },
                     animationSpec = infiniteRepeatable(
-                        animation = tween(1000, easing = EaseInOut),
+                        animation = tween(1000),
                         repeatMode = RepeatMode.Reverse
                     )
                 )

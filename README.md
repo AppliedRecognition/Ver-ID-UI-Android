@@ -3,12 +3,94 @@
 # Ver-ID UI for Android
 
 <details>
+<summary>What's new in Ver-ID 2.8</summary>
+
+## Resources delivered separately from the SDK
+
+The Ver-ID SDK's resources are no longer packaged in the SDK's aar file. You have 2 options:
+
+1. Let Ver-ID download the resources first time it loads (default).
+    
+    - When you call `VerIDFactory.createVerID()` the resource files will be downloaded from a CDN and cached on the device.
+    - Next time Ver-ID is loaded it will use the cached resource files.
+2. Package the resources with your app.
+
+    - Create a folder called Ver-ID-Models inside your app's assets folder.
+    - Copy the content of the [files folder](https://github.com/AppliedRecognition/Ver-ID-Models/tree/master/files) into the Ver-ID-Models folder in your app's assets.
+    - Ver-ID will pick up the resource files from assets and copy them into the app's cache.
+    - Next time Ver-ID is loaded it will use the resource files from the app's cache.
+
+### Copy only the resources you need
+
+If you are only using specific face template versions in your app you can select the model files pertinent to these versions and omit the unused resource files.
+
+1. First, specify the face template versions you will use in your app. In this example, your app will only use face template versions 16 and 24:
+    
+    ```java
+    // Create Ver-ID factory
+    VerIDFactory veridFactory = new VerIDFactory(this);
+    
+    // Create face detection/recognition factory
+    FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this);
+    
+    // Create a set with the face template versions your app will use
+    Set<VerIDFaceTemplateVersion> faceTemplateVersions = EnumSet.of(VerIDFaceTemplateVersion.V16, VerIDFaceTemplateVersion.V24);
+    
+    // Set the face template versions on the face detection/recognition factory
+    faceDetectionRecognitionFactory.setFaceTemplateVersions(faceTemplateVersions);
+    
+    // Tell Ver-ID factory to use your face detection/recognition factory for face detection
+    veridFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
+    
+    // Tell Ver-ID factory to use your face detection/recognition factory for face recognition
+    veridFactory.setFaceRecognitionFactory(faceDetectionRecognitionFactory);
+    
+    // Etc. (set Ver-ID factory delegate and create Ver-ID)
+    ```
+
+2. Optional\*: Copy the required resource files to the Ver-ID-Models folder inside your app's assets. Here is a table of the resources your app will need for different face template versions:
+
+    | Always included |
+    | --------------- |
+    | fhogcascade\_face\_frontal.dat |
+    | RFB-320.bin |
+    | RFB-320.nv |
+    | RFB-320.param |
+    | shape\_predictor\_5\_face\_landmarks.dat |
+    | shape\_predictor\_68\_face\_landmarks.dat |
+    | facemask-20200720-dut23td+1700-251149%3000.nv |
+    | SpoofDetectorModel\_1.0.7\_bst\_2022-11-26\_yl61\_opt.torchscript |
+    | MoireDetectorModel\_ep100\_ntrn-627p-620n\_02\_res-98-99-96-0-5.tflite |
+    
+    #### Face template version specific files
+    
+    | File | Face template version |
+    | ---- | --------------------- |
+    | dlib\_face\_recognition\_resnet\_model\_v1.dat | V16 |
+    | facenet-20170512.nv | V20 |
+    | rec21-recfull-20211108vw-fn23i-s8597c-b144f6-c1062-t100m10-r14s3000-q06.nv | V21 |
+    | mobilefacenet-opt.bin | V24 |
+    | mobilefacenet-opt.param | V24 |
+    | mobilefacenet-q12.nv | V24 |
+    
+    \* If you don't bundle the resource files with your app Ver-ID will download the pertinent files from a CDN.
+    
+## Ver-ID SDK artifacts hosted on Maven Central
+
+- You can now **remove** `maven { url 'https://dev.ver-id.com/artifactory/gradle-release' }` from repositories in your build files.
+- Ensure `mavenCentral()` is in your module's repositories.
+
+--
+</details>
+<details>
 <summary>What's new in Ver-ID 2.4</summary>
 
 ## Added a diagnostic method to compare given face templates
 [`compareUserFaceTemplates`](https://appliedrecognition.github.io/Ver-ID-UI-Android/com/appliedrec/verid/core2/util/FaceTemplateDiagnostics.html#compareUserFaceTemplates(java.util.Map,com.appliedrec.verid.core2.util.ResultCallback)) accepts a map of users and their face templates. The advantage of this method over others in the class is that it doesn't require the face templates to be of registered users.
 	
 ### Please note that version 2.4.0 has a bug where camera previews appear stretched on some devices. This bug has been fixed in 2.4.1.
+
+--
 </details>
 <details>
 <summary>What's new in Ver-ID 2.3</summary>
@@ -46,8 +128,8 @@ You can now run population analysis on your registered user's faces. This may be
 	});
 	```
 	
+--
 </details>
-
 <details>
 <summary>What's new in Ver-ID 2.2</summary>
 
@@ -98,8 +180,8 @@ Let's assume you have a machine learning model in a file called licence_classifi
         float score = ((FaceDetection) faceDetection).extractAttributeFromFace(faces[0], image, licenceClassifierName);
 	```
 	
+--
 </details>
-
 <details>
 <summary>What's new in Ver-ID 2.1</summary>
 
@@ -131,8 +213,9 @@ If you're using Ver-ID's implementation of the `IUserManagement` interface you c
 VerIDFactory veridFactory = new VerIDFactory(context);
 ((UserManagementFactory)verIDFactory.getUserManagementFactory()).setEnableAutomaticFaceTemplateMigration(true);
 ```
-</details>
 
+--
+</details>
 <details><summary>What's new in Ver-ID 2.0</summary>
 
 ## Version 2 of the Ver-ID SDK brings a number of improvements:
@@ -159,6 +242,8 @@ VerIDFactory veridFactory = new VerIDFactory(context);
 Please note that Ver-ID 2.+ is not compatible with Ver-ID 1.+. You will need to migrate to the new SDK. 
 
 We opted to separate the new API to its own packages so both Ver-ID 1.+ and Ver-ID 2.+ can co-exist in the same project.
+
+--
 </details>
 
 ## Requirements
@@ -188,9 +273,7 @@ The SDK runs on Android 5.0 (API level 21) and newer.
     
     ~~~groovy
     dependencies {
-        implementation 'com.appliedrec.verid:native2:2.8.1'
-        implementation 'com.appliedrec.verid:core2:2.8.1'
-        implementation 'com.appliedrec.verid:ui2:2.8.1'
+        implementation 'com.appliedrec.verid:ui2:[2.8.3,3)'
     }
     ~~~
 3. [Register your app](https://dev.ver-id.com/licensing/). You will need your app's package name.

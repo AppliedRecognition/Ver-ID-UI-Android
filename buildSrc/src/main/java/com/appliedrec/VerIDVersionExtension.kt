@@ -4,7 +4,7 @@ open class VerIDVersionExtension {
 
     val versionMajor = 2
     val versionMinor = 8
-    val versionPatch = 1
+    val versionPatch = 3
     val versionClassifier: String? = null
     val versionClassifierVersion: String? = null
 
@@ -13,7 +13,7 @@ open class VerIDVersionExtension {
     val buildToolsVersion = "30.0.3"
     val compileSdkVersion = 33
     val kotlinCompilerExtensionVersion = "1.4.2"
-    val kotlinJvmTarget = "11"
+    val kotlinJvmTarget = "1.8"
     val kotlinVersion = "1.8.10"
 
     val versionCode: Int
