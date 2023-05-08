@@ -210,9 +210,9 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     public static class IntroFragment extends Fragment {
 
         static final int[] imageResourceIds = new int[]{
-                R.mipmap.guide_head_straight,
-                R.mipmap.multiple_heads,
-                R.mipmap.authentication
+                com.appliedrec.verid.ui2.R.mipmap.guide_head_straight,
+                com.appliedrec.verid.ui2.R.mipmap.multiple_heads,
+                com.appliedrec.verid.ui2.R.mipmap.authentication
         };
         static final int[] titleResourceIds = new int[]{
                 R.string.verid_person_sdk,

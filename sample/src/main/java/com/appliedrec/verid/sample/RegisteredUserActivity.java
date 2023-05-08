@@ -34,6 +34,7 @@ import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
 import com.appliedrec.verid.sample.sharing.RegistrationImportContract;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
+import com.appliedrec.verid.sample.R;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
@@ -102,16 +103,17 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                showSettings();
-                return true;
-            case R.id.action_export_registration:
-                exportRegistration();
-                return true;
-            case R.id.action_kiosk_demo:
-                startActivity(new Intent(this, ContinuousLivenessActivity.class));
-                return true;
+        if (item.getItemId() == R.id.action_export_registration) {
+            exportRegistration();
+            return true;
+        }
+        if (item.getItemId() == R.id.action_settings) {
+            showSettings();
+            return true;
+        }
+        if (item.getItemId() == R.id.action_kiosk_demo) {
+            startActivity(new Intent(this, ContinuousLivenessActivity.class));
+            return true;
         }
         return false;
     }

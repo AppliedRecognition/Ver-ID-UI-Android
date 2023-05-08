@@ -93,7 +93,7 @@ public class FaceSizeSettingsFragment extends Fragment implements SeekBar.OnSeek
         }
         float progress = (float)seekBar.getProgress()/ (float)seekBar.getMax();
         RectF faceRect = createFaceRect(progress, detectedFaceView.getWidth(), detectedFaceView.getHeight());
-        detectedFaceView.setFaceRect(faceRect, null, requireContext().getResources().getColor(R.color.verid_green), 0x80000000, null, null);
+        detectedFaceView.setFaceRect(faceRect, null, requireContext().getResources().getColor(com.appliedrec.verid.ui2.R.color.verid_green), 0x80000000, null, null);
         if (listener != null) {
             listener.onFaceSizeFractionChanged(progress, isLandscape);
         }
