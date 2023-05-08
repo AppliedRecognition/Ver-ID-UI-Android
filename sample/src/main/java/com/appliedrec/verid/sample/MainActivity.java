@@ -2,6 +2,7 @@ package com.appliedrec.verid.sample;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.test.espresso.IdlingResource;
 
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.sample.databinding.ActivityMainBinding;
 
 import io.reactivex.rxjava3.disposables.Disposable;
 
@@ -17,11 +19,13 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
     private boolean veridLoadFinished = false;
     private ResourceCallback resourceCallback;
     private Disposable getUsersDisposable;
+    private ActivityMainBinding viewBinding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        viewBinding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(viewBinding.getRoot());
     }
 
     @Override
@@ -30,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
         if (getUsersDisposable != null && !getUsersDisposable.isDisposed()) {
             getUsersDisposable.dispose();
         }
+        viewBinding = null;
         getUsersDisposable = null;
     }
 
@@ -77,6 +82,16 @@ public class MainActivity extends AppCompatActivity implements IVerIDLoadObserve
     @Override
     public void onVerIDUnloaded() {
 
+    }
+
+    @Override
+    public void onVerIDLoadProgress(float progress) {
+        if (viewBinding == null) {
+            return;
+        }
+        viewBinding.determinateProgressBar.setVisibility(View.VISIBLE);
+        viewBinding.determinateProgressBar.setMax(100);
+        viewBinding.determinateProgressBar.setProgress((int)(progress * 100f));
     }
 
     @Override

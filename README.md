@@ -273,7 +273,7 @@ The SDK runs on Android 5.0 (API level 21) and newer.
     
     ~~~groovy
     dependencies {
-        implementation 'com.appliedrec.verid:ui2:[2.8.3,3)'
+        implementation 'com.appliedrec.verid:ui2:[2.9.0,3)'
     }
     ~~~
 3. [Register your app](https://dev.ver-id.com/licensing/). You will need your app's package name.

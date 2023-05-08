@@ -7,4 +7,8 @@ public interface IVerIDLoadObserver {
     void onVerIDLoaded(VerID verid);
 
     void onVerIDUnloaded();
+
+    default void onVerIDLoadProgress(float progress) {
+
+    }
 }

@@ -38,7 +38,7 @@ object VerIDDependencies {
     const val PROTOBUF_JAVALITE = "com.google.protobuf:protobuf-javalite:[3.8.0,4)"
     const val MULTIDEX = "androidx.multidex:multidex:[2.0.1,3)"
     const val RELINKER = "com.getkeepsafe.relinker:relinker:[1.3.1,2)"
-    const val CBOR = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:[2.11.1,3)"
+    const val CBOR = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.11.1"
     const val TENSORFLOW_LITE = "org.tensorflow:tensorflow-lite:[2.9.0,3)"
     const val TENSORFLOW_SUPPORT = "org.tensorflow:tensorflow-lite-support:[0.4.3,1)"
     const val TENSORFLOW_METADATA = "org.tensorflow:tensorflow-lite-metadata:[0.1.0,1)"
@@ -49,7 +49,7 @@ object VerIDDependencies {
     const val PYTORCH_ANDROID_TORCHVISION = "org.pytorch:pytorch_android_torchvision_lite:[1.12.2,2)"
     const val MOCKITO_CORE = "org.mockito:mockito-core:2.28.2"
     const val MOCKITO_ANDROID = "org.mockito:mockito-android:2.28.2"
-    const val LIVENESS_DETECTION = "com.appliedrec.verid:liveness-detection:[1.0.1,2)"
+    const val LIVENESS_DETECTION = "com.appliedrec.verid:liveness-detection:[1.1.0,2)"
     const val ANDROIDX_COLLECTION = "androidx.collection:collection:[1.2.0,2)"
     const val ANDROIDX_CORE = "androidx.core:core:[1.9.0,2)"
 }

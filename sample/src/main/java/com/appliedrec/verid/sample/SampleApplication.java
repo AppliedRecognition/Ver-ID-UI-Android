@@ -117,6 +117,13 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         startActivity(intent);
     }
 
+    @Override
+    public void onVerIDLoadProgress(@NonNull VerIDFactory factory, float progress, VerIDFactory.Task task) {
+        for (IVerIDLoadObserver activity : createdActivities) {
+            activity.onVerIDLoadProgress(progress);
+        }
+    }
+
     //endregion
 
     public Optional<VerID> getVerID() {
