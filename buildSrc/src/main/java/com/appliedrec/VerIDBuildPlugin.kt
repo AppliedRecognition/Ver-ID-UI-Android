@@ -13,13 +13,14 @@ class VerIDBuildPlugin: Plugin<Project> {
         project.extensions.create("versions", VerIDVersionExtension::class.java)
         val androidComponents = project.extensions.getByType(AndroidComponentsExtension::class.java)
         androidComponents.finalizeDsl { extension ->
-            extension.compileOptions.sourceCompatibility = JavaVersion.VERSION_1_8
-            extension.compileOptions.targetCompatibility = JavaVersion.VERSION_1_8
+            extension.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+            extension.compileOptions.targetCompatibility = JavaVersion.VERSION_17
             when (project.name) {
                 "sample" -> {
                     extension.compileOptions.isCoreLibraryDesugaringEnabled = true
                     extension.buildFeatures.viewBinding = true
                     extension.buildFeatures.compose = true
+                    extension.buildFeatures.buildConfig = true
                     extension.composeOptions.kotlinCompilerExtensionVersion = project.extensions.getByType(VerIDVersionExtension::class.java).kotlinCompilerExtensionVersion
                 }
                 "veridui" -> {
@@ -30,11 +31,12 @@ class VerIDBuildPlugin: Plugin<Project> {
                 }
                 "veridcore" -> {
                     extension.compileOptions.isCoreLibraryDesugaringEnabled = true
+                    extension.buildFeatures.buildConfig = true
                 }
             }
             extension.lint.abortOnError = false
-            extension.packagingOptions.resources.excludes.add("/META-INF/{AL2.0,LGPL2.1}")
-            extension.packagingOptions.resources.excludes.add("META-INF/androidx.exifinterface_exifinterface.version")
+            extension.packaging.resources.excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+            extension.packaging.resources.excludes.add("META-INF/androidx.exifinterface_exifinterface.version")
             when (project.name) {
                 "sample" -> {
                     extension.testOptions.execution = "ANDROIDX_TEST_ORCHESTRATOR"

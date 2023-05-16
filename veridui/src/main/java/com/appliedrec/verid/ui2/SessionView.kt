@@ -245,7 +245,7 @@ class SessionView @JvmOverloads constructor(
         val imageSize = faceDetectionResult.imageSize
         val viewSize = viewSize
         val scale =
-            max(viewSize.width / imageSize.width, viewSize.height / imageSize.height).toFloat()
+            max(viewSize.width.toFloat() / imageSize.width.toFloat(), viewSize.height.toFloat() / imageSize.height.toFloat())
         val matrix = Matrix()
         matrix.setScale(scale, scale)
         matrix.postTranslate(
