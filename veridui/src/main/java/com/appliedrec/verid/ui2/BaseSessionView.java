@@ -34,11 +34,6 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private final AtomicReference<FaceExtents> defaultFaceExtents = new AtomicReference<>();
     private final AtomicBoolean isSurfaceAvailable = new AtomicBoolean(false);
     private final Matrix cameraPreviewMatrix = new Matrix();
-    private @ColorInt int overlayBackgroundColor = 0x80000000;
-    private @ColorInt int ovalColor = 0xFFFFFFFF;
-    private @ColorInt int ovalColorHighlighted = 0xFF36AF00;
-    private @ColorInt int textColor = 0xFF000000;
-    private @ColorInt int textColorHighlighted = 0xFFFFFFFF;
     private VerIDSessionSettings sessionSettings;
     private boolean isCameraPreviewMirrored = true;
 
@@ -191,97 +186,107 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     /**
      * @return Colour of the background around the detected face overlaid on top of the camera view finder
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     public int getOverlayBackgroundColor() {
-        return overlayBackgroundColor;
+        return 0;
     }
 
     /**
      * @param overlayBackgroundColor Colour of the background around the detected face overlaid on top of the camera view finder
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
-    public void setOverlayBackgroundColor(@ColorInt int overlayBackgroundColor) {
-        this.overlayBackgroundColor = overlayBackgroundColor;
-    }
+    @Deprecated
+    public void setOverlayBackgroundColor(@ColorInt int overlayBackgroundColor) {}
 
     /**
      * @return Colour of the face oval
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     public int getOvalColor() {
-        return ovalColor;
+        return 0;
     }
 
     /**
      * @param ovalColor Colour of the face oval
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
-    public void setOvalColor(@ColorInt int ovalColor) {
-        this.ovalColor = ovalColor;
-    }
+    @Deprecated
+    public void setOvalColor(@ColorInt int ovalColor) {}
 
     /**
      * @return Colour of the face oval when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     public int getOvalColorHighlighted() {
-        return ovalColorHighlighted;
+        return 0;
     }
 
     /**
      * @param ovalColorHighlighted Colour of the face oval when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
-    public void setOvalColorHighlighted(@ColorInt int ovalColorHighlighted) {
-        this.ovalColorHighlighted = ovalColorHighlighted;
-    }
+    @Deprecated
+    public void setOvalColorHighlighted(@ColorInt int ovalColorHighlighted) {}
 
     /**
      * @return Colour of the text that displays prompts
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     public int getTextColor() {
-        return textColor;
+        return 0;
     }
 
     /**
      * @param textColor Colour of the text that displays prompts
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
-    public void setTextColor(@ColorInt int textColor) {
-        this.textColor = textColor;
-    }
+    @Deprecated
+    public void setTextColor(@ColorInt int textColor) {}
 
     /**
      * @return Colour of the prompt text when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     public int getTextColorHighlighted() {
-        return textColorHighlighted;
+        return 0;
     }
 
     /**
      * @param textColorHighlighted Colour of the prompt text when highlighted (e.g., face is aligned according to instructions)
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
-    public void setTextColorHighlighted(@ColorInt int textColorHighlighted) {
-        this.textColorHighlighted = textColorHighlighted;
-    }
+    @Deprecated
+    public void setTextColorHighlighted(@ColorInt int textColorHighlighted) {}
 
     //endregion
 
@@ -292,9 +297,11 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
      * @param faceDetectionStatus Face detection status on which to base the oval colour
      * @return Colour of the face oval stroke
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     protected int getOvalColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
         switch (faceDetectionStatus) {
             case FACE_FIXED:
@@ -310,9 +317,11 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
      * @param faceDetectionStatus Face detection status on which to base the text colour
      * @return Colour of the session prompt text
      * @since 2.0.0
+     * @deprecated Deprecated in 2.11.0
      */
     @Keep
     @ColorInt
+    @Deprecated
     protected int getTextColourFromFaceDetectionStatus(FaceDetectionStatus faceDetectionStatus) {
         switch (faceDetectionStatus) {
             case FACE_FIXED:
