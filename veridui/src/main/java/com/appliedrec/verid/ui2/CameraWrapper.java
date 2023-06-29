@@ -36,11 +36,6 @@ import com.appliedrec.verid.core2.session.VerIDSessionException;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,7 +45,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * Interfaces with the device's camera
@@ -87,10 +81,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     private final WeakReference<Context> contextWeakReference;
     private final CameraLocation cameraLocation;
-    private final IImageIterator imageIterator;
+    private final WeakReference<IImageIterator> imageIteratorRef;
     private final AtomicReference<String> cameraId = new AtomicReference<>();
     private ImageReader imageReader;
-    private final ISessionVideoRecorder videoRecorder;
+    private final WeakReference<ISessionVideoRecorder> videoRecorderRef;
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
     private final AtomicReference<CameraDevice> cameraDevice = new AtomicReference<>();
     private HandlerThread cameraProcessingThread;
@@ -137,10 +131,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
      */
     @Keep
     public CameraWrapper(@NonNull Context context, @NonNull CameraLocation cameraLocation, @NonNull IImageIterator imageIterator, @Nullable ISessionVideoRecorder videoRecorder) {
-        contextWeakReference = new WeakReference<>(context);
+        contextWeakReference = new WeakReference<>(context.getApplicationContext());
         this.cameraLocation = cameraLocation;
-        this.imageIterator = imageIterator;
-        this.videoRecorder = videoRecorder;
+        this.imageIteratorRef = new WeakReference<>(imageIterator);
+        this.videoRecorderRef = new WeakReference<>(videoRecorder);
         if (context instanceof LifecycleOwner) {
             if (((LifecycleOwner)context).getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
                 throw new IllegalStateException();
@@ -260,7 +254,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 Size previewSize = sizes[0];
 
                 imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
-                imageIterator.setExifOrientation(getExifOrientation(rotation));
+                imageIteratorRef.get().setExifOrientation(getExifOrientation(rotation));
 
                 getSessionVideoRecorder().ifPresent(videoRecorder -> {
                     Size videoSize = sizes[2];
@@ -317,7 +311,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
      */
     @Keep
     public IImageIterator getImageIterator() {
-        return imageIterator;
+        return imageIteratorRef.get();
     }
 
     //endregion
@@ -425,7 +419,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                         surfaces.add(previewSurface);
                     }
 
-                    imageReader.setOnImageAvailableListener(imageIterator, cameraProcessingHandler);
+                    imageReader.setOnImageAvailableListener(imageIteratorRef.get(), cameraProcessingHandler);
                     previewBuilder.addTarget(imageReader.getSurface());
                     surfaces.add(imageReader.getSurface());
 
@@ -481,7 +475,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     private Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
-        return Optional.ofNullable(videoRecorder);
+        return Optional.ofNullable(videoRecorderRef.get());
     }
 
     private CameraManager getCameraManager() throws Exception {
@@ -579,6 +573,8 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     @Override
     public void onDestroy(@NonNull LifecycleOwner owner) {
         owner.getLifecycle().removeObserver(this);
+        cameraDevice.set(null);
+        contextWeakReference.clear();
     }
 
     //endregion
