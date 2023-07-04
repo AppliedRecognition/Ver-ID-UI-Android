@@ -3,8 +3,8 @@ package com.appliedrec
 open class VerIDVersionExtension {
 
     val versionMajor = 2
-    val versionMinor = 10
-    val versionPatch = 1
+    val versionMinor = 11
+    val versionPatch = 0
     val versionClassifier: String? = null
     val versionClassifierVersion: String? = null
 
@@ -13,7 +13,7 @@ open class VerIDVersionExtension {
     val buildToolsVersion = "30.0.3"
     val compileSdkVersion = 33
     val kotlinCompilerExtensionVersion = "1.4.2"
-    val kotlinJvmTarget = "1.8"
+    val kotlinJvmTarget = "17"
     val kotlinVersion = "1.8.10"
 
     val versionCode: Int
