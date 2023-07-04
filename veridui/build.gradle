@@ -5,6 +5,7 @@ plugins {
 }
 
 android {
+    namespace 'com.appliedrec.verid.ui2'
     compileSdkVersion versions.compileSdkVersion
     buildToolsVersion versions.buildToolsVersion
 

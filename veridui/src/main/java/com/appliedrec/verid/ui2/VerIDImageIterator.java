@@ -17,11 +17,13 @@ import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.IImage;
 import com.appliedrec.verid.core2.session.IImageIterator;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Default implementation of {@link IImageIterator}
@@ -33,8 +35,9 @@ public class VerIDImageIterator implements IImageIterator {
     private final SynchronousQueue<IImageProvider> imageQueue = new SynchronousQueue<>();
     private final AtomicInteger exifOrientation = new AtomicInteger(ExifInterface.ORIENTATION_NORMAL);
     private final AtomicBoolean isMirrored = new AtomicBoolean(false);
-    private final AtomicBoolean isActive = new AtomicBoolean(false);
-    private final ImageUtils imageUtils;
+//    private final AtomicBoolean isActive = new AtomicBoolean(false);
+    private final AtomicReference<ImageUtils> imageUtils = new AtomicReference<>(null);
+    private WeakReference<Context> contextRef = new WeakReference<>(null);
 
     @NonNull
     @Override
@@ -44,7 +47,8 @@ public class VerIDImageIterator implements IImageIterator {
 
     @Override
     public boolean hasNext() {
-        return isActive.get();
+        return imageUtils.get() != null;
+//        return isActive.get();
     }
 
     @Override
@@ -125,18 +129,18 @@ public class VerIDImageIterator implements IImageIterator {
     @Keep
     @Deprecated
     public VerIDImageIterator(VerID verID) {
-        this.imageUtils = new ImageUtils(verID.getContext().get());
+        this.contextRef = new WeakReference<>(verID.getContext().get());
     }
 
     @Keep
     public VerIDImageIterator(Context context) {
-        this.imageUtils = new ImageUtils(context);
+        this.contextRef = new WeakReference<>(context.getApplicationContext());
     }
 
     @Override
     public void onImageAvailable(ImageReader imageReader) {
         try (Image image = imageReader.acquireLatestImage()) {
-            if (image == null || !isActive.get()) {
+            if (image == null || imageUtils.get() == null) {
                 return;
             }
             queueImage(new MediaImageImage(image, exifOrientation.get()));
@@ -145,7 +149,10 @@ public class VerIDImageIterator implements IImageIterator {
 
     private void queueImage(IImage<?> image) {
         try {
-            Bitmap bitmap = this.imageUtils.bitmapFromImageSource(image);
+            if (imageUtils.get() == null) {
+                return;
+            }
+            Bitmap bitmap = this.imageUtils.get().bitmapFromImageSource(image);
             com.appliedrec.verid.core2.Image verIDImage = new com.appliedrec.verid.core2.Image(bitmap, image.getExifOrientation());
             verIDImage.setIsMirrored(isMirrored.get());
             imageQueue.put(verIDImage);
@@ -183,11 +190,20 @@ public class VerIDImageIterator implements IImageIterator {
 
     @Override
     public void activate() {
-        isActive.set(true);
+        Context context = contextRef.get();
+        if (context != null) {
+            imageUtils.set(new ImageUtils(context));
+        }
+//        isActive.set(true);
     }
 
     @Override
     public void deactivate() {
-        isActive.set(false);
+        if (imageUtils.get() == null) {
+            return;
+        }
+        imageUtils.get().close();
+        imageUtils.set(null);
+//        isActive.set(false);
     }
 }

@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    namespace 'com.appliedrec.verid.sample'
     compileSdkVersion versions.compileSdkVersion
     buildToolsVersion versions.buildToolsVersion
 

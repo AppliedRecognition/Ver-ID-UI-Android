@@ -42,6 +42,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -69,14 +70,14 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     protected static final int REQUEST_CODE_CAMERA_PERMISSION = 10;
     private ExecutorService backgroundExecutor;
     private final ArrayList<Bitmap> faceImages = new ArrayList<>();
-    private CameraWrapper cameraWrapper;
+    private WeakReference<CameraWrapper> cameraWrapperRef = new WeakReference<>(null);
     private T sessionView;
     private final Object sessionViewLock = new Object();
     private Session<?> session;
     private SessionPrompts sessionPrompts;
     private final AtomicBoolean isSessionRunning = new AtomicBoolean(false);
     private SessionParameters sessionParameters;
-    private AtomicInteger faceCaptureCount = new AtomicInteger(0);
+    private final AtomicInteger faceCaptureCount = new AtomicInteger(0);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -115,8 +116,8 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         }
         backgroundExecutor = null;
         faceImages.clear();
+        sessionParameters = null;
         getCameraWrapper().ifPresent(wrapper -> wrapper.removeListener(this));
-        cameraWrapper = null;
         getSessionView().ifPresent(view -> view.removeListener(this));
         sessionView = null;
         getSessionVideoRecorder().ifPresent(getLifecycle()::removeObserver);
@@ -124,7 +125,9 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
             session1.getFaceDetectionLiveData().removeObservers(this);
             session1.getFaceCaptureLiveData().removeObservers(this);
             session1.getSessionResultLiveData().removeObservers(this);
+            session = null;
         });
+        cameraWrapperRef = new WeakReference<>(null);
     }
 
     @Override
@@ -225,7 +228,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
 
     @Keep
     protected final Optional<CameraWrapper> getCameraWrapper() {
-        return Optional.ofNullable(cameraWrapper);
+        return Optional.ofNullable(cameraWrapperRef.get());
     }
 
     @Keep
@@ -257,14 +260,20 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Override
     public void setSessionParameters(SessionParameters sessionParameters) {
         this.sessionParameters = sessionParameters;
-        IImageIterator imageIterator = sessionParameters.getImageIteratorFactory().apply(this);
-        cameraWrapper = new CameraWrapper(this, sessionParameters.getCameraLocation(), imageIterator, sessionParameters.getVideoRecorder().orElse(null));
-        cameraWrapper.setCapturedImageMinimumArea(sessionParameters.getMinImageArea());
-        Session.Builder<?> sessionBuilder = new Session.Builder<>(sessionParameters.getVerID(), sessionParameters.getSessionSettings(), imageIterator, this);
-        sessionBuilder.setSessionFunctions(sessionParameters.getSessionFunctions());
-        sessionBuilder.bindToLifecycle(this.getLifecycle());
-        session = sessionBuilder.build();
-        sessionParameters.getVideoRecorder().ifPresent(videoRecorder -> getLifecycle().addObserver(videoRecorder));
+        if (sessionParameters != null) {
+            IImageIterator imageIterator = sessionParameters.getImageIteratorFactory().apply(this);
+            CameraWrapper cameraWrapper = new CameraWrapper(this, sessionParameters.getCameraLocation(), imageIterator, sessionParameters.getVideoRecorder().orElse(null));
+            cameraWrapper.setCapturedImageMinimumArea(sessionParameters.getMinImageArea());
+            Session.Builder<?> sessionBuilder = new Session.Builder<>(sessionParameters.getVerID(), sessionParameters.getSessionSettings(), imageIterator, this);
+            sessionBuilder.setSessionFunctions(sessionParameters.getSessionFunctions());
+            sessionBuilder.bindToLifecycle(this.getLifecycle());
+            session = sessionBuilder.build();
+            sessionParameters.getVideoRecorder().ifPresent(videoRecorder -> getLifecycle().addObserver(videoRecorder));
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+        } else {
+            cameraWrapperRef = new WeakReference<>(null);
+            session = null;
+        }
     }
 
     @Keep

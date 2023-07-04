@@ -1,6 +1,7 @@
 package com.appliedrec.verid.ui2;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -14,13 +15,16 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
+import com.appliedrec.verid.ui2.ui.theme.SessionTheme;
+
 public class OvalMaskView extends View {
 
     private Bitmap maskBitmap;
     private Canvas tempCanvas;
     private final Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private RectF maskRect;
-    private int backgroundColor = Color.WHITE;
+
+    public SessionTheme sessionTheme = SessionTheme.getDefault();
 
     public OvalMaskView(Context context) {
         this(context, null);
@@ -58,7 +62,16 @@ public class OvalMaskView extends View {
         if (maskBitmap == null || tempCanvas == null || maskRect == null) {
             return;
         }
-        tempCanvas.drawColor(this.backgroundColor);
+        int backgroundColor;
+        switch (getContext().getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
+            case Configuration.UI_MODE_NIGHT_YES:
+                backgroundColor = sessionTheme.getBackgroundColorDarkTheme();
+                break;
+            default:
+                backgroundColor = sessionTheme.getBackgroundColorLightTheme();
+                break;
+        }
+        tempCanvas.drawColor(backgroundColor);
         tempCanvas.drawOval(this.maskRect, maskPaint);
         canvas.drawBitmap(maskBitmap, 0, 0, null);
     }

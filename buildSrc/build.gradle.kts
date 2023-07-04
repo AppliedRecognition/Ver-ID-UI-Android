@@ -20,6 +20,6 @@ gradlePlugin {
 
 dependencies {
     implementation(kotlin("stdlib", "1.8.10"))
-    implementation("com.android.tools.build:gradle-api:7.4.1")
+    implementation("com.android.tools.build:gradle-api:8.0.2")
     gradleApi()
 }

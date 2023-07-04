@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.RectF
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.util.Log
@@ -44,6 +45,7 @@ import com.appliedrec.verid.core2.Size
 import com.appliedrec.verid.core2.session.FaceDetectionResult
 import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
+import com.appliedrec.verid.ui2.ui.theme.SessionTheme
 import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
 import kotlinx.coroutines.*
 import kotlin.math.*
@@ -61,15 +63,17 @@ class SessionView @JvmOverloads constructor(
     private val textureView: TextureView
     private val ovalMaskView: OvalMaskView
 
-    init {
-        when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
-            Configuration.UI_MODE_NIGHT_NO -> {
-                setBackgroundColor(Color.White.toArgb())
-            } // Night mode is not active, we're using the light theme
-            Configuration.UI_MODE_NIGHT_YES -> {
-                setBackgroundColor(Color.Black.toArgb())
-            } // Night mode is active, we're using dark theme
+    /**
+     * Theme for the session view
+     * @since 2.11.0
+     */
+    var sessionTheme: SessionTheme = SessionTheme.Default
+        set(value) {
+            field = value
+            updateColors()
         }
+
+    init {
         textureView = TextureView(context).apply {
             surfaceTextureListener = this@SessionView
             id = View.generateViewId()
@@ -77,9 +81,12 @@ class SessionView @JvmOverloads constructor(
         ovalMaskView = OvalMaskView(context).apply {
             id = View.generateViewId()
         }
+        updateColors()
         val composeView = ComposeView(context).apply {
             setContent {
-                VerIDTheme {
+                VerIDTheme(
+                    sessionTheme = sessionTheme,
+                ) {
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -137,10 +144,20 @@ class SessionView @JvmOverloads constructor(
         addView(composeView)
     }
 
-
-    override fun remove() {
-        Log.d("Ver-ID", "Remove what?")
+    private fun updateColors() {
+        when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_NO -> {
+                setBackgroundColor(sessionTheme.backgroundColorLightTheme)
+            } // Night mode is not active, we're using the light theme
+            Configuration.UI_MODE_NIGHT_YES -> {
+                setBackgroundColor(sessionTheme.backgroundColorDarkTheme)
+            } // Night mode is active, we're using dark theme
+        }
+        ovalMaskView.sessionTheme = this.sessionTheme
     }
+
+
+    override fun remove() {}
 
     override fun setFaceDetectionResult(
         faceDetectionResult: FaceDetectionResult?,
@@ -481,11 +498,12 @@ fun DirectionArrow(
         moveTo(arrowTipX, arrowTipY)
         lineTo(arrowStartX, arrowStartY)
     }
+    val arrowColor = MaterialTheme.colorScheme.secondary
     Canvas(modifier = modifier) {
         val strokeWidth = size.width * 0.038f
         drawPath(
             arrowPath,
-            color = Color.White,
+            color = arrowColor,
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
