@@ -68,13 +68,16 @@ public class DefaultSessionFailureDialogFactory implements SessionFailureDialogF
                 message = stringTranslator.getTranslatedString("Please turn slowly");
             }
         } else if (exception.getCause() instanceof FacePresenceException) {
-            FacePresenceException facePresenceException = (FacePresenceException)exception.getCause();
+            FacePresenceException facePresenceException = (FacePresenceException) exception.getCause();
             requestedBearing = facePresenceException.getRequestedBearing();
             if (facePresenceException.getCode() == FacePresenceException.Code.FACE_MOVED_TOO_FAR) {
                 message = stringTranslator.getTranslatedString("You may have turned too far");
             } else if (facePresenceException.getCode() == FacePresenceException.Code.FACE_LOST) {
-                message = stringTranslator.getTranslatedString("Turn your head in the direction of the arrow");
+                message = stringTranslator.getTranslatedString("Align your face with the oval");
             }
+        } else if (exception.getCode() == VerIDSessionException.Code.LIVENESS_FAILURE) {
+            message = stringTranslator.getTranslatedString("Ensure you are in a well-lit environment in light that doesn't throw sharp shadows.");
+            requestedBearing = Bearing.STRAIGHT;
         } else {
             return null;
         }
