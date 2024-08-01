@@ -6,8 +6,10 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -15,19 +17,29 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.Bearing;
+import com.appliedrec.verid.core2.Face;
+import com.appliedrec.verid.core2.FaceRecognition;
+import com.appliedrec.verid.core2.IRecognizable;
+import com.appliedrec.verid.core2.RecognizableFace;
+import com.appliedrec.verid.core2.UserIdentification;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
+import com.appliedrec.verid.core2.VerIDFaceTemplateVersion;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
+import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceExtents;
+import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
+import com.appliedrec.verid.sample.databinding.DiagnosticUploadConsentBinding;
 import com.appliedrec.verid.sample.preferences.MimeTypes;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
@@ -40,11 +52,30 @@ import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
+import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class RegisteredUserActivity extends AppCompatActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
@@ -53,8 +84,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     private RegistrationExport registrationExport;
     private ExecutorService backgroundExecutor;
     private ActivityRegisteredUserBinding viewBinding;
-    private final AtomicInteger sessionRunCount = new AtomicInteger(0);
-    private final int sessionMaxRetryCount = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,7 +200,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
-        sessionRunCount.set(0);
         VerIDSession authenticationSession;
         authenticationSession = new VerIDSession(verID, settings);
         authenticationSession.setDelegate(this);
@@ -195,7 +223,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
-        sessionRunCount.set(0);
         VerIDSession registrationSession = new VerIDSession(verID, settings);
         registrationSession.setDelegate(this);
         registrationSession.start();
@@ -318,19 +345,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public void onSessionFinished(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
-        /**
-        // Reporting session results to Applied Recognition
-        try {
-            File jsonFile = File.createTempFile("verid_", ".json");
-            try (FileOutputStream fileOutputStream = new FileOutputStream(jsonFile)) {
-                SessionResultPackage sessionResultPackage = new SessionResultPackage(session.getVerID(), session.getSettings(), result);
-                sessionResultPackage.archiveToStream(fileOutputStream);
-                // Send us the jsonFile
-            }
-        } catch (Exception exception) {
-            exception.printStackTrace();
-        }
-         **/
         if (session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent()) {
             result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
                 try {
@@ -368,11 +382,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
     @Override
     public boolean shouldSessionRecordVideo(@NonNull IVerIDSession<?> session) {
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false);
-    }
-
-    @Override
-    public boolean shouldRetrySessionAfterFailure(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionException exception) {
-        return sessionRunCount.getAndIncrement() < sessionMaxRetryCount;
     }
 
 //    // To use alternative session UI

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 
 import androidx.annotation.Keep;
 import androidx.exifinterface.media.ExifInterface;
@@ -29,6 +30,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -54,7 +56,7 @@ public class SessionResultPackage {
      * @since 2.0.0
      */
     @Keep
-    public SessionResultPackage(VerID verID, VerIDSessionSettings settings, VerIDSessionResult result) throws Exception {
+    public SessionResultPackage(VerID verID, VerIDSessionSettings settings, VerIDSessionResult result, String applicationId, String applicationVersion) throws Exception {
         this.context = verID.getContext().orElseThrow(Exception::new).getApplicationContext();
         this.settings = settings;
         this.result = result;
@@ -64,7 +66,11 @@ public class SessionResultPackage {
                 ((FaceDetection) faceDetection).detRecLib.getSettings().getConfidenceThreshold(),
                 ((FaceDetection) faceDetection).getFaceExtractQualityThreshold(),
                 ((FaceDetection) faceDetection).getLandmarkTrackingQualityThreshold(),
-                VerID.getVersion()
+                VerID.getVersion(),
+                applicationId,
+                applicationVersion,
+                Build.MANUFACTURER + " " + Build.MODEL,
+                "Android "+ Build.VERSION.RELEASE
         );
     }
 

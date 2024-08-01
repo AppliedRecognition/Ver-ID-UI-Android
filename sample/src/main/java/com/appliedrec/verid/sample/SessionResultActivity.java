@@ -1,43 +1,62 @@
 package com.appliedrec.verid.sample;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.text.TextUtilsCompat;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.PreferenceManager;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.OutOfQuotaPolicy;
+import androidx.work.WorkManager;
 
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.AuthenticationSessionResult;
 import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
+import com.appliedrec.verid.sample.databinding.DiagnosticUploadConsentBinding;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.sharing.SampleAppFileProvider;
+import com.appliedrec.verid.sample.sharing.SessionDiagnosticUpload;
+import com.appliedrec.verid.sample.sharing.SessionDiagnosticUploadWorker;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.SessionParameters;
 import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class SessionResultActivity extends AppCompatActivity implements ISessionActivity {
 
@@ -47,12 +66,42 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
     private VerIDSessionSettings sessionSettings;
     private SessionResultPackage sessionResultPackage;
     private boolean areViewsAdded = false;
+    private boolean diagnosticUploadDone = false;
+
+    private SessionDiagnosticUpload diagnosticUpload;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_session_result);
         prepareSharing();
+        diagnosticUploadDone = savedInstanceState != null && savedInstanceState.getBoolean("diagnosticUploadDone", false);
+        diagnosticUpload = new SessionDiagnosticUpload(this);
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("diagnosticUploadDone", diagnosticUploadDone);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        uploadDiagnostics();
+    }
+
+    private void uploadDiagnostics() {
+        if (diagnosticUploadDone) {
+            return;
+        }
+        diagnosticUpload.askForUserConsent(granted -> {
+            diagnosticUploadDone = true;
+            if (granted) {
+                diagnosticUpload.upload(sessionResultPackage);
+            }
+            return null;
+        });
     }
 
     private void prepareSharing() {
@@ -63,7 +112,7 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             return;
         }
         try {
-            sessionResultPackage = new SessionResultPackage(verID, sessionSettings, sessionResult);
+            sessionResultPackage = new SessionResultPackage(verID, sessionSettings, sessionResult, BuildConfig.APPLICATION_ID, BuildConfig.VERSION_NAME);
             FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
             sessionResult.getVideoUri().ifPresent(videoUri -> transaction.add(R.id.content, SessionVideoFragment.newInstance(videoUri)));
             if (sessionResult.getFaceCaptures().length > 0) {
@@ -78,6 +127,33 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Started", sessionResult.getSessionStartTime().toString()));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format(Locale.ROOT, "%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
             sessionResult.getSessionDiagnostics().ifPresent(diagnostics -> transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format(Locale.ROOT, "%.01f faces/second", (float)diagnostics.getDiagnosticImages().length/(float)sessionResult.getSessionDuration(TimeUnit.MILLISECONDS)*1000f))));
+            ArrayList<String> faceCoveringScores = new ArrayList<>();
+            ArrayList<String> glassesScores = new ArrayList<>();
+            ArrayList<String> sunglassesScores = new ArrayList<>();
+            for (FaceCapture faceCapture : sessionResult.getFaceCaptures()) {
+                if (!faceCapture.getDiagnosticInfo().isEmpty()) {
+                    if (faceCapture.getDiagnosticInfo().getFaceCoveringScore() != null) {
+                        faceCoveringScores.add(String.format(Locale.ROOT, "%.02f", faceCapture.getDiagnosticInfo().getFaceCoveringScore()));
+                    }
+                    if (faceCapture.getDiagnosticInfo().getGlassesScore() != null) {
+                        glassesScores.add(String.format(Locale.ROOT, "%.02f", faceCapture.getDiagnosticInfo().getGlassesScore()));
+                    }
+                    if (faceCapture.getDiagnosticInfo().getSunglassesScore() != null) {
+                        sunglassesScores.add(String.format(Locale.ROOT, "%.02f", faceCapture.getDiagnosticInfo().getSunglassesScore()));
+                    }
+                }
+            }
+            if (!faceCoveringScores.isEmpty() || !glassesScores.isEmpty() || !sunglassesScores.isEmpty()) {
+                if (!faceCoveringScores.isEmpty()) {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance(faceCoveringScores.size() > 1 ? "Face covering scores" : "Face covering score", String.join(", ", faceCoveringScores)));
+                }
+                if (!glassesScores.isEmpty()) {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance(glassesScores.size() > 1 ? "Glasses scores" : "Glasses score", String.join(", ", glassesScores)));
+                }
+                if (!sunglassesScores.isEmpty()) {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance(sunglassesScores.size() > 1 ? "Sunglasses scores" : "Sunglasses score", String.join(", ", sunglassesScores)));
+                }
+            }
             if (sessionResult instanceof AuthenticationSessionResult) {
                 ((AuthenticationSessionResult)sessionResult).getComparisonScore().ifPresent(score -> {
                     transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Comparison score", String.format(Locale.ROOT, "%.02f", score)));
@@ -89,25 +165,21 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
                     transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template version", String.format(Locale.ROOT, "%d", faceTemplateVersion.getValue())));
                 });
             }
-            ArrayList<String> spoofDeviceConfidenceScores = new ArrayList<>();
-            ArrayList<String> moireConfidenceScores = new ArrayList<>();
-            for (FaceCapture faceCapture : sessionResult.getFaceCaptures()) {
-                Float spoofDeviceConfidence = faceCapture.getDiagnosticInfo().getSpoofDeviceConfidence();
-                if (spoofDeviceConfidence != null) {
-                    spoofDeviceConfidenceScores.add(String.format(Locale.ROOT, "%.02f", spoofDeviceConfidence));
-                } else if (faceCapture.getDiagnosticInfo().getSpoofDevices() != null) {
-                    spoofDeviceConfidenceScores.add(String.format(Locale.ROOT, "%.02f", 0f));
+            List<Map<String,Float>> spoofDetectorScoreList = Arrays.stream(sessionResult.getFaceCaptures()).map(faceCapture -> faceCapture.getDiagnosticInfo().getSpoofConfidenceScores()).filter(confidenceScores -> !confidenceScores.isEmpty()).collect(Collectors.toList());
+            if (!spoofDetectorScoreList.isEmpty()) {
+                transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Passive Liveness Detection"));
+                HashMap<String,ArrayList<String>> spoofDetectorScores = new HashMap<>();
+                for (Map<String,Float> map : spoofDetectorScoreList) {
+                    for (Map.Entry<String,Float> entry : map.entrySet()) {
+                        if (!spoofDetectorScores.containsKey(entry.getKey())) {
+                            spoofDetectorScores.put(entry.getKey(), new ArrayList<>());
+                        }
+                        spoofDetectorScores.get(entry.getKey()).add(String.format(Locale.ROOT, "%.02f", entry.getValue()));
+                    }
                 }
-                Float moireConfidence = faceCapture.getDiagnosticInfo().getMoireConfidence();
-                if (moireConfidence != null) {
-                    moireConfidenceScores.add(String.format(Locale.ROOT, "%.02f", moireConfidence));
+                for (Map.Entry<String,ArrayList<String>> entry : spoofDetectorScores.entrySet()) {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance(entry.getKey().substring(0, Math.min(entry.getKey().length(), 30)), String.join(", ", entry.getValue())));
                 }
-            }
-            if (!spoofDeviceConfidenceScores.isEmpty()) {
-                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Spoof confidence (object)", TextUtils.join(", ", spoofDeviceConfidenceScores)));
-            }
-            if (!moireConfidenceScores.isEmpty()) {
-                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Spoof confidence (moire)", TextUtils.join(", ", moireConfidenceScores)));
             }
             transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Session Settings"));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Expiry time", String.format(Locale.ROOT, "%d seconds", sessionSettings.getMaxDuration(TimeUnit.SECONDS))));
@@ -132,6 +204,7 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             areViewsAdded = true;
             invalidateOptionsMenu();
         } catch (Exception ignore) {
+            Log.e("SessionResultActivity", "Failed to prepare session result for sharing", ignore);
         }
     }
 

@@ -14,6 +14,7 @@ import com.appliedrec.verid.core2.ExifOrientation;
 import com.appliedrec.verid.core2.IImageProvider;
 import com.appliedrec.verid.core2.ImageUtils;
 import com.appliedrec.verid.core2.VerID;
+import com.appliedrec.verid.core2.VerIDImageBitmap;
 import com.appliedrec.verid.core2.session.IImage;
 import com.appliedrec.verid.core2.session.IImageIterator;
 
@@ -149,11 +150,11 @@ public class VerIDImageIterator implements IImageIterator {
 
     private void queueImage(IImage<?> image) {
         try {
-            if (imageUtils.get() == null) {
+            ImageUtils imageUtils = this.imageUtils.get();
+            if (imageUtils == null) {
                 return;
             }
-            Bitmap bitmap = this.imageUtils.get().bitmapFromImageSource(image);
-            com.appliedrec.verid.core2.Image verIDImage = new com.appliedrec.verid.core2.Image(bitmap, image.getExifOrientation());
+            com.appliedrec.verid.core2.Image verIDImage = imageUtils.verIDImageFromImageSource(image);
             verIDImage.setIsMirrored(isMirrored.get());
             imageQueue.put(verIDImage);
         } catch (Exception e) {

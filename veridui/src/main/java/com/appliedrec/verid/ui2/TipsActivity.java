@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
 
 public class TipsActivity extends PageViewActivity implements ISessionActivity {
 
@@ -33,6 +34,8 @@ public class TipsActivity extends PageViewActivity implements ISessionActivity {
         speak(tipText(0), true);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(translate("Tip 1 of 3"));
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
     }
 
@@ -85,6 +88,10 @@ public class TipsActivity extends PageViewActivity implements ISessionActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
         if (item.getItemId() == R.id.action_next) {
             if (getViewPager().getCurrentItem() >= getPageCount() - 1) {
                 finish();

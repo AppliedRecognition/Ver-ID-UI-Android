@@ -42,9 +42,9 @@ public class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSession
         src.getSessionDiagnostics().ifPresent(sessionDiagnostics -> {
             jsonObject.add("diagnostics", context.serialize(sessionDiagnostics, SessionDiagnostics.class));
         });
-        jsonObject.addProperty("start_time", src.getSessionStartTime().getTime());
+        jsonObject.addProperty("start_time", src.getSessionStartTime().getTime()/1000);
         jsonObject.addProperty("duration_seconds", src.getSessionDuration(TimeUnit.SECONDS));
-        if (!src.getError().isPresent()) {
+        if (src.getError().isEmpty()) {
             jsonObject.addProperty("succeeded", true);
         } else {
             jsonObject.addProperty("error", src.getError().get().getCode().name());
@@ -56,7 +56,7 @@ public class SessionResultDataJsonAdapter implements JsonSerializer<VerIDSession
     @Override
     public VerIDSessionResult deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();
-        long startTime = jsonObject.get("start_time").getAsLong();
+        long startTime = jsonObject.get("start_time").getAsLong()*1000;
         long duration = jsonObject.get("duration_seconds").getAsLong();
         long endTime = startTime + duration * 1000;
         SessionDiagnostics diagnostics;
