@@ -18,6 +18,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 
@@ -54,6 +55,10 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showRegistration = getIntent().getBooleanExtra(EXTRA_SHOW_REGISTRATION, true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
     }
 
     @Override
@@ -103,6 +108,10 @@ public class IntroActivity extends PageViewActivity implements IVerIDLoadObserve
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
         if (item.getItemId() == R.id.action_next) {
             if (getViewPager().getCurrentItem() < getPageCount() - 1) {
                 getViewPager().setCurrentItem(getViewPager().getCurrentItem() + 1, true);

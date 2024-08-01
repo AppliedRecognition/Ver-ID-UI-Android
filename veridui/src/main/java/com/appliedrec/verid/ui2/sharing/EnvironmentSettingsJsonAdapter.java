@@ -1,5 +1,7 @@
 package com.appliedrec.verid.ui2.sharing;
 
+import android.os.Build;
+
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -19,7 +21,10 @@ public class EnvironmentSettingsJsonAdapter implements JsonSerializer<Environmen
         jsonObject.addProperty("faceTemplateExtractionThreshold", src.getFaceTemplateExtractionThreshold());
         jsonObject.addProperty("authenticationThreshold", src.getAuthenticationThreshold());
         jsonObject.addProperty("veridVersion", src.getVeridVersion());
-        jsonObject.addProperty("os", "Android");
+        jsonObject.addProperty("applicationVersion", src.getApplicationVersion());
+        jsonObject.addProperty("applicationId", src.getApplicationId());
+        jsonObject.addProperty("os", src.getOs());
+        jsonObject.addProperty("deviceModel", src.getDeviceModel());
         return jsonObject;
     }
 
@@ -31,6 +36,10 @@ public class EnvironmentSettingsJsonAdapter implements JsonSerializer<Environmen
         float faceTemplateExtractionThreshold = jsonObject.get("faceTemplateExtractionThreshold").getAsFloat();
         float authenticationThreshold = jsonObject.get("authenticationThreshold").getAsFloat();
         String veridVersion = jsonObject.get("veridVersion").getAsString();
-        return new EnvironmentSettings(faceDetectorVersion, confidenceThreshold, faceTemplateExtractionThreshold, authenticationThreshold, veridVersion);
+        String applicationId = jsonObject.get("applicationId").getAsString();
+        String applicationVersion = jsonObject.get("applicationVersion").getAsString();
+        String os = jsonObject.get("os").getAsString();
+        String deviceModel = jsonObject.get("deviceModel").getAsString();
+        return new EnvironmentSettings(faceDetectorVersion, confidenceThreshold, faceTemplateExtractionThreshold, authenticationThreshold, veridVersion, applicationId, applicationVersion, deviceModel, os);
     }
 }

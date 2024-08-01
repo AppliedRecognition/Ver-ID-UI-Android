@@ -34,14 +34,14 @@ public class SessionSettingsDataJsonAdapter implements JsonSerializer<VerIDSessi
             jsonObject.addProperty("type", "liveness detection");
             jsonObject.add("bearings", context.serialize(((LivenessDetectionSessionSettings)src).getBearings(), EnumSet.class));
         }
-        jsonObject.addProperty("expiryTime", src.getMaxDuration(TimeUnit.SECONDS));
-        jsonObject.addProperty("numberOfResultsToCollect", src.getFaceCaptureCount());
+        jsonObject.addProperty("maxDuration", src.getMaxDuration(TimeUnit.SECONDS));
+        jsonObject.addProperty("faceCaptureCount", src.getFaceCaptureCount());
         jsonObject.addProperty("yawThreshold", src.getYawThreshold());
         jsonObject.addProperty("pitchThreshold", src.getPitchThreshold());
         jsonObject.addProperty("faceWidthFraction", src.getExpectedFaceExtents().getProportionOfViewWidth());
         jsonObject.addProperty("faceHeightFraction", src.getExpectedFaceExtents().getProportionOfViewHeight());
         jsonObject.addProperty("pauseDuration", src.getPauseDuration(TimeUnit.SECONDS));
-        jsonObject.addProperty("faceBufferSize", src.getFaceCaptureFaceCount());
+        jsonObject.addProperty("faceCaptureFaceCount", src.getFaceCaptureFaceCount());
 
         return jsonObject;
     }
@@ -84,15 +84,15 @@ public class SessionSettingsDataJsonAdapter implements JsonSerializer<VerIDSessi
             }
             sessionSettings = livenessDetectionSessionSettings;
         }
-        sessionSettings.setMaxDuration(jsonObject.get("expiryTime").getAsLong(), TimeUnit.SECONDS);
-        sessionSettings.setFaceCaptureCount(jsonObject.get("numberOfResultsToCollect").getAsInt());
+        sessionSettings.setMaxDuration(jsonObject.get("maxDuration").getAsLong(), TimeUnit.SECONDS);
+        sessionSettings.setFaceCaptureCount(jsonObject.get("faceCaptureCount").getAsInt());
         sessionSettings.setYawThreshold(jsonObject.get("yawThreshold").getAsFloat());
         sessionSettings.setPitchThreshold(jsonObject.get("pitchThreshold").getAsFloat());
         float faceWidthFraction = jsonObject.get("faceWidthFraction").getAsFloat();
         float faceHeightFraction = jsonObject.get("faceHeightFraction").getAsFloat();
         sessionSettings.setExpectedFaceExtents(new FaceExtents(faceWidthFraction, faceHeightFraction));
         sessionSettings.setPauseDuration(jsonObject.get("pauseDuration").getAsLong(), TimeUnit.SECONDS);
-        sessionSettings.setFaceCaptureFaceCount(jsonObject.get("faceBufferSize").getAsInt());
+        sessionSettings.setFaceCaptureFaceCount(jsonObject.get("faceCaptureFaceCount").getAsInt());
         return sessionSettings;
     }
 }

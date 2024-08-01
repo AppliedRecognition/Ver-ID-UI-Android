@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
+import android.util.Pair;
 
 import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
@@ -26,10 +27,13 @@ import com.appliedrec.verid.sample.R;
 
 import static android.content.Context.CAMERA_SERVICE;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Objects;
 
 public class SettingsFragment extends PreferenceFragmentCompat implements SharedPreferences.OnSharedPreferenceChangeListener {
+    private HashMap<String,String> diagnosticUploadMap = new HashMap<>();
 
     public static SettingsFragment newInstance(VerID verID) {
         Bundle bundle = new Bundle();
@@ -41,6 +45,9 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+        diagnosticUploadMap.put("allow", "Allow");
+        diagnosticUploadMap.put("deny", "Deny");
+        diagnosticUploadMap.put("ask", "Ask on every session");
         Context context = getPreferenceManager().getContext();
         SharedPreferences sharedPreferences = getPreferenceManager().getSharedPreferences();
         Bundle args = getArguments();
@@ -236,6 +243,23 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         recordSessionVideo.setKey(PreferenceKeys.RECORD_SESSION_VIDEO);
         recordSessionVideo.setChecked(sharedPreferences.getBoolean(PreferenceKeys.RECORD_SESSION_VIDEO, false));
         cameraCategory.addPreference(recordSessionVideo);
+
+        // DIAGNOSTICS
+        PreferenceCategory diagnosticUploadCategory = new PreferenceCategory(context);
+        diagnosticUploadCategory.setTitle(R.string.diagnostic_upload);
+        preferenceScreen.addPreference(diagnosticUploadCategory);
+        ListPreference allowDiagnosticUpload = new ListPreference(context);
+        allowDiagnosticUpload.setTitle(R.string.allow_diagnostic_upload);
+        allowDiagnosticUpload.setKey(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD);
+        allowDiagnosticUpload.setEntries(diagnosticUploadMap.values().toArray(String[]::new));
+        allowDiagnosticUpload.setEntryValues(diagnosticUploadMap.keySet().toArray(String[]::new));
+        String diagnosticUploadPreference = sharedPreferences.getString(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD, "ask");
+        allowDiagnosticUpload.setValue(diagnosticUploadPreference);
+        allowDiagnosticUpload.setDialogTitle(R.string.allow_diagnostic_upload);
+        allowDiagnosticUpload.setSummary(diagnosticUploadMap.get(diagnosticUploadPreference));
+//        allowDiagnosticUpload.setSummary(R.string.allow_diagnostic_upload_summary);
+        diagnosticUploadCategory.addPreference(allowDiagnosticUpload);
+
         setPreferenceScreen(preferenceScreen);
     }
 
@@ -261,6 +285,13 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
             } else {
                 summary = String.format(Locale.ROOT, "%.0f%% of view width", sharedPreferences.getFloat(s, livenessDetectionSessionSettings.getExpectedFaceExtents().getProportionOfViewWidth()) * 100);
             }
+            Preference preference = findPreference(s);
+            if (preference != null) {
+                preference.setSummary(summary);
+            }
+        } else if (s.equals(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD)) {
+            String summaryKey = sharedPreferences.getString(s, "ask");
+            String summary = diagnosticUploadMap.get(summaryKey);
             Preference preference = findPreference(s);
             if (preference != null) {
                 preference.setSummary(summary);

@@ -116,4 +116,9 @@
     <string name="enable_face_covering_detection">Enable face covering detection</string>
     <string name="migrate_to_v20_face_templates">Migrate to v20 face templates</string>
     <string name="face_detector_version">Face detector version</string>
+    <string name="diagnostic_upload">Diagnostic upload</string>
+    <string name="allow_diagnostic_upload">Session diagnostic uploads</string>
+    <string name="allow_diagnostic_upload_summary">The uploaded session diagnostic data is used by Applied Recognition Corp. to improve Ver-ID. The upload contains an image of the face collected during the session, face location in the image, face angle, face landmark locations in the image, image brightness, contrast and sharpness and spoof detector confidence scores.</string>
+    <string name="diagnostic_upload_consent">Applied Recognition Corp. would like your consent to upload session diagnostic data. The data is used to improve Ver-ID. The upload contains an image of the face collected during the session, face location in the image, face angle, face landmark locations in the image, image brightness, contrast and sharpness and spoof detector confidence scores.</string>
+    <string name="diagnostic_upload_remember">Remember my choice (can be changed later in settings)</string>
 </resources>

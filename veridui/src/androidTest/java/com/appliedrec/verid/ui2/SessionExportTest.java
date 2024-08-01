@@ -8,6 +8,7 @@ import android.graphics.RectF;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.appliedrec.verid.core2.Bearing;
+import com.appliedrec.verid.core2.BuildConfig;
 import com.appliedrec.verid.core2.EulerAngle;
 import com.appliedrec.verid.core2.Face;
 import com.appliedrec.verid.core2.Image;
@@ -50,7 +51,7 @@ public class SessionExportTest {
     public void testArchiveSessionResult() throws Exception {
         LivenessDetectionSessionSettings sessionSettings = new LivenessDetectionSessionSettings();
         VerIDSessionResult result = new VerIDSessionResult(new VerIDSessionException(new Exception("Test")), System.currentTimeMillis()-1000, System.currentTimeMillis(), null);
-        SessionResultPackage sessionResultPackage = new SessionResultPackage(verID, sessionSettings,result);
+        SessionResultPackage sessionResultPackage = new SessionResultPackage(verID, sessionSettings,result, "test", BuildConfig.VERSION_NAME);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             sessionResultPackage.archiveToStream(outputStream);
             byte[] zipped = outputStream.toByteArray();
@@ -85,7 +86,7 @@ public class SessionExportTest {
             faceCaptures.add(new FaceCapture(face, bearing, image, new Image(image)));
         }
         VerIDSessionResult result = new VerIDSessionResult(faceCaptures, System.currentTimeMillis()-1000, System.currentTimeMillis(), null);
-        SessionResultPackage sessionResultPackage = new SessionResultPackage(verID, sessionSettings,result);
+        SessionResultPackage sessionResultPackage = new SessionResultPackage(verID, sessionSettings,result, "test", BuildConfig.VERSION_NAME);
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             sessionResultPackage.archiveToStream(outputStream);
             byte[] zipped = outputStream.toByteArray();
