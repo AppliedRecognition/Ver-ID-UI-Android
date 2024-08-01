@@ -73,6 +73,12 @@ class SessionView @JvmOverloads constructor(
             updateColors()
         }
 
+    /**
+     * Set to `false` to disable visual tracking of the detected face prior to alignment in the requested face bounds
+     * @since 2.12.0
+     */
+    var isTrackedFaceHighlightEnabled: Boolean = true
+
     init {
         textureView = TextureView(context).apply {
             surfaceTextureListener = this@SessionView
@@ -99,6 +105,7 @@ class SessionView @JvmOverloads constructor(
                                 isPreviewMirrored = isCameraPreviewMirrored,
                                 isLastFaceCapture = faceCaptureCount >= sessionSettings.faceCaptureCount,
                                 isFinishing = isFinishing,
+                                isTrackedFaceHighlightEnabled = isTrackedFaceHighlightEnabled,
                                 modifier = Modifier
                                     .align(Alignment.Center)
                                     .requiredSize(
@@ -276,6 +283,10 @@ class SessionView @JvmOverloads constructor(
 
     private fun maskCameraPreviewFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult) {
         val defaultFaceBounds = getDefaultFaceRectFromFaceDetectionResult(faceDetectionResult)
+        if (!isTrackedFaceHighlightEnabled) {
+            maskCameraPreviewWithOvalInBounds(defaultFaceBounds)
+            return
+        }
         when (faceDetectionResult.status) {
             FaceDetectionStatus.FACE_FIXED, FaceDetectionStatus.FACE_MISALIGNED, FaceDetectionStatus.FACE_ALIGNED -> maskCameraPreviewWithOvalInBounds(
                 defaultFaceBounds
@@ -303,7 +314,8 @@ fun FaceDetectionResultView(
     isPreviewMirrored: Boolean,
     isLastFaceCapture: Boolean,
     isFinishing: Boolean,
-    modifier: Modifier
+    modifier: Modifier,
+    isTrackedFaceHighlightEnabled: Boolean = true
 ) {
     var parentSize by remember { mutableStateOf(IntSize.Zero) }
     var latestMisalignTime: Long? by remember { mutableStateOf(null) }
@@ -356,7 +368,6 @@ fun FaceDetectionResultView(
             }
         }
         FaceDetectionStatus.FACE_FIXED -> {
-
         }
         FaceDetectionStatus.FACE_MISALIGNED -> {
             val now = System.currentTimeMillis()
@@ -387,7 +398,7 @@ fun FaceDetectionResultView(
             )
         }
         else -> {
-            if (faceDetectionResult.faceBounds.isPresent) {
+            if (faceDetectionResult.faceBounds.isPresent && isTrackedFaceHighlightEnabled) {
                 val transition = rememberInfiniteTransition()
                 val strokeWidth by transition.animateFloat(
                     initialValue = with(LocalDensity.current) { 10.dp.toPx() },

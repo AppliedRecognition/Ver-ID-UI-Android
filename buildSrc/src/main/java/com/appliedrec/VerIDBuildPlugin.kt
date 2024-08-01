@@ -111,6 +111,7 @@ class VerIDBuildPlugin: Plugin<Project> {
                 project.dependencies.add("implementation", VerIDDependencies.ANDROIDX_COLLECTION)
                 project.dependencies.add("implementation", VerIDDependencies.ANDROIDX_CORE)
                 project.dependencies.add("implementation", VerIDDependencies.ROOM_RUNTIME)
+                project.dependencies.add("implementation", VerIDDependencies.KT_COROUTINES_JVM)
                 project.dependencies.add("testImplementation", VerIDDependencies.JUNIT)
                 project.dependencies.add("testImplementation", VerIDDependencies.MOCKITO_CORE)
                 project.dependencies.add("testImplementation", VerIDDependencies.MOCKITO_ANDROID)
