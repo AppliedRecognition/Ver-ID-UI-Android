@@ -20,7 +20,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import com.appliedrec.verid.core2.EulerAngle
 import java.util.*
 import kotlin.math.*
@@ -52,6 +51,7 @@ fun Head3DView(
         onFinish()
     }
     val imageName = Head3DViewHelper.getHeadImageNameAtAngle(angle)
+    // Check that image exists 1869.webp
     val bitmap = LocalContext.current.assets.open(imageName).use { inputStream ->
         BitmapFactory.decodeStream(inputStream)
     }
@@ -79,17 +79,11 @@ object Head3DViewHelper {
     }
 
     fun getHeadImageNameAtAngle(angle: EulerAngle): String {
-        val xOffset = floor(HeadDimensions.COLS.toDouble() / 2)
-        val yOffset = floor(HeadDimensions.ROWS.toDouble() / 2)
-        val x = angle.yaw + xOffset
-        val y = angle.pitch + yOffset
-        val index: Int = max(
-            0.0,
-            min(HeadDimensions.ROWS.toDouble(), y)
-        ).toInt() * HeadDimensions.COLS + max(
-            0.0,
-            min(HeadDimensions.COLS.toDouble(), x)
-        ).toInt()
+        val xOffset = floor(HeadDimensions.COLS.toDouble() / 2).toInt()
+        val yOffset = floor(HeadDimensions.ROWS.toDouble() / 2).toInt()
+        val x = clamp(angle.yaw.toInt() + xOffset, 0, HeadDimensions.COLS - 1)
+        val y = clamp(angle.pitch.toInt() + yOffset, 0, HeadDimensions.ROWS - 1)
+        val index = clamp(HeadDimensions.COLS * y + x, 0, HeadDimensions.COLS * HeadDimensions.ROWS - 1)
         return String.format(Locale.ROOT, "head_angles/%04d.webp", index)
     }
 
@@ -103,5 +97,19 @@ object Head3DViewHelper {
     fun getAnimationDuration(startAngle: EulerAngle, endAngle: EulerAngle): Int {
         val frameCount = ceil(getDistanceBetweenAngles(startAngle, endAngle).toDouble()).toInt()
         return frameCount * 33
+    }
+
+    private fun <T: Number> clamp(value: T, min: T, max: T): T {
+        val minValue = min.toDouble()
+        val maxValue = max.toDouble()
+        val valueToClamp = value.toDouble()
+        val clampedValue = min(maxValue, max(minValue, valueToClamp))
+        return when (value) {
+            is Int -> clampedValue.toInt() as T
+            is Long -> clampedValue.toLong() as T
+            is Float -> clampedValue.toFloat() as T
+            is Double -> clampedValue as T
+            else -> throw IllegalArgumentException("Unsupported type")
+        }
     }
 }

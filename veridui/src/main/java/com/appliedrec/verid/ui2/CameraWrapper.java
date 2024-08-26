@@ -14,9 +14,11 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
@@ -31,6 +33,7 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
 import com.appliedrec.verid.core2.ExifOrientation;
+import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 
@@ -102,6 +105,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     private final AtomicBoolean isCameraOpen = new AtomicBoolean(false);
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
     private final CameraPreviewHelper cameraPreviewHelper = new CameraPreviewHelper();
+    private CameraCaptureSession cameraCaptureSession;
 
     private static final NormalizedSize SIZE_1080P = new NormalizedSize(1920, 1080);
 
@@ -195,85 +199,12 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         if (!isStarted.compareAndSet(false, true)) {
             return;
         }
+//        Log.d(VerID.TAG, "Starting camera");
         startBackgroundThread();
         this.viewWidth.set(width);
         this.viewHeight.set(height);
         this.displayRotation.set(displayRotation);
-        runInBackground(() -> {
-            try {
-                Context context = getContext().orElseThrow(() -> new Exception("Activity unavailable"));
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    onError(new VerIDSessionException(VerIDSessionException.Code.CAMERA_ACCESS_DENIED));
-                    return;
-                }
-                CameraManager manager = getCameraManager();
-                if (!cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
-                    throw new TimeoutException("Time out waiting to acquire camera lock.");
-                }
-                String[] cameras = manager.getCameraIdList();
-                cameraId.set(null);
-                int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
-                if (cameraLocation == CameraLocation.BACK) {
-                    requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
-                }
-                for (String camId : cameras) {
-                    Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
-                    if (lensFacing != null && lensFacing == requestedLensFacing) {
-                        cameraId.set(camId);
-                        break;
-                    }
-                }
-                if (cameraId.get() == null) {
-                    for (String camId : cameras) {
-                        Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
-                        if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
-                            cameraId.set(camId);
-                            break;
-                        }
-                    }
-                    if (cameraId.get() == null) {
-                        throw new Exception("Camera not available");
-                    }
-                }
-//                if (manager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) == CameraMetadata.IN
-
-                // Choose the sizes for camera preview and video recording
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId.get());
-                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-                int sensorOrientation = (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
-                if (map == null) {
-                    throw new Exception("Cannot get video sizes");
-                }
-                int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
-
-                Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
-                Size[] previewSizes = map.getOutputSizes(previewClass);
-                Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
-                Size[] sizes = cameraPreviewHelper.getOutputSizes(previewSizes, yuvSizes, videoSizes, width, height, sensorOrientation, displayRotation);
-                Size previewSize = sizes[0];
-
-                imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
-                imageIteratorRef.get().setExifOrientation(getExifOrientation(rotation));
-
-                getSessionVideoRecorder().ifPresent(videoRecorder -> {
-                    Size videoSize = sizes[2];
-                    videoRecorder.setup(videoSize, rotation);
-                });
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    for (Listener listener : listeners) {
-                        listener.onCameraPreviewSize(previewSize.getWidth(), previewSize.getHeight(), sensorOrientation);
-                    }
-                });
-                if (isCameraOpen.compareAndSet(false, true)) {
-                    manager.openCamera(cameraId.get(), stateCallback, cameraProcessingHandler);
-                }
-            } catch (Exception e) {
-                onError(new VerIDSessionException(e));
-            } finally {
-                cameraOpenCloseLock.release();
-            }
-        });
+        runInBackground(new StartRunnable(this, width, height, displayRotation));
     }
 
     /**
@@ -285,20 +216,48 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         if (!isStarted.compareAndSet(true, false)) {
             return;
         }
+//        Log.d(VerID.TAG, "Stopping camera");
         isCameraOpen.set(false);
         try {
-            if (imageReader != null) {
-                imageReader.close();
-            }
             if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+//                Log.d(VerID.TAG, "Acquired camera lock");
+                if (imageReader != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        imageReader.discardFreeBuffers();
+                    }
+                    imageReader.setOnImageAvailableListener(null, null);
+                    if (imageReader.getSurface() != null) {
+                        imageReader.getSurface().release();
+                    }
+//                    Log.d(VerID.TAG, "Closing image reader");
+                    imageReader.close();
+//                    Log.d(VerID.TAG, "Closed image reader");
+                    imageReader = null;
+                }
+                Surface previewSurface = surfaceRef.get();
+                if (previewSurface != null) {
+//                    Log.d(VerID.TAG, "Releasing preview surface");
+                    previewSurface.release();
+//                    Log.d(VerID.TAG, "Released preview surface");
+                    surfaceRef.set(null);
+                }
+                if (cameraCaptureSession != null) {
+//                    Log.d(VerID.TAG, "Closing camera capture session");
+                    cameraCaptureSession.close();
+//                    Log.d(VerID.TAG, "Closed camera capture session");
+                    cameraCaptureSession = null;
+                }
                 CameraDevice camera = cameraDevice.getAndSet(null);
                 if (camera != null) {
+//                    Log.d(VerID.TAG, "Closing camera");
                     camera.close();
+//                    Log.d(VerID.TAG, "Closed camera");
                 }
                 cameraOpenCloseLock.release();
+//                Log.d(VerID.TAG, "Released camera lock");
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+//            Log.e(VerID.TAG, "Exception when stopping camera", e);
         } finally {
             stopBackgroundThread();
         }
@@ -325,11 +284,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     private void onError(VerIDSessionException exception) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            for (Listener listener : listeners) {
-                listener.onCameraError(exception);
-            }
-        });
+        runOnMainThread(new OnErrorRunnable(this, exception));
     }
 
     private void runInBackground(Runnable runnable) {
@@ -338,126 +293,344 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         }
     }
 
-    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+    private void runOnMainThread(Runnable runnable) {
+        new Handler(Looper.getMainLooper()).post(runnable);
+    }
+
+    private static class OnErrorRunnable implements Runnable {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+        private final WeakReference<VerIDSessionException> exception;
+
+        OnErrorRunnable(CameraWrapper cameraWrapper, VerIDSessionException exception) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+            this.exception = new WeakReference<>(exception);
+        }
+
+        @Override
+        public void run() {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            VerIDSessionException exception = this.exception.get();
+            if (cameraWrapper == null || exception == null) {
+                return;
+            }
+            for (Listener listener : cameraWrapper.listeners) {
+                listener.onCameraError(exception);
+            }
+        }
+    }
+
+    private static class OnPreviewSizeRunnable implements Runnable {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+        private final int width;
+        private final int height;
+        private final int sensorOrientation;
+
+        OnPreviewSizeRunnable(CameraWrapper cameraWrapper, int width, int height, int sensorOrientation) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+            this.width = width;
+            this.height = height;
+            this.sensorOrientation = sensorOrientation;
+        }
+
+        @Override
+        public void run() {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            for (Listener listener : cameraWrapper.listeners) {
+                listener.onCameraPreviewSize(width, height, sensorOrientation);
+            }
+        }
+    }
+
+    private static class StartRunnable implements Runnable {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+        private final int width;
+        private final int height;
+        private final int displayRotation;
+
+        StartRunnable(CameraWrapper cameraWrapper, int width, int height, int displayRotation) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+            this.width = width;
+            this.height = height;
+            this.displayRotation = displayRotation;
+        }
+
+        @Override
+        public void run() {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            try {
+                Context context = cameraWrapper.getContext().orElseThrow(() -> new Exception("Activity unavailable"));
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    cameraWrapper.onError(new VerIDSessionException(VerIDSessionException.Code.CAMERA_ACCESS_DENIED));
+                    return;
+                }
+                CameraManager manager = cameraWrapper.getCameraManager();
+                if (!cameraWrapper.cameraOpenCloseLock.tryAcquire(10, TimeUnit.SECONDS)) {
+                    throw new TimeoutException("Time out waiting to acquire camera lock.");
+                }
+                String[] cameras = manager.getCameraIdList();
+                cameraWrapper.cameraId.set(null);
+                int requestedLensFacing = CameraCharacteristics.LENS_FACING_FRONT;
+                if (cameraWrapper.cameraLocation == CameraLocation.BACK) {
+                    requestedLensFacing = CameraCharacteristics.LENS_FACING_BACK;
+                }
+                for (String camId : cameras) {
+                    Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
+                    if (lensFacing != null && lensFacing == requestedLensFacing) {
+                        cameraWrapper.cameraId.set(camId);
+                        break;
+                    }
+                }
+                if (cameraWrapper.cameraId.get() == null) {
+                    for (String camId : cameras) {
+                        Integer lensFacing = manager.getCameraCharacteristics(camId).get(CameraCharacteristics.LENS_FACING);
+                        if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_EXTERNAL) {
+                            cameraWrapper.cameraId.set(camId);
+                            break;
+                        }
+                    }
+                    if (cameraWrapper.cameraId.get() == null) {
+                        throw new Exception("Camera not available");
+                    }
+                }
+//                if (manager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) == CameraMetadata.IN
+
+                // Choose the sizes for camera preview and video recording
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraWrapper.cameraId.get());
+                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+                int sensorOrientation = (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
+                if (map == null) {
+                    throw new Exception("Cannot get video sizes");
+                }
+                int rotation = (360 - (sensorOrientation - displayRotation)) % 360;
+
+                Size[] yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888);
+                Size[] previewSizes = map.getOutputSizes(cameraWrapper.previewClass);
+                Size[] videoSizes = map.getOutputSizes(MediaRecorder.class);
+                Size[] sizes = cameraWrapper.cameraPreviewHelper.getOutputSizes(previewSizes, yuvSizes, videoSizes, width, height, sensorOrientation, displayRotation);
+                Size previewSize = sizes[0];
+
+                cameraWrapper.imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
+                cameraWrapper.imageIteratorRef.get().setExifOrientation(cameraWrapper.getExifOrientation(rotation));
+
+                cameraWrapper.getSessionVideoRecorder().ifPresent(videoRecorder -> {
+                    Size videoSize = sizes[2];
+                    videoRecorder.setup(videoSize, rotation);
+                });
+                cameraWrapper.runOnMainThread(new OnPreviewSizeRunnable(cameraWrapper, previewSize.getWidth(), previewSize.getHeight(), sensorOrientation));
+                if (cameraWrapper.isCameraOpen.compareAndSet(false, true)) {
+                    manager.openCamera(cameraWrapper.cameraId.get(), new CameraDeviceStateCallback(cameraWrapper), cameraWrapper.cameraProcessingHandler);
+                } else {
+                    cameraWrapper.cameraOpenCloseLock.release();
+                }
+            } catch (Exception e) {
+                cameraWrapper.cameraOpenCloseLock.release();
+                cameraWrapper.onError(new VerIDSessionException(e));
+            }
+        }
+    }
+
+    private static class CameraDeviceStateCallback extends CameraDevice.StateCallback {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+
+        CameraDeviceStateCallback(CameraWrapper cameraWrapper) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+        }
 
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
-            CameraWrapper.this.cameraDevice.set(cameraDevice);
-            cameraOpenCloseLock.release();
-            startPreview();
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            cameraWrapper.cameraDevice.set(cameraDevice);
+            cameraWrapper.cameraOpenCloseLock.release();
+            cameraWrapper.startPreview();
+//            Log.d(VerID.TAG, "Camera opened");
         }
 
         @Override
         public void onDisconnected(@NonNull CameraDevice cameraDevice) {
-            cameraOpenCloseLock.release();
-            isCameraOpen.set(false);
-            getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            cameraWrapper.getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
             cameraDevice.close();
-            CameraWrapper.this.cameraDevice.set(null);
-            cameraId.set(null);
+            cameraWrapper.cameraDevice.set(null);
+            cameraWrapper.cameraId.set(null);
+            cameraWrapper.cameraOpenCloseLock.release();
+            cameraWrapper.isCameraOpen.set(false);
+//            Log.d(VerID.TAG, "Camera disconnected");
         }
 
         @Override
         public void onError(@NonNull CameraDevice cameraDevice, int error) {
-            cameraOpenCloseLock.release();
-            isCameraOpen.set(false);
-            getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
-            cameraDevice.close();
-            CameraWrapper.this.cameraDevice.set(null);
-            cameraId.set(null);
-            String message;
-            switch (error) {
-                case ERROR_CAMERA_IN_USE:
-                    message = "Camera in use";
-                    break;
-                case ERROR_MAX_CAMERAS_IN_USE:
-                    message = "Too many other open camera devices";
-                    break;
-                case ERROR_CAMERA_DISABLED:
-                    message = "Camera disabled";
-                    break;
-                case ERROR_CAMERA_DEVICE:
-                    message = "Camera failed";
-                    break;
-                case ERROR_CAMERA_SERVICE:
-                    message = "Camera service failed";
-                    break;
-                default:
-                    message = "";
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
             }
-            CameraWrapper.this.onError(new VerIDSessionException(new Exception("Failed to open camera: "+message)));
+            cameraWrapper.getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::stop);
+            cameraDevice.close();
+            cameraWrapper.cameraDevice.set(null);
+            cameraWrapper.cameraId.set(null);
+            cameraWrapper.cameraOpenCloseLock.release();
+            cameraWrapper.isCameraOpen.set(false);
+            String message = switch (error) {
+                case ERROR_CAMERA_IN_USE -> "Camera in use";
+                case ERROR_MAX_CAMERAS_IN_USE -> "Too many other open camera devices";
+                case ERROR_CAMERA_DISABLED -> "Camera disabled";
+                case ERROR_CAMERA_DEVICE -> "Camera failed";
+                case ERROR_CAMERA_SERVICE -> "Camera service failed";
+                default -> "";
+            };
+            cameraWrapper.onError(new VerIDSessionException(new Exception("Failed to open camera: "+message)));
+//            Log.d(VerID.TAG, "Camera error: "+message);
         }
 
         @Override
         public void onClosed(@NonNull CameraDevice camera) {
+//            Log.d(VerID.TAG, "CameraDevice onClosed");
             super.onClosed(camera);
-            cameraDevice.set(null);
-            cameraId.set(null);
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            cameraWrapper.cameraDevice.set(null);
+            cameraWrapper.cameraId.set(null);
+//            Log.d(VerID.TAG, "Camera closed");
         }
     };
 
-    private void startPreview() {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (!getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(true)) {
-                onError(new VerIDSessionException(new Exception("CameraWrapper requires a started activity")));
+    private static class CaptureSessionStateCallback extends CameraCaptureSession.StateCallback {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+        private final WeakReference<CaptureRequest.Builder> previewBuilderRef;
+
+        CaptureSessionStateCallback(CameraWrapper cameraWrapper, CaptureRequest.Builder previewBuilder) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+            previewBuilderRef = new WeakReference<>(previewBuilder);
+        }
+
+        @Override
+        public void onConfigured(@NonNull CameraCaptureSession session) {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            CaptureRequest.Builder previewBuilder = previewBuilderRef.get();
+            if (cameraWrapper == null || previewBuilder == null) {
                 return;
             }
-            runInBackground(() -> {
+            cameraWrapper.cameraCaptureSession = session;
+            if (cameraWrapper.isCameraOpen.get() && (!cameraWrapper.getLifecycleOwner().isPresent() || cameraWrapper.getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(false))) {
                 try {
-                    if (cameraDevice.get() == null) {
-                        throw new VerIDSessionException(new Exception("Camera unavailable"));
-                    }
-                    if (!cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
-                        throw new Exception("Failed to acquire camera");
-                    }
-                    ArrayList<Surface> surfaces = new ArrayList<>();
-                    CaptureRequest.Builder previewBuilder = cameraDevice.get().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-
-                    Surface previewSurface = surfaceRef.get();
-                    if (previewSurface != null) {
-                        previewBuilder.addTarget(previewSurface);
-                        surfaces.add(previewSurface);
-                    }
-
-                    imageReader.setOnImageAvailableListener(imageIteratorRef.get(), cameraProcessingHandler);
-                    previewBuilder.addTarget(imageReader.getSurface());
-                    surfaces.add(imageReader.getSurface());
-
-                    getSessionVideoRecorder().flatMap(ISessionVideoRecorder::getSurface).ifPresent(surface -> {
-                        previewBuilder.addTarget(surface);
-                        surfaces.add(surface);
-                    });
-
-                    cameraDevice.get().createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            if (isCameraOpen.get() && (!getLifecycleOwner().isPresent() || getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(false))) {
-                                try {
-                                    previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-                                    session.setRepeatingRequest(previewBuilder.build(), null, cameraPreviewHandler);
-                                    getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
-                                } catch (CameraAccessException e) {
-                                    onError(new VerIDSessionException(e));
-                                }
-                            } else {
-                                onError(new VerIDSessionException(new Exception("Failed to configure camera")));
-                            }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            onError(new VerIDSessionException(new Exception("Failed to start preview")));
-                        }
-
-                    }, cameraProcessingHandler);
-                } catch (Exception e) {
-                    onError(new VerIDSessionException(e));
-                } finally {
-                    cameraOpenCloseLock.release();
+                    previewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                    session.setRepeatingRequest(previewBuilder.build(), null, cameraWrapper.cameraPreviewHandler);
+                    cameraWrapper.getSessionVideoRecorder().ifPresent(ISessionVideoRecorder::start);
+                } catch (CameraAccessException e) {
+                    cameraWrapper.onError(new VerIDSessionException(e));
                 }
-            });
-        });
+            } else {
+                cameraWrapper.onError(new VerIDSessionException(new Exception("Failed to configure camera")));
+            }
+        }
+
+        @Override
+        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            cameraWrapper.onError(new VerIDSessionException(new Exception("Failed to start preview")));
+        }
+    }
+
+    private static class StartCameraPreviewBackgroundRunnable implements Runnable {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+
+        StartCameraPreviewBackgroundRunnable(CameraWrapper cameraWrapper) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+        }
+
+        @Override
+        public void run() {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            try {
+                if (cameraWrapper.cameraDevice.get() == null) {
+                    throw new VerIDSessionException(new Exception("Camera unavailable"));
+                }
+                if (!cameraWrapper.cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
+                    throw new Exception("Failed to acquire camera");
+                }
+                ArrayList<Surface> surfaces = new ArrayList<>();
+                CaptureRequest.Builder previewBuilder = cameraWrapper.cameraDevice.get().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+                Surface previewSurface = cameraWrapper.surfaceRef.get();
+                if (previewSurface != null && previewSurface.isValid()) {
+                    previewBuilder.addTarget(previewSurface);
+                    surfaces.add(previewSurface);
+                } else {
+                    throw new VerIDSessionException(new Exception("Preview surface unavailable"));
+                }
+
+                if (cameraWrapper.imageReader != null) {
+                    cameraWrapper.imageReader.setOnImageAvailableListener(cameraWrapper.imageIteratorRef.get(), cameraWrapper.cameraProcessingHandler);
+                    previewBuilder.addTarget(cameraWrapper.imageReader.getSurface());
+                    surfaces.add(cameraWrapper.imageReader.getSurface());
+                } else {
+                    throw new VerIDSessionException(new Exception("Image reader unavailable"));
+                }
+
+                cameraWrapper.getSessionVideoRecorder().flatMap(ISessionVideoRecorder::getSurface).ifPresent(surface -> {
+                    previewBuilder.addTarget(surface);
+                    surfaces.add(surface);
+                });
+
+                cameraWrapper.cameraDevice.get().createCaptureSession(surfaces, new CaptureSessionStateCallback(cameraWrapper, previewBuilder), cameraWrapper.cameraProcessingHandler);
+            } catch (Exception e) {
+                cameraWrapper.onError(new VerIDSessionException(e));
+            } finally {
+                cameraWrapper.cameraOpenCloseLock.release();
+            }
+        }
+    }
+
+    private static class StartCameraPreviewRunnable implements Runnable {
+
+        private final WeakReference<CameraWrapper> cameraWrapperRef;
+
+        StartCameraPreviewRunnable(CameraWrapper cameraWrapper) {
+            cameraWrapperRef = new WeakReference<>(cameraWrapper);
+        }
+
+        @Override
+        public void run() {
+            CameraWrapper cameraWrapper = cameraWrapperRef.get();
+            if (cameraWrapper == null) {
+                return;
+            }
+            if (!cameraWrapper.getLifecycleOwner().map(LifecycleOwner::getLifecycle).map(Lifecycle::getCurrentState).map(state -> state.isAtLeast(Lifecycle.State.STARTED)).orElse(true)) {
+                cameraWrapper.onError(new VerIDSessionException(new Exception("CameraWrapper requires a started activity")));
+                return;
+            }
+            cameraWrapper.runInBackground(new StartCameraPreviewBackgroundRunnable(cameraWrapper));
+        }
+    }
+
+    private void startPreview() {
+        runOnMainThread(new StartCameraPreviewRunnable(this));
     }
 
     private Optional<Context> getContext() {
@@ -534,47 +707,72 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         cameraPreviewThread.start();
         cameraPreviewHandler = new Handler(cameraPreviewThread.getLooper());
         backgroundExecutor = Executors.newSingleThreadExecutor();
+//        Log.d(VerID.TAG, "Started background threads");
     }
 
     /**
      * Stops the background thread and its {@link Handler}.
      */
     private void stopBackgroundThread() {
-        if (cameraProcessingThread != null) {
-            cameraProcessingThread.quit();
+//        Log.d(VerID.TAG, "Stopping background threads");
+        try {
+            if (cameraProcessingHandler != null) {
+                cameraProcessingHandler.removeCallbacksAndMessages(null);
+            }
+            if (cameraProcessingThread != null) {
+                cameraProcessingThread.quitSafely();
+                cameraProcessingThread.join(500);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            cameraProcessingThread = null;
+            cameraProcessingHandler = null;
         }
-        cameraProcessingThread = null;
-        cameraProcessingHandler = null;
-        if (cameraPreviewThread != null) {
-            cameraPreviewThread.quit();
+        try {
+            if (cameraPreviewHandler != null) {
+                cameraPreviewHandler.removeCallbacksAndMessages(null);
+            }
+            if (cameraPreviewThread != null) {
+                cameraPreviewThread.quitSafely();
+                cameraPreviewThread.join(500);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            cameraPreviewThread = null;
+            cameraPreviewHandler = null;
         }
-        cameraPreviewThread = null;
-        cameraPreviewHandler = null;
         if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
             backgroundExecutor.shutdown();
         }
         backgroundExecutor = null;
+//        Log.d(VerID.TAG, "Stopped background threads");
     }
 
     //region Lifecycle callbacks
 
     @Override
-    public void onStart(@NonNull LifecycleOwner owner) {
+    public void onResume(@NonNull LifecycleOwner owner) {
+//        Log.d(VerID.TAG, "CameraWrapper onResume");
         if (viewWidth.get() > 0 && viewHeight.get() > 0) {
             start(viewWidth.get(), viewHeight.get(), displayRotation.get());
         }
     }
 
     @Override
-    public void onStop(@NonNull LifecycleOwner owner) {
+    public void onPause(@NonNull LifecycleOwner owner) {
+//        Log.d(VerID.TAG, "CameraWrapper onPause");
         stop();
     }
 
     @Override
     public void onDestroy(@NonNull LifecycleOwner owner) {
+//        Log.d(VerID.TAG, "CameraWrapper onDestroy");
         owner.getLifecycle().removeObserver(this);
         cameraDevice.set(null);
         contextWeakReference.clear();
+        listeners.clear();
     }
 
     //endregion
