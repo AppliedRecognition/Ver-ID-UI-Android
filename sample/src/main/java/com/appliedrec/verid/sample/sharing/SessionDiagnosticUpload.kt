@@ -15,11 +15,13 @@ import com.appliedrec.verid.sample.preferences.PreferenceKeys
 import com.appliedrec.verid.ui2.sharing.SessionResultPackage
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 
-class SessionDiagnosticUpload(val activity: Activity) {
+class SessionDiagnosticUpload(activity: Activity) {
 
     private val sessionDiagnosticCollectionURL = "https://session-upload.ver-id.com"
+    private val activityRef = WeakReference(activity)
 
     fun upload(sessionResultPackage: SessionResultPackage) {
         if (!hasUserConsent) {
@@ -28,6 +30,7 @@ class SessionDiagnosticUpload(val activity: Activity) {
         Executors.newSingleThreadExecutor().execute {
             try {
                 val tempFile = File.createTempFile("diagnostics_", ".zip")
+                val activity = activityRef.get() ?: return@execute
                 FileOutputStream(tempFile).use { outputStream ->
                     sessionResultPackage.archiveToStream(outputStream)
                     val request: OneTimeWorkRequest =
@@ -53,12 +56,18 @@ class SessionDiagnosticUpload(val activity: Activity) {
 
     val hasUserConsent: Boolean
         get() {
+            val activity = activityRef.get() ?: return false
             val preferences = PreferenceManager.getDefaultSharedPreferences(activity)
             val value = preferences.getString(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD, "ask")
             return value == "allow"
         }
 
     fun askForUserConsent(completion: (Boolean) -> Unit) {
+        val activity = activityRef.get()
+        if (activity == null) {
+            completion(false)
+            return
+        }
         val preferences = PreferenceManager.getDefaultSharedPreferences(activity)
         try {
             // Check if user previously allowed or denied consent
@@ -101,6 +110,7 @@ class SessionDiagnosticUpload(val activity: Activity) {
     }
 
     private fun createDiagnosticUploadConsentView(): DiagnosticUploadConsentBinding {
+        val activity = activityRef.get() ?: throw Error("Activity is null")
         return DiagnosticUploadConsentBinding.inflate(activity.layoutInflater, null, false)
     }
 }

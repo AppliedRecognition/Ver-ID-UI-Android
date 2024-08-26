@@ -35,7 +35,37 @@ import java.util.concurrent.atomic.AtomicReference;
  * @since 2.0.0
  */
 @Keep
-public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Application.ActivityLifecycleCallbacks, IdlingResource {
+public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Application.ActivityLifecycleCallbacks {
+
+    private static class StartRunnable implements Runnable {
+        private final WeakReference<VerIDSession> session;
+
+        StartRunnable(VerIDSession session) {
+            this.session = new WeakReference<>(session);
+        }
+
+        @Override
+        public void run() {
+            VerIDSession session = this.session.get();
+            if (session == null) {
+                return;
+            }
+            try {
+                if (session.isStarted.get()) {
+                    throw new VerIDUISessionException(VerIDUISessionException.Code.SESSION_ALREADY_STARTED);
+                }
+                Context context = session.getVerID().getContext().orElseThrow(() -> new VerIDUISessionException(VerIDUISessionException.Code.CONTEXT_UNAVAILABLE));
+                session.isStarted.set(true);
+                session.registerActivityCallbacks();
+                session.startSessionActivity(context);
+            } catch (VerIDUISessionException e) {
+                session.isStarted.set(false);
+                session.onSessionFinished();
+                long now = System.currentTimeMillis();
+                session.getDelegate().ifPresent(listener -> listener.onSessionFinished(session, new VerIDSessionResult(new VerIDSessionException(e), now, now, null)));
+            }
+        }
+    }
 
     private final VerID verID;
     private final VerIDSessionSettings settings;
@@ -43,13 +73,11 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     private final long sessionId;
     private WeakReference<VerIDSessionDelegate> delegateReference;
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
-    private final AtomicBoolean isIdle = new AtomicBoolean(false);
     private ITextSpeaker textSpeaker;
     private final AtomicReference<VerIDSessionResult> sessionResult = new AtomicReference<>();
-    private ResourceCallback idlingResourceCallback;
     private final SessionPrompts sessionPrompts;
     private ISessionVideoRecorder videoRecorder;
-    private AtomicInteger faceCaptureCount = new AtomicInteger(0);
+    private final AtomicInteger faceCaptureCount = new AtomicInteger(0);
 
     static final AtomicLong lastSessionId = new AtomicLong(0);
 
@@ -87,24 +115,8 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
      */
     @Keep
     public void start() {
-        isIdle.set(false);
         faceCaptureCount.set(0);
-        new Handler(Looper.getMainLooper()).post(() -> {
-            try {
-                if (isStarted.get()) {
-                    throw new VerIDUISessionException(VerIDUISessionException.Code.SESSION_ALREADY_STARTED);
-                }
-                Context context = getVerID().getContext().orElseThrow(() -> new VerIDUISessionException(VerIDUISessionException.Code.CONTEXT_UNAVAILABLE));
-                isStarted.set(true);
-                registerActivityCallbacks();
-                startSessionActivity(context);
-            } catch (VerIDUISessionException e) {
-                isStarted.set(false);
-                onSessionFinished();
-                long now = System.currentTimeMillis();
-                getDelegate().ifPresent(listener -> listener.onSessionFinished(this, new VerIDSessionResult(new VerIDSessionException(e), now, now, null)));
-            }
-        });
+        new Handler(Looper.getMainLooper()).post(new StartRunnable(this));
     }
 
     /**
@@ -237,9 +249,6 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     }
 
     private void onSessionFinished() {
-        if (!isIdle.getAndSet(true) && idlingResourceCallback != null) {
-            idlingResourceCallback.onTransitionToIdle();
-        }
         unregisterActivityCallbacks();
         getDelegate().ifPresent(verIDSessionDelegate -> {
             VerIDSessionResult result = sessionResult.getAndSet(null);
@@ -249,6 +258,9 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
                 verIDSessionDelegate.onSessionFinished(this, result);
             }
         });
+        sessionResult.set(null);
+        textSpeaker = null;
+        videoRecorder = null;
     }
 
     private void onSessionCancelled() {
@@ -356,28 +368,6 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     }
 
     //endregion
-
-    //endregion
-
-    //region Idling resource
-
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @Override
-    public String getName() {
-        return "Ver-ID session";
-    }
-
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @Override
-    public boolean isIdleNow() {
-        return isIdle.get();
-    }
-
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @Override
-    public void registerIdleTransitionCallback(ResourceCallback callback) {
-        idlingResourceCallback = callback;
-    }
 
     //endregion
 }

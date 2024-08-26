@@ -1,10 +1,10 @@
 package com.appliedrec.verid.ui2;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.media.Image;
 import android.media.ImageReader;
+import android.util.Log;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
@@ -14,7 +14,6 @@ import com.appliedrec.verid.core2.ExifOrientation;
 import com.appliedrec.verid.core2.IImageProvider;
 import com.appliedrec.verid.core2.ImageUtils;
 import com.appliedrec.verid.core2.VerID;
-import com.appliedrec.verid.core2.VerIDImageBitmap;
 import com.appliedrec.verid.core2.session.IImage;
 import com.appliedrec.verid.core2.session.IImageIterator;
 
@@ -22,6 +21,7 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,73 +54,64 @@ public class VerIDImageIterator implements IImageIterator {
 
     @Override
     public IImageProvider next() {
+        if (imageUtils.get() == null) {
+            return null;
+        }
         try {
+//            Log.d(VerID.TAG, "Taking from image queue");
             return imageQueue.take();
         } catch (InterruptedException ignore) {
             return null;
         }
     }
 
-    private static class MediaImageImage implements IImage<Image> {
-
-        private final Image mediaImage;
-        private final int exifOrientation;
-
-        public MediaImageImage(Image mediaImage, int exifOrientation) {
-            this.mediaImage = mediaImage;
-            this.exifOrientation = exifOrientation;
-        }
+    private record MediaImageImage(Image mediaImage, int exifOrientation) implements IImage<Image> {
 
         @Override
-        public Image getSourceImage() {
-            return mediaImage;
-        }
+            public Image getSourceImage() {
+                return mediaImage;
+            }
 
-        @Override
-        public Rect getCropRect() {
-            return mediaImage.getCropRect();
-        }
+            @Override
+            public Rect getCropRect() {
+                return mediaImage.getCropRect();
+            }
 
-        @Override
-        public int getPlaneCount() {
-            return mediaImage.getPlanes().length;
-        }
+            @Override
+            public int getPlaneCount() {
+                return mediaImage.getPlanes().length;
+            }
 
-        @Override
-        public ByteBuffer getBufferOfPlane(int plane) {
-            return mediaImage.getPlanes()[plane].getBuffer();
-        }
+            @Override
+            public ByteBuffer getBufferOfPlane(int plane) {
+                return mediaImage.getPlanes()[plane].getBuffer();
+            }
 
-        @Override
-        public int getRowStrideOfPlane(int plane) {
-            return mediaImage.getPlanes()[plane].getRowStride();
-        }
+            @Override
+            public int getRowStrideOfPlane(int plane) {
+                return mediaImage.getPlanes()[plane].getRowStride();
+            }
 
-        @Override
-        public int getPixelStrideOfPlane(int plane) {
-            return mediaImage.getPlanes()[plane].getPixelStride();
-        }
+            @Override
+            public int getPixelStrideOfPlane(int plane) {
+                return mediaImage.getPlanes()[plane].getPixelStride();
+            }
 
-        @Override
-        public int getWidth() {
-            return mediaImage.getWidth();
-        }
+            @Override
+            public int getWidth() {
+                return mediaImage.getWidth();
+            }
 
-        @Override
-        public int getHeight() {
-            return mediaImage.getHeight();
-        }
+            @Override
+            public int getHeight() {
+                return mediaImage.getHeight();
+            }
 
-        @Override
-        public int getExifOrientation() {
-            return exifOrientation;
+            @Override
+            public void close() {
+                mediaImage.close();
+            }
         }
-
-        @Override
-        public void close() {
-            mediaImage.close();
-        }
-    }
 
     /**
      * Constructor
@@ -156,9 +147,9 @@ public class VerIDImageIterator implements IImageIterator {
             }
             com.appliedrec.verid.core2.Image verIDImage = imageUtils.verIDImageFromImageSource(image);
             verIDImage.setIsMirrored(isMirrored.get());
+//            Log.d(VerID.TAG, "Putting image in queue");
             imageQueue.put(verIDImage);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ignore) {
         }
     }
 
@@ -195,16 +186,17 @@ public class VerIDImageIterator implements IImageIterator {
         if (context != null) {
             imageUtils.set(new ImageUtils(context));
         }
+//        Log.d(VerID.TAG, "Image iterator activated");
 //        isActive.set(true);
     }
 
     @Override
     public void deactivate() {
-        if (imageUtils.get() == null) {
-            return;
+        ImageUtils imgUtils = imageUtils.getAndSet(null);
+        if (imgUtils != null) {
+            imgUtils.close();
         }
-        imageUtils.get().close();
-        imageUtils.set(null);
+//        Log.d(VerID.TAG, "Image iterator deactivated");
 //        isActive.set(false);
     }
 }

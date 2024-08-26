@@ -4,11 +4,11 @@ open class VerIDVersionExtension {
 
     val versionMajor = 2
     val versionMinor = 13
-    val versionPatch = 0
+    val versionPatch = 5
     val versionClassifier: String? = null
     val versionClassifierVersion: String? = null
 
-    val minSdkVersion = 24
+    val minSdkVersion = 26
     val targetSdkVersion = 34
     val buildToolsVersion = "34"
     val compileSdkVersion = 34

@@ -109,7 +109,7 @@ public class FaceProcessingIndicatorView extends View implements ValueAnimator.A
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         canvas.drawPath(coordinates.getPath(), landmarkPaint);
-        Log.d("Ver-ID", String.format("Drew dot at x: %.0f, y: %.0f", coordinates.getX(), coordinates.getY()));
+//        Log.d("Ver-ID", String.format("Drew dot at x: %.0f, y: %.0f", coordinates.getX(), coordinates.getY()));
     }
 
     @Override

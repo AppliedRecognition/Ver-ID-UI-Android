@@ -61,17 +61,31 @@ public class SessionResultPackage {
         this.settings = settings;
         this.result = result;
         IFaceDetection faceDetection = verID.getFaceDetection();
-        this.environmentSettings = new EnvironmentSettings(
-                ((FaceDetection) faceDetection).detRecLib.getSettings().getDetectorVersion(),
-                ((FaceDetection) faceDetection).detRecLib.getSettings().getConfidenceThreshold(),
-                ((FaceDetection) faceDetection).getFaceExtractQualityThreshold(),
-                ((FaceDetection) faceDetection).getLandmarkTrackingQualityThreshold(),
-                VerID.getVersion(),
-                applicationId,
-                applicationVersion,
-                Build.MANUFACTURER + " " + Build.MODEL,
-                "Android "+ Build.VERSION.RELEASE
-        );
+        if (faceDetection instanceof FaceDetection) {
+            this.environmentSettings = new EnvironmentSettings(
+                    ((FaceDetection) faceDetection).detRecLib.getSettings().getDetectorVersion(),
+                    ((FaceDetection) faceDetection).detRecLib.getSettings().getConfidenceThreshold(),
+                    ((FaceDetection) faceDetection).getFaceExtractQualityThreshold(),
+                    ((FaceDetection) faceDetection).getLandmarkTrackingQualityThreshold(),
+                    VerID.getVersion(),
+                    applicationId,
+                    applicationVersion,
+                    Build.MANUFACTURER + " " + Build.MODEL,
+                    "Android "+ Build.VERSION.RELEASE
+            );
+        } else {
+            this.environmentSettings = new EnvironmentSettings(
+                    8,
+                    Float.NaN,
+                    Float.NaN,
+                    Float.NaN,
+                    VerID.getVersion(),
+                    applicationId,
+                    applicationVersion,
+                    Build.MANUFACTURER + " " + Build.MODEL,
+                    "Android " + Build.VERSION.RELEASE
+            );
+        }
     }
 
     @Keep
