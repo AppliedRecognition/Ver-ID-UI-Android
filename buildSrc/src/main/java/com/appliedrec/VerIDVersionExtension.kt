@@ -4,7 +4,7 @@ open class VerIDVersionExtension {
 
     val versionMajor = 2
     val versionMinor = 13
-    val versionPatch = 5
+    val versionPatch = 7
     val versionClassifier: String? = null
     val versionClassifierVersion: String? = null
 

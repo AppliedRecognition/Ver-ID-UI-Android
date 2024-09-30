@@ -19,12 +19,14 @@
         <item>1.00</item>
     </string-array>
     <string-array name="face_detector_version_values">
-        <item>3</item>
         <item>6</item>
+        <item>7</item>
+        <item>MediaPipe</item>
     </string-array>
     <string-array name="face_detector_versions">
-        <item>Version 3</item>
         <item>Version 6</item>
+        <item>Version 7</item>
+        <item>MediaPipe landmarker</item>
     </string-array>
     <string-array name="yaw_thresholds">
         <item>12.0</item>

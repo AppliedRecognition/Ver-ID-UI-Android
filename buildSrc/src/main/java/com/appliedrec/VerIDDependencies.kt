@@ -43,7 +43,7 @@ object VerIDDependencies {
     const val MOCKITO_ANDROID = "org.mockito:mockito-android:2.28.2"
     const val LIVENESS_DETECTION = "com.appliedrec.verid.livenessdetection:common:1.0.0"
     const val SPOOF_DEVICE_DETECTION = "com.appliedrec.verid.livenessdetection:spoof-device-detection:1.0.0"
-    const val SPOOF_DEVICE_DETECTION_MODELS = "com.appliedrec.verid.livenessdetection:spoof-device-detection-models:1.0.0"
+    const val SPOOF_DEVICE_DETECTION_MODELS = "com.appliedrec.verid.livenessdetection:spoof-device-detection-models:1.0.1"
     const val ANDROIDX_COLLECTION = "androidx.collection:collection:1.2.0"
     const val ANDROIDX_CORE = "androidx.core:core:1.10.0"
     const val KT_COROUTINES_JVM = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.2"

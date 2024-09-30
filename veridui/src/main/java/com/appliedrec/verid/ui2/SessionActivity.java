@@ -59,6 +59,84 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Keep
 public class SessionActivity<T extends View & ISessionView> extends AppCompatActivity implements ISessionActivity, ISessionView.SessionViewListener, Iterable<FaceBounds>, CameraWrapper.Listener {
 
+    private static class OnFaceCapture implements Runnable {
+
+        private final WeakReference<SessionActivity<?>> activityRef;
+        private final WeakReference<FaceCapture> faceCaptureRef;
+
+        OnFaceCapture(SessionActivity<?> activity, FaceCapture faceCapture) {
+            this.activityRef = new WeakReference<>(activity);
+            this.faceCaptureRef = new WeakReference<>(faceCapture);
+        }
+
+        @Override
+        public void run() {
+            SessionActivity<?> activity = activityRef.get();
+            FaceCapture faceCapture = faceCaptureRef.get();
+            if (activity == null || faceCapture == null || activity.isDestroyed() || activity.isFinishing()) {
+                return;
+            }
+            float targetHeight = (float)activity.getFaceImageHeight();
+            float scale = targetHeight / (float) faceCapture.getFaceImage().getHeight();
+            Bitmap bitmap = Bitmap.createScaledBitmap(faceCapture.getFaceImage(), Math.round((float) faceCapture.getFaceImage().getWidth() * scale), Math.round((float) faceCapture.getFaceImage().getHeight() * scale), true);
+            if (activity.getSessionParameters().map(SessionParameters::getCameraLocation).orElse(CameraLocation.FRONT) == CameraLocation.FRONT) {
+                Matrix matrix = new Matrix();
+                matrix.setScale(-1, 1);
+                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+            }
+            activity.faceImages.add(bitmap);
+            List<? extends Drawable> drawables = activity.createFaceDrawables();
+            activity.runOnUiThread(new DrawFaces(activity, drawables));
+        }
+    }
+
+    private static class DrawFaces implements Runnable {
+
+        private final WeakReference<SessionActivity<?>> activityRef;
+        private final WeakReference<List<? extends Drawable>> drawablesRef;
+
+        DrawFaces(SessionActivity<?> activity, List<? extends Drawable> drawables) {
+            activityRef = new WeakReference<>(activity);
+            drawablesRef = new WeakReference<>(drawables);
+        }
+
+        @Override
+        public void run() {
+            SessionActivity<?> activity = activityRef.get();
+            List<? extends Drawable> drawables = drawablesRef.get();
+            if (activity == null || drawables == null || activity.isDestroyed() || activity.isFinishing()) {
+                return;
+            }
+            activity.drawFaces(drawables);
+        }
+    }
+
+    private static class OnFaceDetection implements Runnable {
+
+        private final WeakReference<SessionActivity<?>> activityRef;
+        private final WeakReference<FaceDetectionResult> faceDetectionResultRef;
+        private final String prompt;
+
+        OnFaceDetection(SessionActivity<?> activity, FaceDetectionResult faceDetectionResult, String prompt) {
+            this.activityRef = new WeakReference<>(activity);
+            this.faceDetectionResultRef = new WeakReference<>(faceDetectionResult);
+            this.prompt = prompt;
+        }
+
+        @Override
+        public void run() {
+            SessionActivity<?> activity = activityRef.get();
+            FaceDetectionResult faceDetectionResult = faceDetectionResultRef.get();
+            if (activity == null || activity.isDestroyed() || activity.isFinishing() || faceDetectionResult == null) {
+                return;
+            }
+            if (activity.sessionViewRef.get() == null) {
+                return;
+            }
+            activity.sessionViewRef.get().setFaceDetectionResult(faceDetectionResult, prompt);
+        }
+    }
+
     /**
      * The constant EXTRA_SESSION_ID.
      */
@@ -71,7 +149,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     private ExecutorService backgroundExecutor;
     private final ArrayList<Bitmap> faceImages = new ArrayList<>();
     private WeakReference<CameraWrapper> cameraWrapperRef = new WeakReference<>(null);
-    private T sessionView;
+    private WeakReference<T> sessionViewRef = new WeakReference<>(null);
     private final Object sessionViewLock = new Object();
     private Session<?> session;
     private SessionPrompts sessionPrompts;
@@ -85,15 +163,16 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         faceImages.clear();
         backgroundExecutor = Executors.newSingleThreadExecutor();
         synchronized (sessionViewLock) {
-            sessionView = (T) getSessionParameters().map(SessionParameters::getSessionViewFactory).orElseThrow(RuntimeException::new).apply(this);
+            T sessionView = (T) getSessionParameters().map(SessionParameters::getSessionViewFactory).orElseThrow(RuntimeException::new).apply(this);
             sessionView.setDefaultFaceExtents(getDefaultFaceExtents());
             sessionView.setSessionSettings(getSessionParameters().map(SessionParameters::getSessionSettings).orElse(new LivenessDetectionSessionSettings()));
             sessionView.addListener(this);
+            sessionViewRef = new WeakReference<>(sessionView);
             sessionViewLock.notifyAll();
         }
-        setContentView(sessionView);
+        setContentView(sessionViewRef.get());
         getCameraWrapper().ifPresent(wrapper -> {
-            wrapper.setPreviewClass(sessionView.getPreviewClass());
+            wrapper.setPreviewClass(sessionViewRef.get().getPreviewClass());
             wrapper.addListener(this);
         });
         sessionPrompts = new SessionPrompts(getSessionParameters().map(SessionParameters::getStringTranslator).orElseThrow(RuntimeException::new));
@@ -104,7 +183,9 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         });
         executeInBackground(() -> {
             List<? extends Drawable> drawables = createFaceDrawables();
-            runOnUiThread(() -> drawFaces(drawables));
+            if (!isFinishing() && !isDestroyed()) {
+                runOnUiThread(new DrawFaces(this, drawables));
+            }
         });
     }
 
@@ -119,7 +200,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         sessionParameters = null;
         getCameraWrapper().ifPresent(wrapper -> wrapper.removeListener(this));
         getSessionView().ifPresent(view -> view.removeListener(this));
-        sessionView = null;
+        sessionViewRef.clear();
         getSessionVideoRecorder().ifPresent(getLifecycle()::removeObserver);
         getSession().ifPresent(session1 -> {
             session1.getFaceDetectionLiveData().removeObservers(this);
@@ -127,7 +208,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
             session1.getSessionResultLiveData().removeObservers(this);
             session = null;
         });
-        cameraWrapperRef = new WeakReference<>(null);
+        cameraWrapperRef.clear();
     }
 
     @Override
@@ -223,7 +304,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     @NonNull
     protected Optional<T> getSessionView() {
-        return Optional.ofNullable(sessionView);
+        return Optional.ofNullable(sessionViewRef.get());
     }
 
     @Keep
@@ -248,10 +329,10 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
 
     @Keep
     protected void drawFaces(List<? extends Drawable> faceImages) {
-        if (sessionView == null) {
+        if (sessionViewRef.get() == null) {
             return;
         }
-        sessionView.drawFaces(faceImages);
+        sessionViewRef.get().drawFaces(faceImages);
     }
 
     //region ISessionActivity
@@ -271,7 +352,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
             sessionParameters.getVideoRecorder().ifPresent(videoRecorder -> getLifecycle().addObserver(videoRecorder));
             cameraWrapperRef = new WeakReference<>(cameraWrapper);
         } else {
-            cameraWrapperRef = new WeakReference<>(null);
+            cameraWrapperRef.clear();
             session = null;
         }
     }
@@ -281,31 +362,14 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
         getSessionParameters().flatMap(SessionParameters::getFaceDetectionResultObserver).ifPresent(observer -> observer.onChanged(faceDetectionResult));
 
         String prompt = sessionPrompts.promptFromFaceDetectionResult(faceDetectionResult).orElse(null);
-        runOnUiThread(() -> {
-            if (sessionView == null) {
-                return;
-            }
-            sessionView.setFaceDetectionResult(faceDetectionResult, prompt);
-        });
+        runOnUiThread(new OnFaceDetection(this, faceDetectionResult, prompt));
     }
 
     @Keep
     protected void onFaceCapture(@NonNull FaceCapture faceCapture) {
         getSessionParameters().flatMap(SessionParameters::getFaceCaptureObserver).ifPresent(faceCaptureObserver -> faceCaptureObserver.onChanged(faceCapture));
         if (getSessionParameters().map(SessionParameters::getSessionSettings).orElse(null) instanceof RegistrationSessionSettings) {
-            executeInBackground(() -> {
-                float targetHeight = (float)getFaceImageHeight();
-                float scale = targetHeight / (float) faceCapture.getFaceImage().getHeight();
-                Bitmap bitmap = Bitmap.createScaledBitmap(faceCapture.getFaceImage(), Math.round((float) faceCapture.getFaceImage().getWidth() * scale), Math.round((float) faceCapture.getFaceImage().getHeight() * scale), true);
-                if (getSessionParameters().map(SessionParameters::getCameraLocation).orElse(CameraLocation.FRONT) == CameraLocation.FRONT) {
-                    Matrix matrix = new Matrix();
-                    matrix.setScale(-1, 1);
-                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                }
-                faceImages.add(bitmap);
-                List<? extends Drawable> drawables = createFaceDrawables();
-                runOnUiThread(() -> drawFaces(drawables));
-            });
+            executeInBackground(new OnFaceCapture(this, faceCapture));
         }
     }
 
@@ -358,7 +422,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
             }
         };
         if (getSessionView().isPresent()) {
-            sessionView.willFinishWithResult(result, onViewFinished);
+            sessionViewRef.get().willFinishWithResult(result, onViewFinished);
         } else {
             onViewFinished.run();
         }
@@ -402,8 +466,6 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @DrawableRes
     private int placeholderImageForBearing(Bearing bearing) {
         switch (bearing) {
-            case STRAIGHT:
-                return R.mipmap.head_straight;
             case LEFT:
                 return R.mipmap.head_left;
             case RIGHT:
@@ -516,7 +578,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
     @Keep
     public Iterator<FaceBounds> iterator() {
         synchronized (sessionViewLock) {
-            while (sessionView == null) {
+            while (sessionViewRef.get() == null) {
                 try {
                     sessionViewLock.wait();
                 } catch (InterruptedException ignore) {
@@ -533,7 +595,7 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
                     };
                 }
             }
-            return sessionView;
+            return sessionViewRef.get();
         }
     }
 
@@ -543,8 +605,11 @@ public class SessionActivity<T extends View & ISessionView> extends AppCompatAct
 
     @Override
     public void onCameraPreviewSize(int width, int height, int sensorOrientation) {
-        sessionView.setPreviewSize(width, height, sensorOrientation);
-        sessionView.setCameraPreviewMirrored(getSessionParameters().map(params -> params.getCameraLocation() == CameraLocation.FRONT).orElse(true));
+        if (sessionViewRef.get() == null) {
+            return;
+        }
+        sessionViewRef.get().setPreviewSize(width, height, sensorOrientation);
+        sessionViewRef.get().setCameraPreviewMirrored(getSessionParameters().map(params -> params.getCameraLocation() == CameraLocation.FRONT).orElse(true));
     }
 
     @Override

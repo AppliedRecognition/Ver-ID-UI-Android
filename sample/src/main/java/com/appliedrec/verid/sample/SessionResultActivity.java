@@ -197,7 +197,11 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
                 transaction.add(R.id.content, SessionResultHeadingFragment.newInstance("Environment"));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Ver-ID version", sessionResultPackage.getEnvironmentSettings().getVeridVersion()));
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face template extraction threshold", String.format(Locale.ROOT, "%.01f", sessionResultPackage.getEnvironmentSettings().getFaceTemplateExtractionThreshold())));
-                transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detector version", String.format(Locale.ROOT, "%d", sessionResultPackage.getEnvironmentSettings().getFaceDetectorVersion())));
+                if (sessionResultPackage.getEnvironmentSettings().getFaceDetectorVersion() == -1) {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detector version", "MediaPipe landmarker"));
+                } else {
+                    transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detector version", String.format(Locale.ROOT, "%d", sessionResultPackage.getEnvironmentSettings().getFaceDetectorVersion())));
+                }
                 transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Confidence threshold", String.format(Locale.ROOT, "%.01f", sessionResultPackage.getEnvironmentSettings().getConfidenceThreshold())));
             }
             transaction.commit();

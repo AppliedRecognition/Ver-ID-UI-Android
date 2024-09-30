@@ -12,6 +12,7 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
@@ -57,7 +58,7 @@ public class OvalMaskView extends View {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         if (maskBitmap == null || tempCanvas == null || maskRect == null) {
             return;
@@ -74,5 +75,23 @@ public class OvalMaskView extends View {
         tempCanvas.drawColor(backgroundColor);
         tempCanvas.drawOval(this.maskRect, maskPaint);
         canvas.drawBitmap(maskBitmap, 0, 0, null);
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (tempCanvas != null) {
+            tempCanvas.setBitmap(null);
+            tempCanvas = null;
+        }
+        if (maskBitmap != null) {
+            maskBitmap.recycle();
+            maskBitmap = null;
+        }
     }
 }
