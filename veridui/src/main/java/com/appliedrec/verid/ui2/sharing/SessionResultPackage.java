@@ -75,7 +75,7 @@ public class SessionResultPackage {
             );
         } else {
             this.environmentSettings = new EnvironmentSettings(
-                    8,
+                    -1,
                     Float.NaN,
                     Float.NaN,
                     Float.NaN,

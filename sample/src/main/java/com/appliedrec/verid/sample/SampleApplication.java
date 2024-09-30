@@ -15,11 +15,15 @@ import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.FaceDetectionRecognitionFactory;
 import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
+import com.appliedrec.verid.core2.IFaceDetection;
+import com.appliedrec.verid.core2.IFaceDetectionFactory;
 import com.appliedrec.verid.core2.UserManagementFactory;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDFaceTemplateVersion;
 import com.appliedrec.verid.core2.VerIDFactory;
 import com.appliedrec.verid.core2.VerIDFactoryDelegate;
+import com.appliedrec.verid.core2.util.Log;
+import com.appliedrec.verid.facedetection.mediapipe.FaceDetection;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 
 import java.util.ArrayList;
@@ -27,7 +31,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class SampleApplication extends MultiDexApplication implements VerIDFactoryDelegate, SharedPreferences.OnSharedPreferenceChangeListener, Application.ActivityLifecycleCallbacks {
+public class SampleApplication extends MultiDexApplication implements VerIDFactoryDelegate, SharedPreferences.OnSharedPreferenceChangeListener, Application.ActivityLifecycleCallbacks, IFaceDetectionFactory {
 
     private AtomicReference<VerID> verID = new AtomicReference<>();
     private final ArrayList<IVerIDLoadObserver> createdActivities = new ArrayList<>();
@@ -37,6 +41,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.setEnabled(BuildConfig.DEBUG);
         mainHandler = new Handler(Looper.getMainLooper());
         registerActivityLifecycleCallbacks(this);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -62,8 +67,14 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         if (preferences.contains(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD)) {
             faceDetectionRecognitionSettings.setFaceExtractQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD, String.format(Locale.ROOT, "%.01f", faceDetectionRecognitionSettings.getFaceExtractQualityThreshold()))));
         }
+        boolean useMediaPipeFaceDetection = false;
         if (preferences.contains(PreferenceKeys.FACE_DETECTOR_VERSION)) {
-            faceDetectionRecognitionSettings.setDetectorVersion(Integer.parseInt(preferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, Integer.toString(faceDetectionRecognitionSettings.getDetectorVersion()))));
+            String faceDetector = preferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, Integer.toString(faceDetectionRecognitionSettings.getDetectorVersion()));
+            if (faceDetector.matches("^\\d+$")) {
+                faceDetectionRecognitionSettings.setDetectorVersion(Integer.parseInt(preferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, Integer.toString(faceDetectionRecognitionSettings.getDetectorVersion()))));
+            } else {
+                useMediaPipeFaceDetection = true;
+            }
         }
         if (preferences.contains(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD)) {
             faceDetectionRecognitionSettings.setLandmarkTrackingQualityThreshold(Float.parseFloat(preferences.getString(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD, String.format(Locale.ROOT, "%.01f", faceDetectionRecognitionSettings.getLandmarkTrackingQualityThreshold()))));
@@ -72,7 +83,11 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         faceDetectionRecognitionFactory.setDefaultFaceTemplateVersion(VerIDFaceTemplateVersion.getLatest());
         VerIDFactory verIDFactory = new VerIDFactory(this, this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
-        verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
+        if (useMediaPipeFaceDetection) {
+            verIDFactory.setFaceDetectionFactory(this);
+        } else {
+            verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);
+        }
         verIDFactory.setFaceRecognitionFactory(faceDetectionRecognitionFactory);
         verIDFactory.createVerID();
     }
@@ -173,6 +188,11 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         if (activity instanceof ErrorActivity) {
             loadVerID();
         }
+    }
+
+    @Override
+    public IFaceDetection createFaceDetection() throws Exception {
+        return new FaceDetection(this);
     }
 
     //endregion

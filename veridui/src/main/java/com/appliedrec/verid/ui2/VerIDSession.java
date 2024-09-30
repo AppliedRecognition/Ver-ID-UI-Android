@@ -8,12 +8,15 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
+import androidx.collection.ArraySet;
 import androidx.test.espresso.IdlingResource;
 
 import com.appliedrec.verid.core2.VerID;
@@ -22,8 +25,10 @@ import com.appliedrec.verid.core2.session.SessionFunctions;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
+import com.appliedrec.verid.core2.util.Log;
 
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -224,7 +229,13 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-        context.startActivity(intent);
+//        if (context instanceof ComponentActivity) {
+//            ((ComponentActivity) context).registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+//                Log.v("Session activity finished");
+//            }).launch(intent);
+//        } else {
+            context.startActivity(intent);
+//        }
     }
 
     @UiThread
@@ -296,6 +307,12 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle bundle) {
+        if ((activity instanceof VerIDSessionDelegate) && bundle != null) {
+            long delegateId = bundle.getLong("verIDSessionDelegateId", -1);
+            if (delegateId == getSessionIdentifier()) {
+                delegateReference = new WeakReference<>((VerIDSessionDelegate) activity);
+            }
+        }
         sessionActivity(activity).ifPresent(sessionActivity -> {
             SessionParameters sessionParameters = new SessionParameters(verID, settings, getCameraLens(), getDelegate().map(delegate -> delegate.createSessionViewFactory(this)).orElse(SessionView::new), stringTranslator, getDelegate().map(delegate -> delegate.createSessionFunctions(this, getVerID(), getSettings())).orElse(new SessionFunctions(getVerID(), getSettings())));
             getVideoRecorder().ifPresent(sessionParameters::setVideoRecorder);
@@ -358,13 +375,17 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivityStopped(@NonNull Activity activity) {
+        if ((activity instanceof VerIDSessionDelegate) && !activity.isFinishing() && activity == delegateReference.get()) {
 
+        }
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Override
     public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
-
+        if (activity instanceof VerIDSessionDelegate) {
+            outState.putLong("verIDSessionDelegateId", getSessionIdentifier());
+        }
     }
 
     //endregion

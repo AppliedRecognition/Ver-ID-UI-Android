@@ -51,6 +51,9 @@ import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
+import com.appliedrec.verid.ui2.VerIDSessionActivity;
+import com.appliedrec.verid.ui2.VerIDSessionActivityContract;
+import com.appliedrec.verid.ui2.VerIDSessionActivitySettings;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
 import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
@@ -200,12 +203,36 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
+//        authenticationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
         VerIDSession authenticationSession;
         authenticationSession = new VerIDSession(verID, settings);
         authenticationSession.setDelegate(this);
         authenticationSession.start();
     }
     //endregion
+
+    private ActivityResultLauncher<VerIDSessionActivitySettings> authenticationSessionLauncher = registerForActivityResult(new VerIDSessionActivityContract(), result -> {
+        if (result != null) {
+            if (result.getError().isPresent()) {
+                Toast.makeText(this, "Authentication failed: "+result.getError().get().getMessage(), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Authentication succeeded", Toast.LENGTH_SHORT).show();
+            }
+        }
+    });
+
+    private ActivityResultLauncher<VerIDSessionActivitySettings> registrationSessionLauncher = registerForActivityResult(new VerIDSessionActivityContract(), result -> {
+        if (result != null && !result.getError().isPresent()) {
+            result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
+                try {
+                    profilePhotoHelper.setProfilePhoto(faceCapture.getFaceImage());
+                    loadProfilePicture();
+                    Toast.makeText(this, "Registration succeeded", Toast.LENGTH_SHORT).show();
+                } catch (Exception ignore) {
+                }
+            });
+        }
+    });
 
     //region Registration
 
@@ -223,9 +250,10 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(true);
-        VerIDSession registrationSession = new VerIDSession(verID, settings);
-        registrationSession.setDelegate(this);
-        registrationSession.start();
+        registrationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
+//        VerIDSession registrationSession = new VerIDSession(verID, settings);
+//        registrationSession.setDelegate(this);
+//        registrationSession.start();
     }
 
     private void unregisterUser() {

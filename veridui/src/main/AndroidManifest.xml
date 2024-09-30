@@ -3,13 +3,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.appliedrec.verid.ui2">
 
+    <uses-sdk tools:overrideLibrary="io.github.sceneview" />
+
     <uses-feature android:name="android.hardware.camera.any" />
 
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-sdk tools:overrideLibrary="io.github.sceneview" />
-
     <application>
+        <activity
+            android:name=".VerIDSessionActivity"
+            android:exported="false" />
         <activity
             android:name=".SessionActivity"
             android:theme="@style/CameraActivityTheme" />

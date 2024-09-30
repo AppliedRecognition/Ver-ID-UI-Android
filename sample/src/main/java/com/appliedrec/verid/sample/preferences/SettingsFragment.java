@@ -19,6 +19,7 @@ import androidx.preference.SwitchPreferenceCompat;
 
 import com.appliedrec.verid.core2.FaceDetection;
 import com.appliedrec.verid.core2.FaceDetectionRecognitionSettings;
+import com.appliedrec.verid.core2.IFaceDetection;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
@@ -60,7 +61,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         } catch (Exception e) {
             verID = null;
         }
-        if (verID == null || !(verID.getFaceDetection() instanceof FaceDetection)) {
+        if (verID == null) {
             return;
         }
 
@@ -97,7 +98,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
 
         // FACE DETECTION
         int i = 0;
-        FaceDetection faceDetection = (FaceDetection) verID.getFaceDetection();
+        IFaceDetection faceDetection = verID.getFaceDetection();
 
         PreferenceCategory faceDetectionCategory = new PreferenceCategory(context);
         faceDetectionCategory.setTitle(R.string.face_detection);
@@ -108,14 +109,25 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         confidenceThresholdPreference.setEntries(R.array.confidence_threshold_values);
         confidenceThresholdPreference.setTitle(R.string.confidence_threshold);
         confidenceThresholdPreference.setKey(PreferenceKeys.CONFIDENCE_THRESHOLD);
+        confidenceThresholdPreference.setEnabled(faceDetection instanceof FaceDetection);
         for (CharSequence val : confidenceThresholdPreference.getEntryValues()) {
-            if (val.toString().equals(String.format(Locale.ROOT, "%.02f", faceDetection.detRecLib.getSettings().getConfidenceThreshold()))) {
+            if ((faceDetection instanceof FaceDetection) && val.toString().equals(String.format(Locale.ROOT, "%.02f", ((FaceDetection)faceDetection).detRecLib.getSettings().getConfidenceThreshold()))) {
                 confidenceThresholdPreference.setValueIndex(i);
                 break;
             }
             i++;
         }
-        confidenceThresholdPreference.setSummaryProvider(pref -> sharedPreferences.getString(pref.getKey(), String.format(Locale.ROOT, "%.02f", faceDetection.detRecLib.getSettings().getConfidenceThreshold())));
+        confidenceThresholdPreference.setSummaryProvider(pref -> {
+            if (sharedPreferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, "").contains("MediaPipe")) {
+                return "N/A";
+            } else {
+                float defaultValue = new FaceDetectionRecognitionSettings(null).getConfidenceThreshold();
+                if (faceDetection instanceof FaceDetection) {
+                    defaultValue = ((FaceDetection) faceDetection).detRecLib.getSettings().getConfidenceThreshold();
+                }
+                return sharedPreferences.getString(pref.getKey(), String.format(Locale.ROOT, "%.02f", defaultValue));
+            }
+        });
         faceDetectionCategory.addPreference(confidenceThresholdPreference);
 
         ListPreference faceDetectorVersionPreference = new ListPreference(context);
@@ -125,13 +137,23 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         faceDetectorVersionPreference.setKey(PreferenceKeys.FACE_DETECTOR_VERSION);
         i=0;
         for (CharSequence val : faceDetectorVersionPreference.getEntryValues()) {
-            if (val.toString().equals(String.format(Locale.ROOT, "%d", faceDetection.detRecLib.getSettings().getDetectorVersion()))) {
+            if ((faceDetection instanceof FaceDetection) && val.toString().equals(String.format(Locale.ROOT, "%d", ((FaceDetection)faceDetection).detRecLib.getSettings().getDetectorVersion()))) {
+                faceDetectorVersionPreference.setValueIndex(i);
+                break;
+            }
+            if (val.toString().contains("MediaPipe")) {
                 faceDetectorVersionPreference.setValueIndex(i);
                 break;
             }
             i ++;
         }
-        faceDetectorVersionPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%d", faceDetection.detRecLib.getSettings().getDetectorVersion())));
+        faceDetectorVersionPreference.setSummaryProvider(preference -> {
+            if (faceDetection instanceof FaceDetection) {
+                return sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%d", ((FaceDetection)faceDetection).detRecLib.getSettings().getDetectorVersion()));
+            } else {
+                return "MediaPipe";
+            }
+        });
         faceDetectionCategory.addPreference(faceDetectorVersionPreference);
 
         ListPreference faceTemplateExtractionThresholdPreference = new ListPreference(context);
@@ -139,15 +161,26 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         faceTemplateExtractionThresholdPreference.setEntryValues(R.array.face_template_extraction_thresholds);
         faceTemplateExtractionThresholdPreference.setTitle(R.string.face_template_extraction_threshold);
         faceTemplateExtractionThresholdPreference.setKey(PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD);
+        faceTemplateExtractionThresholdPreference.setEnabled(faceDetection instanceof FaceDetection);
         i=0;
         for (CharSequence val : faceTemplateExtractionThresholdPreference.getEntryValues()) {
-            if (val.toString().equals(String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getFaceExtractQualityThreshold()))) {
+            if ((faceDetection instanceof FaceDetection) && val.toString().equals(String.format(Locale.ROOT, "%.01f", ((FaceDetection)faceDetection).detRecLib.getSettings().getFaceExtractQualityThreshold()))) {
                 faceTemplateExtractionThresholdPreference.setValueIndex(i);
                 break;
             }
             i++;
         }
-        faceTemplateExtractionThresholdPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getFaceExtractQualityThreshold())));
+        faceTemplateExtractionThresholdPreference.setSummaryProvider(preference -> {
+            if (sharedPreferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, "").contains("MediaPipe")) {
+                return "N/A";
+            } else {
+                float defaultValue = new FaceDetectionRecognitionSettings(null).getFaceExtractQualityThreshold();
+                if (faceDetection instanceof FaceDetection) {
+                    defaultValue = ((FaceDetection) faceDetection).detRecLib.getSettings().getFaceExtractQualityThreshold();
+                }
+                return sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", defaultValue));
+            }
+        });
         faceDetectionCategory.addPreference(faceTemplateExtractionThresholdPreference);
 
         ListPreference landmarkTrackingThresholdPreference = new ListPreference(context);
@@ -155,15 +188,26 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         landmarkTrackingThresholdPreference.setEntryValues(R.array.face_template_extraction_thresholds);
         landmarkTrackingThresholdPreference.setTitle(R.string.face_landmark_tracking_threshold);
         landmarkTrackingThresholdPreference.setKey(PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD);
+        landmarkTrackingThresholdPreference.setEnabled(faceDetection instanceof FaceDetection);
         i=0;
         for (CharSequence val : landmarkTrackingThresholdPreference.getEntryValues()) {
-            if (val.toString().equals(String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getLandmarkTrackingQualityThreshold()))) {
+            if ((faceDetection instanceof FaceDetection) && val.toString().equals(String.format(Locale.ROOT, "%.01f", ((FaceDetection)faceDetection).detRecLib.getSettings().getLandmarkTrackingQualityThreshold()))) {
                 landmarkTrackingThresholdPreference.setValueIndex(i);
                 break;
             }
             i++;
         }
-        landmarkTrackingThresholdPreference.setSummaryProvider(preference -> sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", faceDetection.detRecLib.getSettings().getLandmarkTrackingQualityThreshold())));
+        landmarkTrackingThresholdPreference.setSummaryProvider(preference -> {
+            if (sharedPreferences.getString(PreferenceKeys.FACE_DETECTOR_VERSION, "").contains("MediaPipe")) {
+                return "N/A";
+            } else {
+                float defaultValue = new FaceDetectionRecognitionSettings(null).getLandmarkTrackingQualityThreshold();
+                if (faceDetection instanceof FaceDetection) {
+                    defaultValue = ((FaceDetection) faceDetection).detRecLib.getSettings().getLandmarkTrackingQualityThreshold();
+                }
+                return sharedPreferences.getString(preference.getKey(), String.format(Locale.ROOT, "%.01f", defaultValue));
+            }
+        });
         faceDetectionCategory.addPreference(landmarkTrackingThresholdPreference);
 
         Preference faceWidthPref = new Preference(context);
@@ -251,8 +295,8 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
         ListPreference allowDiagnosticUpload = new ListPreference(context);
         allowDiagnosticUpload.setTitle(R.string.allow_diagnostic_upload);
         allowDiagnosticUpload.setKey(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD);
-        allowDiagnosticUpload.setEntries(diagnosticUploadMap.values().toArray(String[]::new));
-        allowDiagnosticUpload.setEntryValues(diagnosticUploadMap.keySet().toArray(String[]::new));
+        allowDiagnosticUpload.setEntries(diagnosticUploadMap.values().stream().toArray(String[]::new));
+        allowDiagnosticUpload.setEntryValues(diagnosticUploadMap.keySet().stream().toArray(String[]::new));
         String diagnosticUploadPreference = sharedPreferences.getString(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD, "ask");
         allowDiagnosticUpload.setValue(diagnosticUploadPreference);
         allowDiagnosticUpload.setDialogTitle(R.string.allow_diagnostic_upload);
@@ -295,6 +339,16 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
             Preference preference = findPreference(s);
             if (preference != null) {
                 preference.setSummary(summary);
+            }
+        } else if (s.equals(PreferenceKeys.FACE_DETECTOR_VERSION)) {
+            String detector = sharedPreferences.getString(s, null);
+            String[] prefs = new String[]{PreferenceKeys.CONFIDENCE_THRESHOLD, PreferenceKeys.FACE_LANDMARK_TRACKING_THRESHOLD, PreferenceKeys.FACE_TEMPLATE_EXTRACTION_THRESHOLD};
+            boolean enable = detector == null || !detector.contains("MediaPipe");
+            for (String pref : prefs) {
+                Preference preference = findPreference(pref);
+                if (preference != null) {
+                    preference.setEnabled(enable);
+                }
             }
         }
     }

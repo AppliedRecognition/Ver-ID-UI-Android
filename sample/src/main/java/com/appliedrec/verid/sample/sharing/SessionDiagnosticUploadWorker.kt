@@ -1,10 +1,16 @@
 package com.appliedrec.verid.sample.sharing
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
+import android.os.Build
 import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.core.app.NotificationCompat
+import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import com.appliedrec.verid.core2.util.Log
 import com.google.common.util.concurrent.ListenableFuture
 import java.io.File
 import java.io.FileInputStream
@@ -34,15 +40,41 @@ class SessionDiagnosticUploadWorker(context: Context, workerParams: WorkerParame
                         throw IOException("Session diagnostics upload responded with code ${connection.responseCode}")
                     }
                     Log.d(
-                        "Ver-ID",
                         "Session diagnostics uploaded to ${uploadURL}"
                     )
                     callback.set(Result.success())
                 } catch (error: Exception) {
-                    Log.e("Ver-ID", "Failed to upload session diagnostics", error)
+                    Log.e("Failed to upload session diagnostics", error)
                     callback.set(Result.failure())
                 }
             }
         }
+    }
+
+    override fun getForegroundInfoAsync(): ListenableFuture<ForegroundInfo> {
+        return CallbackToFutureAdapter.getFuture { completer ->
+            val notification = createNotification()
+            val foregroundInfo = ForegroundInfo(NOTIFICATION_ID, notification)
+            completer.set(foregroundInfo)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        val channelId = "upload_channel"
+        val channelName = "Upload Channel"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
+            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+        return NotificationCompat.Builder(applicationContext, channelId)
+            .setContentTitle("Uploading Session Diagnostics")
+            .setContentText("Session diagnostic upload in progress")
+            .setSmallIcon(android.R.drawable.ic_menu_upload)
+            .build()
+    }
+
+    companion object {
+        const val NOTIFICATION_ID = 1
     }
 }

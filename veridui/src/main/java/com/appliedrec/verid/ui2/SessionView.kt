@@ -1,37 +1,57 @@
 package com.appliedrec.verid.ui2
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.RectF
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.util.Log
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.AnimationVector4D
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateValue
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -45,10 +65,21 @@ import com.appliedrec.verid.core2.Size
 import com.appliedrec.verid.core2.session.FaceDetectionResult
 import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
+import com.appliedrec.verid.core2.util.Log
 import com.appliedrec.verid.ui2.ui.theme.SessionTheme
 import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
-import kotlinx.coroutines.*
-import kotlin.math.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.sin
 
 class SessionView @JvmOverloads constructor(
     context: Context,
@@ -151,6 +182,16 @@ class SessionView @JvmOverloads constructor(
         addView(composeView)
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        textureView.surfaceTextureListener = this
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        textureView.surfaceTextureListener = null
+    }
+
     private fun updateColors() {
         when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
             Configuration.UI_MODE_NIGHT_NO -> {
@@ -170,14 +211,17 @@ class SessionView @JvmOverloads constructor(
         faceDetectionResult: FaceDetectionResult?,
         prompt: String?
     ) {
+        Log.v("Setting face detection result ${faceDetectionResult?.status.toString()} in session view")
         post {
+            Log.v("Posting face detection result ${faceDetectionResult?.status.toString()} in session view")
             if (isFinishing) {
+                Log.v("Return: Session view is finishing")
                 return@post
             }
             if (faceCaptureCount >= sessionSettings.faceCaptureCount) {
+                Log.v("Return: Face capture count is ${faceCaptureCount}")
                 return@post
             }
-            textureView.alpha = 1f
             if (faceDetectionResult?.status == FaceDetectionStatus.FACE_MISALIGNED) {
                 if (latestMisalignTime == null) {
                     latestMisalignTime = System.currentTimeMillis()
@@ -186,6 +230,7 @@ class SessionView @JvmOverloads constructor(
                 latestMisalignTime = null
             }
             faceDetectionResult?.let {
+                textureView.alpha = 1f
                 val previewVisible = if (it.status == FaceDetectionStatus.FACE_ALIGNED) View.INVISIBLE else View.VISIBLE
                 textureView.visibility = previewVisible
                 ovalMaskView.visibility = previewVisible
@@ -212,7 +257,7 @@ class SessionView @JvmOverloads constructor(
         return Size(width, height)
     }
 
-    override fun getTextureView(): TextureView {
+    override fun getTextureView(): TextureView? {
         return textureView
     }
 
@@ -241,7 +286,7 @@ class SessionView @JvmOverloads constructor(
     }
 
     private fun getDefaultFaceRectFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult): RectF {
-        return faceDetectionResult.defaultFaceBounds.translatedToImageSize(viewSize)
+        return faceDetectionResult?.defaultFaceBounds?.translatedToImageSize(viewSize) ?: RectF()
     }
 
     private fun getCameraViewMatrixFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult): Matrix {

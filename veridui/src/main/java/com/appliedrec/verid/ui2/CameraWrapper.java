@@ -18,7 +18,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
@@ -36,6 +35,7 @@ import com.appliedrec.verid.core2.ExifOrientation;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.IImageIterator;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
+import com.appliedrec.verid.core2.util.Log;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -84,10 +84,10 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     private final WeakReference<Context> contextWeakReference;
     private final CameraLocation cameraLocation;
-    private final WeakReference<IImageIterator> imageIteratorRef;
+    private IImageIterator imageIterator;
     private final AtomicReference<String> cameraId = new AtomicReference<>();
     private ImageReader imageReader;
-    private final WeakReference<ISessionVideoRecorder> videoRecorderRef;
+    private ISessionVideoRecorder videoRecorder;
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
     private final AtomicReference<CameraDevice> cameraDevice = new AtomicReference<>();
     private HandlerThread cameraProcessingThread;
@@ -137,8 +137,8 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     public CameraWrapper(@NonNull Context context, @NonNull CameraLocation cameraLocation, @NonNull IImageIterator imageIterator, @Nullable ISessionVideoRecorder videoRecorder) {
         contextWeakReference = new WeakReference<>(context.getApplicationContext());
         this.cameraLocation = cameraLocation;
-        this.imageIteratorRef = new WeakReference<>(imageIterator);
-        this.videoRecorderRef = new WeakReference<>(videoRecorder);
+        this.imageIterator = imageIterator;
+        this.videoRecorder = videoRecorder;
         if (context instanceof LifecycleOwner) {
             if (((LifecycleOwner)context).getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
                 throw new IllegalStateException();
@@ -199,7 +199,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         if (!isStarted.compareAndSet(false, true)) {
             return;
         }
-//        Log.d(VerID.TAG, "Starting camera");
+        Log.v("Starting camera");
         startBackgroundThread();
         this.viewWidth.set(width);
         this.viewHeight.set(height);
@@ -216,11 +216,31 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         if (!isStarted.compareAndSet(true, false)) {
             return;
         }
-//        Log.d(VerID.TAG, "Stopping camera");
+        Log.v("Stopping camera");
         isCameraOpen.set(false);
         try {
             if (cameraOpenCloseLock.tryAcquire(3, TimeUnit.SECONDS)) {
-//                Log.d(VerID.TAG, "Acquired camera lock");
+                Log.v("Acquired camera lock");
+                if (imageIterator != null) {
+                    imageIterator.deactivate();
+                    imageIterator = null;
+                }
+                CameraDevice camera = cameraDevice.getAndSet(null);
+                if (camera != null) {
+                    if (cameraCaptureSession != null) {
+                        Log.v("Closing camera capture session");
+                        try {
+                            cameraCaptureSession.stopRepeating();
+                        } catch (CameraAccessException ignore) {
+                        }
+                        cameraCaptureSession.close();
+                        Log.v("Closed camera capture session");
+                        cameraCaptureSession = null;
+                    }
+                    Log.v("Closing camera");
+                    camera.close();
+                    Log.v("Closed camera");
+                }
                 if (imageReader != null) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         imageReader.discardFreeBuffers();
@@ -229,38 +249,27 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                     if (imageReader.getSurface() != null) {
                         imageReader.getSurface().release();
                     }
-//                    Log.d(VerID.TAG, "Closing image reader");
+                    Log.v("Closing image reader");
                     imageReader.close();
-//                    Log.d(VerID.TAG, "Closed image reader");
+                    Log.v("Closed image reader");
                     imageReader = null;
                 }
                 Surface previewSurface = surfaceRef.get();
                 if (previewSurface != null) {
-//                    Log.d(VerID.TAG, "Releasing preview surface");
+                    Log.v("Releasing preview surface");
                     previewSurface.release();
-//                    Log.d(VerID.TAG, "Released preview surface");
+                    Log.v("Released preview surface");
                     surfaceRef.set(null);
                 }
-                if (cameraCaptureSession != null) {
-//                    Log.d(VerID.TAG, "Closing camera capture session");
-                    cameraCaptureSession.close();
-//                    Log.d(VerID.TAG, "Closed camera capture session");
-                    cameraCaptureSession = null;
-                }
-                CameraDevice camera = cameraDevice.getAndSet(null);
-                if (camera != null) {
-//                    Log.d(VerID.TAG, "Closing camera");
-                    camera.close();
-//                    Log.d(VerID.TAG, "Closed camera");
-                }
                 cameraOpenCloseLock.release();
-//                Log.d(VerID.TAG, "Released camera lock");
+                Log.v("Released camera lock");
             }
         } catch (InterruptedException e) {
-//            Log.e(VerID.TAG, "Exception when stopping camera", e);
+            Log.e("Exception when stopping camera", e);
         } finally {
             stopBackgroundThread();
         }
+        Log.d("Camera stopped");
     }
 
     /**
@@ -270,7 +279,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
      */
     @Keep
     public IImageIterator getImageIterator() {
-        return imageIteratorRef.get();
+        return imageIterator;
     }
 
     //endregion
@@ -420,7 +429,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 Size previewSize = sizes[0];
 
                 cameraWrapper.imageReader = ImageReader.newInstance(sizes[1].getWidth(), sizes[1].getHeight(), ImageFormat.YUV_420_888, 2);
-                cameraWrapper.imageIteratorRef.get().setExifOrientation(cameraWrapper.getExifOrientation(rotation));
+                cameraWrapper.imageIterator.setExifOrientation(cameraWrapper.getExifOrientation(rotation));
 
                 cameraWrapper.getSessionVideoRecorder().ifPresent(videoRecorder -> {
                     Size videoSize = sizes[2];
@@ -456,7 +465,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             cameraWrapper.cameraDevice.set(cameraDevice);
             cameraWrapper.cameraOpenCloseLock.release();
             cameraWrapper.startPreview();
-//            Log.d(VerID.TAG, "Camera opened");
+            Log.d("Camera opened");
         }
 
         @Override
@@ -471,7 +480,9 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             cameraWrapper.cameraId.set(null);
             cameraWrapper.cameraOpenCloseLock.release();
             cameraWrapper.isCameraOpen.set(false);
-//            Log.d(VerID.TAG, "Camera disconnected");
+            cameraWrapper.videoRecorder = null;
+            cameraWrapper.imageIterator = null;
+            Log.d("Camera disconnected");
         }
 
         @Override
@@ -494,13 +505,15 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 case ERROR_CAMERA_SERVICE -> "Camera service failed";
                 default -> "";
             };
+            cameraWrapper.videoRecorder = null;
+            cameraWrapper.imageIterator = null;
             cameraWrapper.onError(new VerIDSessionException(new Exception("Failed to open camera: "+message)));
-//            Log.d(VerID.TAG, "Camera error: "+message);
+            Log.e("Camera error code "+error);
         }
 
         @Override
         public void onClosed(@NonNull CameraDevice camera) {
-//            Log.d(VerID.TAG, "CameraDevice onClosed");
+            Log.v("CameraDevice onClosed");
             super.onClosed(camera);
             CameraWrapper cameraWrapper = cameraWrapperRef.get();
             if (cameraWrapper == null) {
@@ -508,7 +521,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             }
             cameraWrapper.cameraDevice.set(null);
             cameraWrapper.cameraId.set(null);
-//            Log.d(VerID.TAG, "Camera closed");
+            Log.d("Camera closed");
         }
     };
 
@@ -586,7 +599,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
                 }
 
                 if (cameraWrapper.imageReader != null) {
-                    cameraWrapper.imageReader.setOnImageAvailableListener(cameraWrapper.imageIteratorRef.get(), cameraWrapper.cameraProcessingHandler);
+                    cameraWrapper.imageReader.setOnImageAvailableListener(cameraWrapper.imageIterator, cameraWrapper.cameraProcessingHandler);
                     previewBuilder.addTarget(cameraWrapper.imageReader.getSurface());
                     surfaces.add(cameraWrapper.imageReader.getSurface());
                 } else {
@@ -648,7 +661,7 @@ public class CameraWrapper implements DefaultLifecycleObserver {
     }
 
     private Optional<ISessionVideoRecorder> getSessionVideoRecorder() {
-        return Optional.ofNullable(videoRecorderRef.get());
+        return Optional.ofNullable(videoRecorder);
     }
 
     private CameraManager getCameraManager() throws Exception {
@@ -707,14 +720,14 @@ public class CameraWrapper implements DefaultLifecycleObserver {
         cameraPreviewThread.start();
         cameraPreviewHandler = new Handler(cameraPreviewThread.getLooper());
         backgroundExecutor = Executors.newSingleThreadExecutor();
-//        Log.d(VerID.TAG, "Started background threads");
+        Log.d("Started background threads");
     }
 
     /**
      * Stops the background thread and its {@link Handler}.
      */
     private void stopBackgroundThread() {
-//        Log.d(VerID.TAG, "Stopping background threads");
+        Log.v("Stopping background threads");
         try {
             if (cameraProcessingHandler != null) {
                 cameraProcessingHandler.removeCallbacksAndMessages(null);
@@ -747,14 +760,14 @@ public class CameraWrapper implements DefaultLifecycleObserver {
             backgroundExecutor.shutdown();
         }
         backgroundExecutor = null;
-//        Log.d(VerID.TAG, "Stopped background threads");
+        Log.v("Stopped background threads");
     }
 
     //region Lifecycle callbacks
 
     @Override
     public void onResume(@NonNull LifecycleOwner owner) {
-//        Log.d(VerID.TAG, "CameraWrapper onResume");
+        Log.v("CameraWrapper onResume");
         if (viewWidth.get() > 0 && viewHeight.get() > 0) {
             start(viewWidth.get(), viewHeight.get(), displayRotation.get());
         }
@@ -762,13 +775,13 @@ public class CameraWrapper implements DefaultLifecycleObserver {
 
     @Override
     public void onPause(@NonNull LifecycleOwner owner) {
-//        Log.d(VerID.TAG, "CameraWrapper onPause");
+        Log.v("CameraWrapper onPause");
         stop();
     }
 
     @Override
     public void onDestroy(@NonNull LifecycleOwner owner) {
-//        Log.d(VerID.TAG, "CameraWrapper onDestroy");
+        Log.v("CameraWrapper onDestroy");
         owner.getLifecycle().removeObserver(this);
         cameraDevice.set(null);
         contextWeakReference.clear();
