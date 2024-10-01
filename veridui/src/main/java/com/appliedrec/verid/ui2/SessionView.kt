@@ -226,21 +226,21 @@ class SessionView @JvmOverloads constructor(
                                         .padding(top = 16.dp)
                                 )
                             }
-                        } else {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        }
-                        if (context is Activity) {
-                            cancelButton?.let { button ->
-                                Box(modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 64.dp)
-                                    .clickable {
-                                        context.finish()
+                            if (faceCaptureCount < sessionSettings.faceCaptureCount && context is Activity) {
+                                cancelButton?.let { button ->
+                                    Box(modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 64.dp)
+                                        .clickable {
+                                            context.finish()
+                                        }
+                                    ) {
+                                        button()
                                     }
-                                ) {
-                                    button()
                                 }
                             }
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                         }
                     }
                 }
