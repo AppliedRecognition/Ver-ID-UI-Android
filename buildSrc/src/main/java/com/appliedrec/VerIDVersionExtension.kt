@@ -3,8 +3,8 @@ package com.appliedrec
 open class VerIDVersionExtension {
 
     val versionMajor = 2
-    val versionMinor = 13
-    val versionPatch = 7
+    val versionMinor = 14
+    val versionPatch = 1
     val versionClassifier: String? = null
     val versionClassifierVersion: String? = null
 

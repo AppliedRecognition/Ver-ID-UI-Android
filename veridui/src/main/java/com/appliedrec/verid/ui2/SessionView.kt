@@ -110,9 +110,71 @@ class SessionView @JvmOverloads constructor(
      */
     var isTrackedFaceHighlightEnabled: Boolean = true
 
+    /**
+     * If you wish to add cancel button set this property to a composable.
+     *
+     * Here is an example that creates a blue cancel button with rounded corners:
+     * ```
+     * Text("Cancel",
+     *      color = Color.White,
+     *      modifier = Modifier
+     *          .background(Color.Blue, RoundedCornerShape(12.dp))
+     *          .padding(horizontal = 12.dp, vertical = 8.dp)
+     * )
+     * ```
+     * Note that the composable will be made clickable using its modifier. Do not supply clickable
+     * composables like `Button`.
+     * @since 2.14.0
+     * @see addCancelButton
+     * @see removeCancelButton
+     */
+    var cancelButton: @Composable (() -> Unit)? by mutableStateOf(null)
+
+    /**
+     * Add cancel button
+     *
+     * @param backgroundColor Button background colour
+     * @param foregroundColor Button foreground (text) colour – default is white
+     * @param cornerRadius Corner radius of the button rectangle – default is 12 pixels
+     * @param horizontalPadding Horizontal padding of the button – default is 12 pixels
+     * @param verticalPadding Vertical padding of the button – default is 8 pixels
+     * @param label Button label – default is "Cancel"
+     * @since 2.14.0
+     * @see removeCancelButton
+     * @see cancelButton
+     */
+    @JvmOverloads
+    fun addCancelButton(
+        backgroundColor: Int,
+        foregroundColor: Int = android.graphics.Color.WHITE,
+        cornerRadius: Float = 12f,
+        horizontalPadding: Float = 12f,
+        verticalPadding: Float = 8f,
+        label: String = context.getString(android.R.string.cancel))
+    {
+        this.cancelButton = {
+            Text(
+                label,
+                color = Color(foregroundColor),
+                modifier = Modifier
+                    .background(Color(backgroundColor), RoundedCornerShape(cornerRadius.dp))
+                    .padding(horizontal = horizontalPadding.dp, vertical = verticalPadding.dp)
+                )
+        }
+    }
+
+    /**
+     * Remove cancel button
+     * @since 2.14.0
+     * @see addCancelButton
+     * @see cancelButton
+     */
+    fun removeCancelButton() {
+        this.cancelButton = null
+    }
+
     init {
         textureView = TextureView(context).apply {
-            surfaceTextureListener = this@SessionView
             id = View.generateViewId()
         }
         ovalMaskView = OvalMaskView(context).apply {
@@ -163,6 +225,19 @@ class SessionView @JvmOverloads constructor(
                                         .background(MaterialTheme.colorScheme.background)
                                         .padding(top = 16.dp)
                                 )
+                            }
+                            if (faceCaptureCount < sessionSettings.faceCaptureCount && context is Activity) {
+                                cancelButton?.let { button ->
+                                    Box(modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 64.dp)
+                                        .clickable {
+                                            context.finish()
+                                        }
+                                    ) {
+                                        button()
+                                    }
+                                }
                             }
                         } else {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
