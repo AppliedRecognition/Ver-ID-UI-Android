@@ -1,0 +1,21 @@
+VER-ID SOFTWARE LICENSE AGREEMENT
+
+This End-User License Agreement (“EULA”) is a legal agreement between you (“Licensee”), either a single end-user or a single entity, and we (“Licensor” – Applied Recognition, Inc.). By installing this computer software, mobile app, or building your own app with our SDK embedded, you are indicating your acceptance of all the terms and conditions of this EULA. If you do not agree to any of the terms or conditions of this EULA, do not install or use Ver-ID.
+
+GRANT OF LICENSE. Licensor grants you a limited, non-transferable, non-exclusive license to use Ver-ID for testing or demonstration purposes. Ver-ID is licensed, not sold. All rights not explicitly granted under this EULA are hereby reserved.
+
+OTHER RIGHTS AND LIMITATIONS. You may make a single copy of Ver-ID software for backup or archival purposes only. You will not, nor allow any third party to copy, distribute, sell, lend, rent, transfer, convey, modify, decompile, disassemble or reverse engineer Ver-ID. You may terminate this EULA at any time, or Licensor may terminate this EULA if you breach any of the terms or conditions of this EULA. In either situation, you must destroy all copies of Ver-ID. You may not modify any Ver-ID executable files or databases. You can’t use Ver-ID for any illegal purposes.
+
+INTELLECTUAL PROPERTY. Licensor shall retain all right, title and interest to Ver-ID including all patents, copyrights, trademarks, trade secret and other proprietary rights thereto. Ver-ID is owned by Licensor and is protected by U.S. and Canadian copyright laws and international copyright treaties, as well as other intellectual property laws and treaties.
+
+NO WARRANTY. Ver-ID is provided “AS IS” without warranty of any kind, either express or implied, including, without limitation, the implied warranties of merchantability, fitness for a particular purpose, or non-infringement. The entire risk arising out of use or performance of Ver-ID remains with you.
+
+COLLECTION OF DATA. Licensor may also collect usage data on a periodic basis. This information is used to improve our products and services. Please refer to the privacy statement on our website.
+
+LIMITATION OF LIABILITY. Licensor shall not be liable for any special, punitive, incidental, direct, indirect or consequential damages arising out of the use, or inability to use Ver-ID. In any case, Licensor’s cumulative liability shall not exceed the amount paid by you for Ver-ID.
+
+MISCELLANEOUS. The failure of Licensor to require performance of any provision hereof shall in no manner affect the right at a later time to enforce such provision. This Agreement shall be construed in accordance with the laws of the Province of Ontario, Canada.
+
+If you have any questions or comments regarding this EULA, please email: info@appliedrec.com.
+
+License Agreement Last Updated: Oct 2018
