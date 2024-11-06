@@ -28,4 +28,5 @@ public class PreferenceKeys {
     public static final String RECORD_SESSION_VIDEO = "record_session_video";
     public static final String ENABLE_MASK_DETECTION = "enable_mask_detection";
     public static final String ALLOW_DIAGNOSTIC_UPLOAD = "allow_diagnostic_uploads";
+    public static final String PASSIVE_LIVENESS_ENABLED = "passive_liveness_enabled";
 }

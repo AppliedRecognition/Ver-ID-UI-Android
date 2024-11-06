@@ -126,7 +126,7 @@ public class SessionResultActivity extends AppCompatActivity implements ISession
             });
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Started", sessionResult.getSessionStartTime().toString()));
             transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Session duration", String.format(Locale.ROOT, "%d seconds", sessionResult.getSessionDuration(TimeUnit.SECONDS))));
-            sessionResult.getSessionDiagnostics().ifPresent(diagnostics -> transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format(Locale.ROOT, "%.01f faces/second", (float)diagnostics.getDiagnosticImages().length/(float)sessionResult.getSessionDuration(TimeUnit.MILLISECONDS)*1000f))));
+            transaction.add(R.id.content, SessionResultEntryFragment.newInstance("Face detection rate", String.format(Locale.ROOT, "%.01f faces/second", (float)sessionResult.getProcessedImageCount()/(float)sessionResult.getSessionDuration(TimeUnit.SECONDS))));
             ArrayList<String> faceCoveringScores = new ArrayList<>();
             ArrayList<String> glassesScores = new ArrayList<>();
             ArrayList<String> sunglassesScores = new ArrayList<>();

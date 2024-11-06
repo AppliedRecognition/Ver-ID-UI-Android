@@ -226,10 +226,7 @@ public class VerIDImageIterator implements IImageIterator {
             if (imgUtils != null) {
                 imgUtils.close();
             }
-            Context context = contextRef.get();
-            if (context != null) {
-                imageUtils.set(new ImageUtils(context));
-            }
+            imageUtils.set(new ImageUtils());
             isActive.set(true);
             Log.v("Image iterator " + System.identityHashCode(this) + " activated");
         }

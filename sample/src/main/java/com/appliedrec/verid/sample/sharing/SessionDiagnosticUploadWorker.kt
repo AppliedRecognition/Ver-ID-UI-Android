@@ -35,12 +35,14 @@ class SessionDiagnosticUploadWorker(context: Context, workerParams: WorkerParame
                             inputStream.copyTo(outputStream)
                         }
                     }
-                    File(uploadFilePath).delete()
+                    uploadFilePath?.let {
+                        File(it).delete()
+                    }
                     if (connection.responseCode != 200) {
                         throw IOException("Session diagnostics upload responded with code ${connection.responseCode}")
                     }
                     Log.d(
-                        "Session diagnostics uploaded to ${uploadURL}"
+                        "Session diagnostics uploaded to $uploadURL"
                     )
                     callback.set(Result.success())
                 } catch (error: Exception) {

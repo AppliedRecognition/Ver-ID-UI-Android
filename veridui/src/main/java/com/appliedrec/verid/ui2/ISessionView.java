@@ -13,6 +13,9 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import kotlinx.coroutines.flow.SharedFlow;
 
 /**
  * Interface for views that render the camera preview and face detection overlay
@@ -149,4 +152,11 @@ public interface ISessionView extends Iterator<FaceBounds> {
 
     default void onSessionStarted() {
     }
+
+    /**
+     * Supply expected face bounds
+     * @return Face bounds
+     * @since 2.15.0
+     */
+    AtomicReference<FaceBounds> getFaceBounds();
 }

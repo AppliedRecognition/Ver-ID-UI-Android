@@ -35,7 +35,7 @@ fun Head3DView(
     val animationDuration = Head3DViewHelper.getAnimationDuration(startAngle, endAngle)
     val currentState = remember { MutableTransitionState(startAngle) }
     currentState.targetState = endAngle
-    val transition = updateTransition(currentState, label = "3D head transition")
+    val transition = rememberTransition(currentState, label = "3D head transition")
     val angle by transition.animateValue(
         typeConverter = TwoWayConverter(
             convertToVector = { AnimationVector3D(it.yaw, it.pitch, it.roll) },

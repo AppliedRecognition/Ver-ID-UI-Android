@@ -143,10 +143,6 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             showSettings();
             return true;
         }
-        if (item.getItemId() == R.id.action_kiosk_demo) {
-            startActivity(new Intent(this, ContinuousLivenessActivity.class));
-            return true;
-        }
         return false;
     }
 
@@ -201,8 +197,9 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                     preferences.getFloat(PreferenceKeys.FACE_BOUNDS_HEIGHT_FRACTION, settings.getExpectedFaceExtents().getProportionOfViewHeight())
             ));
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
+            settings.setSessionDiagnosticsEnabled(!"deny".equals(preferences.getString(PreferenceKeys.ALLOW_DIAGNOSTIC_UPLOAD, "ask")));
+            settings.setPassiveLivenessDetectionEnabled(preferences.getBoolean(PreferenceKeys.PASSIVE_LIVENESS_ENABLED, settings.isPassiveLivenessDetectionEnabled()));
         }
-        settings.setSessionDiagnosticsEnabled(true);
 //        authenticationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
         VerIDSession authenticationSession;
         authenticationSession = new VerIDSession(verID, settings);
@@ -249,7 +246,7 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             ));
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
-        settings.setSessionDiagnosticsEnabled(true);
+        settings.setSessionDiagnosticsEnabled(false);
         registrationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
 //        VerIDSession registrationSession = new VerIDSession(verID, settings);
 //        registrationSession.setDelegate(this);

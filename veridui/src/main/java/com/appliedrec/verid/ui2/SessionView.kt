@@ -240,7 +240,10 @@ class SessionView @JvmOverloads constructor(
                                 }
                             }
                         } else {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
                         }
                     }
                 }
@@ -286,7 +289,6 @@ class SessionView @JvmOverloads constructor(
         faceDetectionResult: FaceDetectionResult?,
         prompt: String?
     ) {
-        Log.v("Setting face detection result ${faceDetectionResult?.status.toString()} in session view")
         post {
             Log.v("Posting face detection result ${faceDetectionResult?.status.toString()} in session view")
             if (isFinishing) {
@@ -306,7 +308,7 @@ class SessionView @JvmOverloads constructor(
             }
             faceDetectionResult?.let {
                 textureView.alpha = 1f
-                val previewVisible = if (it.status == FaceDetectionStatus.FACE_ALIGNED) View.INVISIBLE else View.VISIBLE
+                val previewVisible = if (it.status == FaceDetectionStatus.FACE_ALIGNED && faceCaptureCount >= sessionSettings.faceCaptureCount) View.INVISIBLE else View.VISIBLE
                 textureView.visibility = previewVisible
                 ovalMaskView.visibility = previewVisible
                 textureView.setTransform(getCameraViewMatrixFromFaceDetectionResult(it))
@@ -339,6 +341,8 @@ class SessionView @JvmOverloads constructor(
     override fun willFinishWithResult(result: VerIDSessionResult?, completionCallback: Runnable?) {
         isFinishing = true
         prompt = null
+        textureView.alpha = 0f
+        ovalMaskView.visibility = View.GONE
         completionCallback?.let { callback ->
             CoroutineScope(Dispatchers.Default).launch {
                 delay(1000)
@@ -361,7 +365,7 @@ class SessionView @JvmOverloads constructor(
     }
 
     private fun getDefaultFaceRectFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult): RectF {
-        return faceDetectionResult?.defaultFaceBounds?.translatedToImageSize(viewSize) ?: RectF()
+        return faceDetectionResult.defaultFaceBounds.translatedToImageSize(viewSize) ?: RectF()
     }
 
     private fun getCameraViewMatrixFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult): Matrix {
@@ -444,6 +448,9 @@ fun FaceDetectionResultView(
     }
     when (faceDetectionResult.status) {
         FaceDetectionStatus.FACE_ALIGNED -> {
+            if (!isLastFaceCapture) {
+                return
+            }
             var faceImage = ImageUtils.cropImageToFace(faceDetectionResult.image.provideBitmap(), faceDetectionResult.face.get())
             if (isPreviewMirrored) {
                 val matrix = Matrix()
@@ -466,8 +473,7 @@ fun FaceDetectionResultView(
                         contentScale = ContentScale.Crop,
                         modifier = modifier
                     )
-                    if (isLastFaceCapture) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 //                        val face = if (isPreviewMirrored) faceDetectionResult.face.get().flipped(Size(faceImage.width, faceImage.height)) else faceDetectionResult.face.get()
 //                        val faceBounds = face.bounds
 //                        val imageScale = max(parentSize.width.toFloat() / faceImage.width.toFloat(), parentSize.height.toFloat() / faceImage.height.toFloat())
@@ -483,7 +489,6 @@ fun FaceDetectionResultView(
 //                            Offset(vec[0], vec[1])
 //                        }
 //                        ProcessingAnimation(landmarks = faceLandmarks, modifier = Modifier.fillMaxSize())
-                    }
                 }
             }
         }
@@ -526,7 +531,7 @@ fun FaceDetectionResultView(
                     animationSpec = infiniteRepeatable(
                         animation = tween(1000),
                         repeatMode = RepeatMode.Reverse
-                    )
+                    ), label = "oval stroke width"
                 )
                 val ovalColour = MaterialTheme.colorScheme.primary
                 Canvas(modifier = modifier
@@ -555,10 +560,10 @@ fun ProcessingAnimation(
         animationSpec = infiniteRepeatable(
             animation = tween(2000),
             repeatMode = RepeatMode.Restart
-        )
+        ), label = "image processing animation"
     )
-    val closePoints = listOf(21,26,30,35,41,47,59,67)
     val strokeWidth = with(LocalDensity.current) { 6.dp.toPx() }
+//    val closePoints = listOf(21,26,30,35,41,47,59,67)
 //    LaunchedEffect(Unit) {
 //        launch(Dispatchers.Default) {
 //            var i = 18

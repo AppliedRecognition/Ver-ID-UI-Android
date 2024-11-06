@@ -121,4 +121,5 @@
     <string name="allow_diagnostic_upload_summary">The uploaded session diagnostic data is used by Applied Recognition Corp. to improve Ver-ID. The upload contains an image of the face collected during the session, face location in the image, face angle, face landmark locations in the image, image brightness, contrast and sharpness and spoof detector confidence scores.</string>
     <string name="diagnostic_upload_consent">Applied Recognition Corp. would like your consent to upload session diagnostic data. The data is used to improve Ver-ID. The upload contains an image of the face collected during the session, face location in the image, face angle, face landmark locations in the image, image brightness, contrast and sharpness and spoof detector confidence scores.</string>
     <string name="diagnostic_upload_remember">Remember my choice (can be changed later in settings)</string>
+    <string name="enable_passive_liveness">Enable passive liveness check</string>
 </resources>

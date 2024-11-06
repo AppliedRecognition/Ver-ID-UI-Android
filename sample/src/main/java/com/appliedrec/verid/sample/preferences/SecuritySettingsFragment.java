@@ -11,6 +11,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.SwitchPreference;
 
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.sample.R;
@@ -28,7 +29,8 @@ public class SecuritySettingsFragment extends PreferenceFragmentCompat implement
         float yawThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.YAW_THRESHOLD, Float.toString(livenessDetectionSessionSettings.getYawThreshold())));
         float pitchThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.PITCH_THRESHOLD, Float.toString(livenessDetectionSessionSettings.getPitchThreshold())));
         float authThreshold = Float.parseFloat(preferences.getString(PreferenceKeys.AUTHENTICATION_THRESHOLD, "4.0"));
-        SecuritySettings securitySettings = new SecuritySettings(requiredPoseCount, yawThreshold, pitchThreshold, authThreshold);
+        boolean passiveLivenessEnabled = preferences.getBoolean(PreferenceKeys.PASSIVE_LIVENESS_ENABLED, true);
+        SecuritySettings securitySettings = new SecuritySettings(requiredPoseCount, yawThreshold, pitchThreshold, authThreshold, passiveLivenessEnabled);
         String[] securityPresets = getResources().getStringArray(R.array.security_profile_presets);
 
         ListPreference presetPreference = new ListPreference(context);
@@ -83,6 +85,14 @@ public class SecuritySettingsFragment extends PreferenceFragmentCompat implement
         pitchThresholdPref.setValue(String.format("%.01f", pitchThreshold));
         pitchThresholdPref.setOnPreferenceChangeListener(this);
         livenessDetectionCategory.addPreference(pitchThresholdPref);
+        SwitchPreference passiveLivenessPref = new SwitchPreference(context);
+        passiveLivenessPref.setKey(PreferenceKeys.PASSIVE_LIVENESS_ENABLED);
+        passiveLivenessPref.setTitle(R.string.enable_passive_liveness);
+        passiveLivenessPref.setSummaryOn(android.R.string.yes);
+        passiveLivenessPref.setSummaryOff(android.R.string.no);
+        passiveLivenessPref.setChecked(passiveLivenessEnabled);
+        passiveLivenessPref.setOnPreferenceChangeListener(this);
+        livenessDetectionCategory.addPreference(passiveLivenessPref);
 
         PreferenceCategory authenticationCategory = new PreferenceCategory(context);
         authenticationCategory.setTitle(R.string.authentication);
@@ -107,14 +117,16 @@ public class SecuritySettingsFragment extends PreferenceFragmentCompat implement
         ListPreference yawThresholdPref = findPreference(PreferenceKeys.YAW_THRESHOLD);
         ListPreference pitchThresholdPref = findPreference(PreferenceKeys.PITCH_THRESHOLD);
         ListPreference authThresholdPref = findPreference(PreferenceKeys.AUTHENTICATION_THRESHOLD);
-        if (poseCountPref == null || yawThresholdPref == null || pitchThresholdPref == null || authThresholdPref == null) {
+        SwitchPreference passiveLivenessPref = findPreference(PreferenceKeys.PASSIVE_LIVENESS_ENABLED);
+        if (poseCountPref == null || yawThresholdPref == null || pitchThresholdPref == null || authThresholdPref == null || passiveLivenessPref == null) {
             return;
         }
         int requiredPoseCount = Integer.parseInt(poseCountPref.getValue());
         float yawThreshold = Float.parseFloat(yawThresholdPref.getValue());
         float pitchThreshold = Float.parseFloat(pitchThresholdPref.getValue());
         float authThreshold = Float.parseFloat(authThresholdPref.getValue());
-        SecuritySettings securitySettings = new SecuritySettings(requiredPoseCount, yawThreshold, pitchThreshold, authThreshold);
+        boolean passiveLivenessEnabled = passiveLivenessPref.isChecked();
+        SecuritySettings securitySettings = new SecuritySettings(requiredPoseCount, yawThreshold, pitchThreshold, authThreshold, passiveLivenessEnabled);
         ListPreference presetPref = findPreference(PreferenceKeys.SECURITY_PROFILE);
         if (presetPref == null) {
             return;
@@ -166,16 +178,19 @@ public class SecuritySettingsFragment extends PreferenceFragmentCompat implement
             ListPreference yawThresholdPref = findPreference(PreferenceKeys.YAW_THRESHOLD);
             ListPreference pitchThresholdPref = findPreference(PreferenceKeys.PITCH_THRESHOLD);
             ListPreference authThresholdPref = findPreference(PreferenceKeys.AUTHENTICATION_THRESHOLD);
+            SwitchPreference passiveLivenessPref = findPreference(PreferenceKeys.PASSIVE_LIVENESS_ENABLED);
             if (poseCountPref != null) poseCountPref.setValue(poseCount);
             if (yawThresholdPref != null) yawThresholdPref.setValue(yawThreshold);
             if (pitchThresholdPref != null) pitchThresholdPref.setValue(pitchThreshold);
             if (authThresholdPref != null) authThresholdPref.setValue(authThreshold);
+            if (passiveLivenessPref != null) passiveLivenessPref.setChecked(securitySettings.isPassiveLivenessEnabled());
 
             SharedPreferences.Editor editor = getPreferenceManager().getSharedPreferences().edit();
             editor.putString(PreferenceKeys.REQUIRED_POSE_COUNT, poseCount);
             editor.putString(PreferenceKeys.YAW_THRESHOLD, yawThreshold);
             editor.putString(PreferenceKeys.PITCH_THRESHOLD, pitchThreshold);
             editor.putString(PreferenceKeys.AUTHENTICATION_THRESHOLD, authThreshold);
+            editor.putBoolean(PreferenceKeys.PASSIVE_LIVENESS_ENABLED, securitySettings.isPassiveLivenessEnabled());
             editor.apply();
         } else {
             new Handler(Looper.getMainLooper()).post(this::updatePresetFromSharedPrefs);

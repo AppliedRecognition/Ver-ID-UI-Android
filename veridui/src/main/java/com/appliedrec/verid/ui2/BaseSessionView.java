@@ -36,6 +36,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private final Matrix cameraPreviewMatrix = new Matrix();
     private VerIDSessionSettings sessionSettings;
     private boolean isCameraPreviewMirrored = true;
+    private AtomicReference<FaceBounds> faceBounds;
 
     public BaseSessionView(@NonNull Context context) {
         this(context, null);
@@ -44,6 +45,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     public BaseSessionView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         defaultFaceExtents.set(new LivenessDetectionSessionSettings().getExpectedFaceExtents());
+        faceBounds = new AtomicReference<>(new FaceBounds(getViewSize(), defaultFaceExtents.get()));
     }
 
     @Override
@@ -70,6 +72,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Keep
     public void setDefaultFaceExtents(@NonNull FaceExtents faceExtents) {
         defaultFaceExtents.set(faceExtents);
+        faceBounds.set(new FaceBounds(getViewSize(), faceExtents));
     }
 
     @Override
@@ -106,6 +109,11 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     }
 
     @Override
+    public AtomicReference<FaceBounds> getFaceBounds() {
+        return faceBounds;
+    }
+
+    @Override
     public boolean hasNext() {
         return true;
     }
@@ -125,7 +133,12 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     }
 
     private void onViewSizeUpdate() {
-        viewSizeRef.set(getViewSize());
+        Size viewSize = getViewSize();
+        viewSizeRef.set(viewSize);
+        if (viewSize == null) {
+            viewSize = new Size(0, 0);
+        }
+        faceBounds.set(new FaceBounds(viewSize, getDefaultFaceExtents()));
     }
 
     //region Surface texture listener

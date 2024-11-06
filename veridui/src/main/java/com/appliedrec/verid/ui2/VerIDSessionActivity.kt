@@ -3,6 +3,7 @@ package com.appliedrec.verid.ui2
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.Window
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedCallback
@@ -24,8 +25,10 @@ class VerIDSessionActivity : AppCompatActivity(), VerIDSessionInViewDelegate, Ob
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+//        enableEdgeToEdge()
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_ver_idsession)
+        supportActionBar?.hide()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -37,7 +40,7 @@ class VerIDSessionActivity : AppCompatActivity(), VerIDSessionInViewDelegate, Ob
             val verID = VerID.getInstance(settings.verIDInstanceId)
             this.settings = settings
             val sessionView = SessionView(this)
-            this.session = VerIDSessionInView(verID, settings.sessionSettings, sessionView)
+            this.session = VerIDSessionInView(verID, settings.sessionSettings, sessionView, this)
             this.session!!.sessionResultLiveData.observe(this, this)
             findViewById<ConstraintLayout>(R.id.main).addView(sessionView, ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT))
         } catch (e: Exception) {

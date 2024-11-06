@@ -24,7 +24,6 @@
         </activity>
         <activity android:name=".ErrorActivity" android:exported="false" />
         <activity android:name=".IntroActivity" android:exported="false" />
-        <activity android:name=".ContinuousLivenessActivity" android:exported="false" />
         <activity android:name=".RegisteredUserActivity" android:exported="false" />
         <activity android:name=".preferences.SettingsActivity" android:exported="false" />
         <activity android:name=".SessionResultActivity" android:exported="false" />
