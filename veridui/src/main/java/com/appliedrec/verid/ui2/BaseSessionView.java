@@ -7,6 +7,7 @@ import android.util.AttributeSet;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.IntRange;
@@ -24,6 +25,7 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class BaseSessionView extends ConstraintLayout implements ISessionView, TextureView.SurfaceTextureListener, View.OnLayoutChangeListener {
@@ -37,6 +39,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private VerIDSessionSettings sessionSettings;
     private boolean isCameraPreviewMirrored = true;
     private AtomicReference<FaceBounds> faceBounds;
+    private android.util.Size previewSize = null;
 
     public BaseSessionView(@NonNull Context context) {
         this(context, null);
@@ -148,6 +151,9 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
         isSurfaceAvailable.set(true);
         synchronized (listenerLock) {
             Surface surface = new Surface(surfaceTexture);
+            if (previewSize != null) {
+                surfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
+            }
             for (SessionViewListener listener : listeners) {
                 listener.onPreviewSurfaceCreated(surface);
             }
@@ -182,9 +188,16 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
+        synchronized (listenerLock) {
+            previewSize = new android.util.Size(width, height);
+        }
         cameraPreviewMatrix.set(CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation()));
-        getTextureView().setTransform(cameraPreviewMatrix);
+        if (getTextureView() != null) {
+            if (getTextureView().getSurfaceTexture() != null) {
+                getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
+            }
+            getTextureView().setTransform(cameraPreviewMatrix);
+        }
     }
 
     protected Matrix getCameraPreviewMatrix() {
@@ -354,7 +367,13 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Override
     @IntRange(from = 0, to = 359)
     public int getDisplayRotation() {
-        switch (getDisplay().getRotation()) {
+        int rotation = 0;
+        if (getDisplay() != null) {
+            rotation = getDisplay().getRotation();
+        } else {
+            rotation = ((WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
+        }
+        switch (rotation) {
             case Surface.ROTATION_0:
             default:
                 return 0;

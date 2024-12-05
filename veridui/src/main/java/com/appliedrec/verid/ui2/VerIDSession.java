@@ -17,6 +17,7 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArraySet;
+import androidx.core.content.ContextCompat;
 import androidx.test.espresso.IdlingResource;
 
 import com.appliedrec.verid.core2.VerID;
@@ -41,36 +42,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Keep
 public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Application.ActivityLifecycleCallbacks {
-
-    private static class StartRunnable implements Runnable {
-        private final WeakReference<VerIDSession> session;
-
-        StartRunnable(VerIDSession session) {
-            this.session = new WeakReference<>(session);
-        }
-
-        @Override
-        public void run() {
-            VerIDSession session = this.session.get();
-            if (session == null) {
-                return;
-            }
-            try {
-                if (session.isStarted.get()) {
-                    throw new VerIDUISessionException(VerIDUISessionException.Code.SESSION_ALREADY_STARTED);
-                }
-                Context context = session.getVerID().getContext().orElseThrow(() -> new VerIDUISessionException(VerIDUISessionException.Code.CONTEXT_UNAVAILABLE));
-                session.isStarted.set(true);
-                session.registerActivityCallbacks();
-                session.startSessionActivity(context);
-            } catch (VerIDUISessionException e) {
-                session.isStarted.set(false);
-                session.onSessionFinished();
-                long now = System.currentTimeMillis();
-                session.getDelegate().ifPresent(listener -> listener.onSessionFinished(session, new VerIDSessionResult(new VerIDSessionException(e), now, now, null)));
-            }
-        }
-    }
 
     private final VerID verID;
     private final VerIDSessionSettings settings;
@@ -121,7 +92,32 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
     @Keep
     public void start() {
         faceCaptureCount.set(0);
-        new Handler(Looper.getMainLooper()).post(new StartRunnable(this));
+        Context context = verID.getContext().orElse(null);
+        if (context == null) {
+            long now = System.currentTimeMillis();
+            getDelegate().ifPresent(delegate -> delegate.onSessionFinished(this, new VerIDSessionResult(new VerIDSessionException(new VerIDUISessionException(VerIDUISessionException.Code.CONTEXT_UNAVAILABLE)), now, now, null)));
+            return;
+        }
+        WeakReference<Context> contextWeakReference = new WeakReference<>(context);
+        ContextCompat.getMainExecutor(context).execute(() -> {
+            try {
+                if (isStarted.get()) {
+                    throw new VerIDUISessionException(VerIDUISessionException.Code.SESSION_ALREADY_STARTED);
+                }
+                Context ctx = contextWeakReference.get();
+                if (ctx == null) {
+                    throw new VerIDUISessionException(VerIDUISessionException.Code.CONTEXT_UNAVAILABLE);
+                }
+                isStarted.set(true);
+                registerActivityCallbacks();
+                startSessionActivity(ctx);
+            } catch (VerIDUISessionException e) {
+                isStarted.set(false);
+                onSessionFinished();
+                long now = System.currentTimeMillis();
+                getDelegate().ifPresent(listener -> listener.onSessionFinished(this, new VerIDSessionResult(new VerIDSessionException(e), now, now, null)));
+            }
+        });
     }
 
     /**
@@ -229,13 +225,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-//        if (context instanceof ComponentActivity) {
-//            ((ComponentActivity) context).registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-//                Log.v("Session activity finished");
-//            }).launch(intent);
-//        } else {
-            context.startActivity(intent);
-//        }
+        context.startActivity(intent);
     }
 
     @UiThread

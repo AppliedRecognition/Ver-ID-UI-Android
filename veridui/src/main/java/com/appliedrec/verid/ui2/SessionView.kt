@@ -226,24 +226,22 @@ class SessionView @JvmOverloads constructor(
                                         .padding(top = 16.dp)
                                 )
                             }
-                            if (faceCaptureCount < sessionSettings.faceCaptureCount && context is Activity) {
-                                cancelButton?.let { button ->
-                                    Box(modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 64.dp)
-                                        .clickable {
-                                            context.finish()
-                                        }
-                                    ) {
-                                        button()
-                                    }
-                                }
-                            }
                         } else {
                             CircularProgressIndicator(
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.align(Alignment.Center)
                             )
+                        }
+                        if (faceCaptureCount < sessionSettings.faceCaptureCount && context is Activity && cancelButton != null) {
+                            Box(modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 64.dp)
+                                .clickable {
+                                    context.finish()
+                                }
+                            ) {
+                                cancelButton!!()
+                            }
                         }
                     }
                 }

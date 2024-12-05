@@ -141,7 +141,8 @@ class SessionActivity<T> : AppCompatActivity(), ISessionActivity,
             try {
                 startCamera()
                 _sessionView?.onSessionStarted()
-            } catch (ignore: Exception) {
+            } catch (e: Exception) {
+                fail(VerIDSessionException(e))
             }
             if (coreSession != null) {
                 coreSession!!.start()
@@ -179,6 +180,8 @@ class SessionActivity<T> : AppCompatActivity(), ISessionActivity,
                 { Exception("Camera wrapper unavailable") })
             cameraWrapper.setPreviewSurface(surface)
             startCamera()
+        } catch (e: VerIDSessionException) {
+            fail(e)
         } catch (e: Exception) {
             fail(VerIDSessionException(e))
         }

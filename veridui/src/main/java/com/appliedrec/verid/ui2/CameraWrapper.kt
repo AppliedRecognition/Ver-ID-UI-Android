@@ -269,7 +269,7 @@ class CameraWrapper<T>(
                     val videoSize = sizes[2]
                     recorder.setup(videoSize, rotation)
                 }
-                withContext(Dispatchers.Main.immediate) {
+                withContext(Dispatchers.Main) {
                     for (listener in listeners) {
                         listener.onCameraPreviewSize(previewSize.width, previewSize.height, sensorOrientation)
                     }
@@ -359,7 +359,7 @@ class CameraWrapper<T>(
                 cameraHandlerThread.interrupt()
             }
         } catch (e: InterruptedException) {
-            e.printStackTrace()
+            Log.e("Camera handler thread interrupted", e)
         }
     }
 
