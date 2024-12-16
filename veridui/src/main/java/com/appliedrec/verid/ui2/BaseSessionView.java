@@ -22,6 +22,7 @@ import com.appliedrec.verid.core2.session.FaceDetectionStatus;
 import com.appliedrec.verid.core2.session.FaceExtents;
 import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionSettings;
+import com.appliedrec.verid.core2.util.Log;
 
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,6 +34,7 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     private final HashSet<SessionViewListener> listeners = new HashSet<>();
     private final Object listenerLock = new Object();
     private final AtomicReference<Size> viewSizeRef = new AtomicReference<>();
+    private final AtomicInteger sensorOrientationRef = new AtomicInteger(0);
     private final AtomicReference<FaceExtents> defaultFaceExtents = new AtomicReference<>();
     private final AtomicBoolean isSurfaceAvailable = new AtomicBoolean(false);
     private final Matrix cameraPreviewMatrix = new Matrix();
@@ -71,6 +73,14 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     protected abstract Size getViewSize();
 
     protected abstract TextureView getTextureView();
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        Log.v("BaseSessionView.onSizeChanged(" + w + ", " + h + ", " + oldw + ", " + oldh +")");
+        viewSizeRef.set(new Size(w, h));
+        faceBounds.set(new FaceBounds(getViewSize(), defaultFaceExtents.get()));
+    }
 
     @Keep
     public void setDefaultFaceExtents(@NonNull FaceExtents faceExtents) {
@@ -151,14 +161,10 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
         isSurfaceAvailable.set(true);
         synchronized (listenerLock) {
             Surface surface = new Surface(surfaceTexture);
-            if (previewSize != null) {
-                surfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-            }
             for (SessionViewListener listener : listeners) {
                 listener.onPreviewSurfaceCreated(surface);
             }
         }
-        onViewSizeUpdate();
     }
 
     @Override
@@ -188,15 +194,13 @@ public abstract class BaseSessionView extends ConstraintLayout implements ISessi
     @Keep
     @Override
     public void setPreviewSize(int width, int height, int sensorOrientation) {
-        synchronized (listenerLock) {
-            previewSize = new android.util.Size(width, height);
-        }
-        cameraPreviewMatrix.set(CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation()));
-        if (getTextureView() != null) {
-            if (getTextureView().getSurfaceTexture() != null) {
-                getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
+        sensorOrientationRef.set(sensorOrientation);
+        if (isSurfaceAvailable.get() && getTextureView() != null && getTextureView().getSurfaceTexture() != null) {
+            getTextureView().getSurfaceTexture().setDefaultBufferSize(width, height);
+            cameraPreviewMatrix.set(CameraPreviewHelper.getInstance().getViewTransformMatrix(width, height, getWidth(), getHeight(), sensorOrientation, getDisplayRotation()));
+            if (getTextureView() != null) {
+                getTextureView().setTransform(cameraPreviewMatrix);
             }
-            getTextureView().setTransform(cameraPreviewMatrix);
         }
     }
 

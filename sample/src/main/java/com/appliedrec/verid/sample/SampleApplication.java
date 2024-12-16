@@ -26,6 +26,7 @@ import com.appliedrec.verid.core2.util.Log;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,11 +41,14 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
     @Override
     public void onCreate() {
         super.onCreate();
-        StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-                .detectAll()
-                .penaltyLog()
-                .build());
+        if (BuildConfig.DEBUG) {
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build());
+        }
         Log.setEnabled(BuildConfig.DEBUG);
+        Log.setStackTraceEnabled(true);
         mainHandler = new Handler(Looper.getMainLooper());
         registerActivityLifecycleCallbacks(this);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -83,6 +87,7 @@ public class SampleApplication extends MultiDexApplication implements VerIDFacto
         }
         FaceDetectionRecognitionFactory faceDetectionRecognitionFactory = new FaceDetectionRecognitionFactory(this, faceDetectionRecognitionSettings);
         faceDetectionRecognitionFactory.setDefaultFaceTemplateVersion(VerIDFaceTemplateVersion.getLatest());
+        faceDetectionRecognitionFactory.setFaceTemplateVersions(EnumSet.of(VerIDFaceTemplateVersion.V16, VerIDFaceTemplateVersion.V24));
         VerIDFactory verIDFactory = new VerIDFactory(this, this);
         verIDFactory.setUserManagementFactory(userManagementFactory);
         verIDFactory.setFaceDetectionFactory(faceDetectionRecognitionFactory);

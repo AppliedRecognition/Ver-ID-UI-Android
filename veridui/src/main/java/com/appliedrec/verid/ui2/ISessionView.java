@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable;
 import android.view.Surface;
 
 import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
 
 import com.appliedrec.verid.core2.session.FaceBounds;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
@@ -37,7 +38,7 @@ public interface ISessionView extends Iterator<FaceBounds> {
          * @since 2.0.0
          */
         @Keep
-        void onPreviewSurfaceCreated(Surface surface);
+        void onPreviewSurfaceCreated(@NonNull Surface surface);
 
         /**
          * Called when camera preview surface is destroyed
@@ -97,6 +98,10 @@ public interface ISessionView extends Iterator<FaceBounds> {
      */
     @Keep
     void drawFaces(List<? extends Drawable> faceImages);
+
+    default boolean isCapableOfDrawingFaces(@NonNull VerIDSessionSettings sessionSettings) {
+        return false;
+    }
 
     /**
      * Get the height of the captured face images

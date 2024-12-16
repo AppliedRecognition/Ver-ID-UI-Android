@@ -29,21 +29,14 @@ import androidx.lifecycle.lifecycleScope
 import com.appliedrec.verid.core2.session.VerIDSessionException
 import com.appliedrec.verid.core2.util.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
-import java.nio.ByteBuffer
-import java.util.LinkedList
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.jvm.optionals.getOrNull
-import android.media.Image as MediaImage
 
 class CameraWrapper<T>(
     context: T, val cameraLocation: CameraLocation, val onImageAvailableListener: OnImageAvailableListener, val exifOrientation: AtomicInteger, val isMirrored: AtomicBoolean, val videoRecorder: ISessionVideoRecorder?
@@ -52,6 +45,8 @@ class CameraWrapper<T>(
     interface Listener {
         fun onCameraPreviewSize(width: Int, height: Int, sensorOrientation: Int)
         fun onCameraError(error: VerIDSessionException)
+        fun onCameraStarted()
+        fun onCameraStopped()
     }
 
     private class CaptureSessionStateCallback<T>(
@@ -80,6 +75,11 @@ class CameraWrapper<T>(
                         cameraWrapper.cameraHandler
                     )
                     cameraWrapper.videoRecorder?.start()
+                    cameraWrapper.contextRef.get()?.let { context ->
+                        context.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                            cameraWrapper.listeners.forEach { it.onCameraStarted() }
+                        }
+                    }
                 } else {
                     throw Exception("Failed to configure camera capture session")
                 }
@@ -115,6 +115,13 @@ class CameraWrapper<T>(
                 e.printStackTrace()
             } finally {
                 cameraWrapper.stopBackgroundHandlers()
+                cameraWrapper.contextRef.get()?.let { context ->
+                    context.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                        cameraWrapper.listeners.forEach {
+                            it.onCameraStopped()
+                        }
+                    }
+                }
             }
         }
 
@@ -208,10 +215,11 @@ class CameraWrapper<T>(
     }
 
     fun start(width: Int, height: Int, displayRotation: Int) {
+        Log.v("CameraWrapper.start(width: $width, height: $height, displayRotation: $displayRotation")
         if (!isStarted.compareAndSet(false, true)) {
+            Log.v("CameraWrapper.start: returning – already started")
             return
         }
-        Log.d("Starting camera")
 //        imageUtils = ImageUtils()
         startBackgroundHandlers()
         viewWidth.set(width)

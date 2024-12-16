@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.UiThread
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.AnimationVector4D
@@ -91,7 +92,7 @@ class SessionView @JvmOverloads constructor(
     private var faceCaptureCount: Int by mutableStateOf(0)
     private var isFinishing: Boolean by mutableStateOf(false)
     private var latestMisalignTime: Long? = null
-    private val textureView: TextureView
+    private var textureView: TextureView
     private val ovalMaskView: OvalMaskView
 
     /**
@@ -174,10 +175,10 @@ class SessionView @JvmOverloads constructor(
     }
 
     init {
-        textureView = TextureView(context).apply {
+        ovalMaskView = OvalMaskView(context).apply {
             id = View.generateViewId()
         }
-        ovalMaskView = OvalMaskView(context).apply {
+        textureView = TextureView(context).apply {
             id = View.generateViewId()
         }
         updateColors()
@@ -258,6 +259,20 @@ class SessionView @JvmOverloads constructor(
         addView(composeView)
     }
 
+//    @UiThread
+//    override fun recreateTextureView() {
+//        if (textureView.isAvailable) {
+//            onSurfaceTextureAvailable(textureView.surfaceTexture!!, textureView.width, textureView.height)
+//        } else {
+//            removeView(textureView)
+//            textureView = TextureView(context).also {
+//                it.id = textureView.id
+//                it.surfaceTextureListener = this
+//            }
+//            addView(textureView, 0, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+//        }
+//    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         textureView.surfaceTextureListener = this
@@ -288,7 +303,6 @@ class SessionView @JvmOverloads constructor(
         prompt: String?
     ) {
         post {
-            Log.v("Posting face detection result ${faceDetectionResult?.status.toString()} in session view")
             if (isFinishing) {
                 Log.v("Return: Session view is finishing")
                 return@post
@@ -344,7 +358,7 @@ class SessionView @JvmOverloads constructor(
         completionCallback?.let { callback ->
             CoroutineScope(Dispatchers.Default).launch {
                 delay(1000)
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main.immediate) {
                     textureView.alpha = 0f
                     ovalMaskView.visibility = View.GONE
                     faceDetectionResult = null

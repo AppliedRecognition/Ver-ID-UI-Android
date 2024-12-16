@@ -304,6 +304,7 @@ public class VerIDSession implements IVerIDSession<VerIDSessionDelegate>, Applic
             }
         }
         sessionActivity(activity).ifPresent(sessionActivity -> {
+            Log.v("onActivityCreated in VerIDSession");
             SessionParameters sessionParameters = new SessionParameters(verID, settings, getCameraLens(), getDelegate().map(delegate -> delegate.createSessionViewFactory(this)).orElse(SessionView::new), stringTranslator, getDelegate().map(delegate -> delegate.createSessionFunctions(this, getVerID(), getSettings())).orElse(new SessionFunctions(getVerID(), getSettings())));
             getVideoRecorder().ifPresent(sessionParameters::setVideoRecorder);
             sessionParameters.setSessionResultObserver(this::onSessionResult);

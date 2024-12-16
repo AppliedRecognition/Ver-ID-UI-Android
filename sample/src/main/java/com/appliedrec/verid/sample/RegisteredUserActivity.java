@@ -1,12 +1,13 @@
 package com.appliedrec.verid.sample;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,68 +18,39 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
 import com.appliedrec.verid.core2.Bearing;
-import com.appliedrec.verid.core2.Face;
-import com.appliedrec.verid.core2.FaceRecognition;
-import com.appliedrec.verid.core2.IRecognizable;
-import com.appliedrec.verid.core2.RecognizableFace;
-import com.appliedrec.verid.core2.UserIdentification;
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.VerIDCoreException;
-import com.appliedrec.verid.core2.VerIDFaceTemplateVersion;
 import com.appliedrec.verid.core2.session.AuthenticationSessionSettings;
-import com.appliedrec.verid.core2.session.FaceCapture;
 import com.appliedrec.verid.core2.session.FaceExtents;
-import com.appliedrec.verid.core2.session.LivenessDetectionSessionSettings;
 import com.appliedrec.verid.core2.session.RegistrationSessionSettings;
 import com.appliedrec.verid.core2.session.VerIDSessionException;
 import com.appliedrec.verid.core2.session.VerIDSessionResult;
 import com.appliedrec.verid.sample.databinding.ActivityRegisteredUserBinding;
-import com.appliedrec.verid.sample.databinding.DiagnosticUploadConsentBinding;
 import com.appliedrec.verid.sample.preferences.MimeTypes;
 import com.appliedrec.verid.sample.preferences.PreferenceKeys;
 import com.appliedrec.verid.sample.preferences.SettingsActivity;
 import com.appliedrec.verid.sample.sharing.RegistrationExport;
 import com.appliedrec.verid.sample.sharing.RegistrationImportContract;
 import com.appliedrec.verid.sample.sharing.RegistrationImportReviewActivity;
-import com.appliedrec.verid.sample.R;
 import com.appliedrec.verid.ui2.CameraLocation;
 import com.appliedrec.verid.ui2.ISessionActivity;
+import com.appliedrec.verid.ui2.ISessionView;
 import com.appliedrec.verid.ui2.IVerIDSession;
+import com.appliedrec.verid.ui2.SessionView;
 import com.appliedrec.verid.ui2.VerIDSession;
-import com.appliedrec.verid.ui2.VerIDSessionActivity;
 import com.appliedrec.verid.ui2.VerIDSessionActivityContract;
 import com.appliedrec.verid.ui2.VerIDSessionActivitySettings;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
-import com.appliedrec.verid.ui2.sharing.SessionResultPackage;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.function.Supplier;
-
-import javax.net.ssl.HttpsURLConnection;
 
 public class RegisteredUserActivity extends AppCompatActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
@@ -379,12 +351,36 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
                 } catch (Exception ignore) {
                 }
             });
+        } else if (BuildConfig.DEBUG && !(session.getSettings() instanceof RegistrationSessionSettings)) {
+            Toast.makeText(this, "Session finished", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
+    public void onSessionCanceled(@NonNull IVerIDSession<?> session) {
+        if (BuildConfig.DEBUG) {
+            Toast.makeText(this, "Session cancelled", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+//    @NonNull
+//    @Override
+//    public <V extends View & ISessionView> Function<Context, V> createSessionViewFactory(@NonNull IVerIDSession<?> session) {
+//        return context -> {
+//            SessionView sessionView = new SessionView(context);
+//            sessionView.addCancelButton(Color.BLUE);
+//            return (V) sessionView;
+//        };
+//    }
+
+    @Override
     public boolean shouldSessionDisplayResult(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         return !(session.getSettings() instanceof RegistrationSessionSettings && !result.getError().isPresent());
+    }
+
+    @Override
+    public boolean shouldRetrySessionAfterFailure(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionException exception) {
+        return true;
     }
 
     @NonNull

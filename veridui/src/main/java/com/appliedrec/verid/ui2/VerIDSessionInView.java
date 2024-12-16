@@ -37,6 +37,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Keep
 public class VerIDSessionInView<T extends View & ISessionView> implements IVerIDSession<VerIDSessionInViewDelegate>, ISessionView.SessionViewListener, Iterable<FaceBounds>, CameraWrapper.Listener {
 
+    @Override
+    public void onCameraStarted() {
+
+    }
+
+    @Override
+    public void onCameraStopped() {
+
+    }
+
     private static class FaceDetectionCallback implements Consumer<FaceDetectionResult> {
 
         private final WeakReference<VerIDSessionInView<?>> sessionRef;
