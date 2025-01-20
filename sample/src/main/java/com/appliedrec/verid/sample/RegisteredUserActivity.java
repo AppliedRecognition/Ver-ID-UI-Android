@@ -219,10 +219,10 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
             settings.setFaceCoveringDetectionEnabled(preferences.getBoolean(PreferenceKeys.ENABLE_MASK_DETECTION, settings.isFaceCoveringDetectionEnabled()));
         }
         settings.setSessionDiagnosticsEnabled(false);
-        registrationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
-//        VerIDSession registrationSession = new VerIDSession(verID, settings);
-//        registrationSession.setDelegate(this);
-//        registrationSession.start();
+//        registrationSessionLauncher.launch(new VerIDSessionActivitySettings(verID, settings));
+        VerIDSession registrationSession = new VerIDSession(verID, settings);
+        registrationSession.setDelegate(this);
+        registrationSession.start();
     }
 
     private void unregisterUser() {

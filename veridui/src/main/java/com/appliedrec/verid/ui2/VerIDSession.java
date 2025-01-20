@@ -5,20 +5,13 @@ import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 
-import androidx.activity.ComponentActivity;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.UiThread;
-import androidx.annotation.VisibleForTesting;
-import androidx.collection.ArraySet;
 import androidx.core.content.ContextCompat;
-import androidx.test.espresso.IdlingResource;
 
 import com.appliedrec.verid.core2.VerID;
 import com.appliedrec.verid.core2.session.FaceDetectionResult;
@@ -29,7 +22,6 @@ import com.appliedrec.verid.core2.session.VerIDSessionSettings;
 import com.appliedrec.verid.core2.util.Log;
 
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
