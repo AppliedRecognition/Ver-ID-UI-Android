@@ -1,7 +1,6 @@
 package com.appliedrec.verid.sample;
 
 import android.content.Context;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,6 +18,7 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawable;
 import com.appliedrec.verid.core2.Bearing;
 import com.appliedrec.verid.core2.FaceRecognition;
 import com.appliedrec.verid.core2.IRecognizable;
+import com.appliedrec.verid.core2.IdentificationResult;
 import com.appliedrec.verid.core2.IdentifiedFace;
 import com.appliedrec.verid.core2.UserIdentification;
 import com.appliedrec.verid.core2.UserIdentificationCallbacks;
@@ -31,18 +31,19 @@ import com.appliedrec.verid.sample.databinding.ActivityIdentificationDemoBinding
 import com.appliedrec.verid.ui2.IVerIDSession;
 import com.appliedrec.verid.ui2.VerIDSession;
 import com.appliedrec.verid.ui2.VerIDSessionDelegate;
-import com.google.common.base.Function;
-import com.google.common.collect.FluentIterable;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
-import io.reactivex.rxjava3.disposables.Disposable;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class IdentificationDemoActivity extends AppCompatActivity implements IVerIDLoadObserver, VerIDSessionDelegate {
 
@@ -50,8 +51,7 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     private VerID verID;
     static final int MAX_FACES = 1000000;
     private IRecognizable[] generatedFaces = new IRecognizable[0];
-    private ArrayList<Disposable> disposables = new ArrayList<>();
-    private AtomicBoolean isSessionRunning = new AtomicBoolean(false);
+    private final AtomicBoolean isSessionRunning = new AtomicBoolean(false);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,14 +73,6 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     protected void onDestroy() {
         super.onDestroy();
         viewBinding = null;
-        Iterator<Disposable> disposableIterator = disposables.iterator();
-        while (disposableIterator.hasNext()) {
-            Disposable disposable = disposableIterator.next();
-            if (!disposable.isDisposed()) {
-                disposable.dispose();
-            }
-            disposableIterator.remove();
-        }
     }
 
     @Override
@@ -137,92 +129,36 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
         viewBinding.progressBar.setVisibility(View.VISIBLE);
         viewBinding.facesTextField.setVisibility(View.INVISIBLE);
         viewBinding.label.setText("Generating faces");
-        Disposable userFacesDisposable = verID.getUserManagement().getFacesOfUserSingle(VerIDUser.DEFAULT_USER_ID).subscribe(userFaces -> {
-            FaceRecognition faceRecognition = (FaceRecognition)verID.getFaceRecognition();
-            int processorCount = Runtime.getRuntime().availableProcessors();
-            int facesPerTask = facesToGenerate / processorCount;
-            int remainder = facesToGenerate % processorCount;
-            int reportingIndex = (int)Math.ceil((float)facesToGenerate / 100f);
-            generatedFaces = new IRecognizable[facesToGenerate+userFaces.length];
-            final VerIDFaceTemplateVersion defaultVersion;
-            if (verID.getFaceRecognition() instanceof FaceRecognition) {
-                defaultVersion = ((FaceRecognition)verID.getFaceRecognition()).defaultFaceTemplateVersion;
-            } else {
-                defaultVersion = VerIDFaceTemplateVersion.V16;
-            }
-            Function<IRecognizable,VerIDFaceTemplateVersion> templateVersionFromFace = face -> {
-                try {
-                    return VerIDFaceTemplateVersion.fromSerialNumber(face.getVersion());
-                } catch (VerIDCoreException ignore) {
-                    return null;
+        new Thread(() -> {
+            try {
+                FaceRecognition faceRecognition = (FaceRecognition) verID.getFaceRecognition();
+                VerIDFaceTemplateVersion faceTemplateVersion = verID.getUserManagement().getLatestCommonFaceTemplateVersion();
+                IRecognizable[] randomFaces = faceRecognition.generateRandomFaceTemplates(facesToGenerate, faceTemplateVersion);
+                IRecognizable[] userFaces = verID.getUserManagement().getFacesOfUser(VerIDUser.DEFAULT_USER_ID, faceTemplateVersion);
+                generatedFaces = new IRecognizable[userFaces.length + randomFaces.length];
+                System.arraycopy(randomFaces, 0, generatedFaces, 0, randomFaces.length);
+                System.arraycopy(userFaces, 0, generatedFaces, randomFaces.length, userFaces.length);
+                if (viewBinding == null) {
+                    return;
                 }
-            };
-            VerIDFaceTemplateVersion version = null;
-            FluentIterable<IRecognizable> userFacesIterable = FluentIterable.from(userFaces);
-            FluentIterable<VerIDFaceTemplateVersion> userFaceVersions = userFacesIterable.transform(templateVersionFromFace).filter(Objects::nonNull);
-            if (userFaceVersions.contains(defaultVersion)) {
-                version = defaultVersion;
-            } else {
-                for (VerIDFaceTemplateVersion v : FluentIterable.from(VerIDFaceTemplateVersion.values()).filter(v -> v != defaultVersion).toSortedSet((a,b) -> b.getValue() - a.getValue())) {
-                    if (userFaceVersions.contains(v)) {
-                        version = v;
-                        break;
-                    }
+                viewBinding.label.post(() -> {
+                    viewBinding.progressBar.setVisibility(View.GONE);
+                    viewBinding.label.setText("Faces to generate");
+                    viewBinding.facesTextField.setVisibility(View.VISIBLE);
+                    startSession();
+                });
+            } catch (Exception e) {
+                if (viewBinding == null) {
+                    return;
                 }
-            }
-            final VerIDFaceTemplateVersion targetVersion = version;
-            userFaces = userFacesIterable.filter(face -> {
-                try {
-                    return VerIDFaceTemplateVersion.fromSerialNumber(face.getVersion()) == targetVersion;
-                } catch (VerIDCoreException e) {
-                    return false;
-                }
-            }).toArray(IRecognizable.class);
-            System.arraycopy(userFaces, 0, generatedFaces, facesToGenerate, userFaces.length);
-            AtomicInteger tasksExecuted = new AtomicInteger(0);
-            AtomicInteger faceCounter = new AtomicInteger(0);
-            int startIndex = 0;
-            for (int i=0; i<processorCount; i++) {
-                int size = facesPerTask + remainder;
-                remainder = 0;
-                GenerateFaces task = new GenerateFaces(size, faceCounter, startIndex, reportingIndex, version, processed -> {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    viewBinding.progressBar.setProgress(processed);
-                    viewBinding.label.setText(String.format("Generated %d faces of %d", processed, facesToGenerate));
-                }, (faces, idx) -> {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    System.arraycopy(faces, 0, generatedFaces, idx, faces.length);
-                    if (tasksExecuted.incrementAndGet() == processorCount) {
-                        viewBinding.progressBar.setVisibility(View.GONE);
-                        viewBinding.label.setText("Faces to generate");
-                        viewBinding.facesTextField.setVisibility(View.VISIBLE);
-                        startSession();
-                    }
-                }, error -> {
-                    if (viewBinding == null) {
-                        return;
-                    }
+                viewBinding.label.post(() -> {
                     viewBinding.progressBar.setVisibility(View.GONE);
                     viewBinding.label.setText("Faces to generate");
                     viewBinding.facesTextField.setVisibility(View.VISIBLE);
                 });
-                startIndex += size;
-                task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, faceRecognition);
+                showAlert("Failed to generate faces");
             }
-        }, error -> {
-            if (viewBinding == null) {
-                return;
-            }
-            viewBinding.progressBar.setVisibility(View.GONE);
-            viewBinding.label.setText("Faces to generate");
-            viewBinding.facesTextField.setVisibility(View.VISIBLE);
-            showAlert("Failed to generate faces");
-        });
-        disposables.add(userFacesDisposable);
+        }).start();
     }
 
     private void startSession() {
@@ -236,70 +172,62 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
     @Override
     public void onSessionFinished(@NonNull IVerIDSession<?> session, @NonNull VerIDSessionResult result) {
         result.getFirstFaceCapture(Bearing.STRAIGHT).ifPresent(faceCapture -> {
-            UserIdentification userIdentification = new UserIdentification(verID);
-            IRecognizable face = faceCapture.getFace();
-            double faceCount = generatedFaces.length;
-            if (viewBinding == null) {
-                return;
-            }
-            viewBinding.progressBar.setMax((int)faceCount);
-            viewBinding.label.setText(String.format("Identifying you in %d faces", (int)faceCount));
-            userIdentification.findFacesSimilarTo(face, generatedFaces, null, new UserIdentificationCallbacks() {
-                @Override
-                public void onProgress(double progress) {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    int itemCount = (int)(progress * faceCount);
-                    viewBinding.label.setText(String.format("Identifying you in face %d of %d", itemCount, (int)faceCount));
-                    viewBinding.progressBar.setVisibility(View.VISIBLE);
-                    viewBinding.progressBar.setProgress(itemCount);
+            try {
+                UserIdentification userIdentification = new UserIdentification(verID);
+                double faceCount = generatedFaces.length;
+                if (viewBinding == null) {
+                    return;
                 }
-
-                @Override
-                public void onError(Throwable error) {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    if (isSessionRunning.getAndSet(false)) {
-                        invalidateOptionsMenu();
-                        viewBinding.label.setText("Faces to generate");
-                        viewBinding.progressBar.setVisibility(View.GONE);
-                        new AlertDialog.Builder(IdentificationDemoActivity.this)
-                                .setMessage("Face comparison failed")
-                                .setNeutralButton("OK", null)
-                                .create()
-                                .show();
+                viewBinding.progressBar.setMax((int) faceCount);
+                viewBinding.label.setText(String.format("Identifying you in %d faces", (int) faceCount));
+                int faceTemplateVersion = verID.getUserManagement().getLatestCommonFaceTemplateVersion().serialNumber(false);
+                AtomicLong startTime = new AtomicLong(System.currentTimeMillis());
+                IRecognizable challengeFace = null;
+                for (IRecognizable capturedFace : faceCapture.getFaces()) {
+                    if (capturedFace.getVersion() == faceTemplateVersion) {
+                        challengeFace = capturedFace;
+                        break;
                     }
                 }
+                if (challengeFace == null) {
+                    throw new VerIDCoreException(VerIDCoreException.Code.MISSING_FACE_TEMPLATE_VERSIONS);
+                }
+                userIdentification.findFacesSimilarTo(challengeFace, generatedFaces, null, new UserIdentificationCallbacks() {
 
-                @Override
-                public void onComplete(IdentifiedFace[] identifiedFaces) {
-                    if (viewBinding == null) {
-                        return;
-                    }
-                    if (isSessionRunning.getAndSet(false)) {
-                        invalidateOptionsMenu();
-                        viewBinding.label.setText("Faces to generate");
-                        viewBinding.progressBar.setVisibility(View.GONE);
-                        if (identifiedFaces.length == 0) {
-                            showAlert("We were unable to identify you");
-                        } else {
-                            Arrays.sort(identifiedFaces, (lhs, rhs) -> {
-                                if (lhs.getScore() == rhs.getScore()) {
-                                    return 0;
-                                }
-                                return lhs.getScore() > rhs.getScore() ? -1 : 1;
-                            });
-                            IRecognizable bestFace = identifiedFaces[0].getFace();
-                            Disposable disposable = verID.getUserManagement().getUserInFaceSingle(bestFace).subscribe(user -> {
-                                if (VerIDUser.DEFAULT_USER_ID.equals(user)) {
-                                    RoundedBitmapDrawable drawable = new ProfilePhotoHelper(IdentificationDemoActivity.this).getProfilePhotoDrawable((int)(100f * getResources().getDisplayMetrics().density));
-                                    ImageView imageView = new ImageView(IdentificationDemoActivity.this);
-                                    imageView.setImageDrawable(drawable);
-                                    AlertDialog alertDialog = new AlertDialog.Builder(IdentificationDemoActivity.this)
-                                            .setView(imageView)
-                                            .setMessage(String.format("You've been identified among %.0f faces", faceCount))
+                    @Override
+                    public void onComplete(IdentifiedFace[] identifiedFaces) {
+                        long elapsedTime = System.currentTimeMillis() - startTime.get();
+                        userIdentification.close();
+                        if (viewBinding == null) {
+                            return;
+                        }
+                        if (isSessionRunning.getAndSet(false)) {
+                            invalidateOptionsMenu();
+                            viewBinding.label.setText("Faces to generate");
+                            viewBinding.progressBar.setVisibility(View.GONE);
+                            if (identifiedFaces.length == 0) {
+                                showAlert("We were unable to identify you");
+                            } else {
+                                Stream<String> identifiedUsers = Arrays.stream(identifiedFaces)
+                                        .map(face -> {
+                                            try {
+                                                return verID.getUserManagement().getUserInFace(face.getFace());
+                                            } catch (Exception e) {
+                                                return null;
+                                            }
+                                        })
+                                        .filter(Objects::nonNull);
+                                if (identifiedUsers.anyMatch(user -> user.equals(VerIDUser.DEFAULT_USER_ID))) {
+                                    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(IdentificationDemoActivity.this);
+                                    try {
+                                        RoundedBitmapDrawable drawable = new ProfilePhotoHelper(IdentificationDemoActivity.this).getProfilePhotoDrawable((int) (100f * getResources().getDisplayMetrics().density));
+                                        ImageView imageView = new ImageView(IdentificationDemoActivity.this);
+                                        imageView.setImageDrawable(drawable);
+                                        alertDialogBuilder.setView(imageView);
+                                    } catch (Exception ignore) {
+                                    }
+                                    AlertDialog alertDialog = alertDialogBuilder
+                                            .setMessage(String.format("You've been identified among %.0f faces in %d ms", faceCount, elapsedTime))
                                             .setNeutralButton("OK", (dialogInterface, i) -> {
                                                 dialogInterface.dismiss();
                                             })
@@ -311,14 +239,34 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
                                 } else {
                                     showAlert("You have been misidentified");
                                 }
-                            }, error -> {
-                                showAlert("Identification failed");
-                            });
-                            disposables.add(disposable);
+                            }
                         }
                     }
-                }
-            });
+
+                    @Override
+                    public void onProgress(double progress) {
+                        if (viewBinding == null) {
+                            return;
+                        }
+                        viewBinding.progressBar.setVisibility(View.VISIBLE);
+                        viewBinding.progressBar.setProgress((int)(progress * faceCount));
+                    }
+
+                    @Override
+                    public void onError(Throwable error) {
+                        userIdentification.close();
+                        if (viewBinding == null) {
+                            return;
+                        }
+                        invalidateOptionsMenu();
+                        viewBinding.label.setText("Faces to generate");
+                        viewBinding.progressBar.setVisibility(View.GONE);
+                        showAlert("Face comparison failed");
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
     }
 
@@ -357,77 +305,5 @@ public class IdentificationDemoActivity extends AppCompatActivity implements IVe
         viewBinding.progressBar.setVisibility(View.GONE);
         viewBinding.facesTextField.setVisibility(View.VISIBLE);
         showKeyboard();
-    }
-
-    private static class GenerateFaces extends AsyncTask<FaceRecognition, Integer, IRecognizable[]> {
-
-        int numberOfFaces;
-        AtomicInteger counter;
-        int startIndex;
-        int reportAtEach;
-        VerIDFaceTemplateVersion faceTemplateVersion;
-        ProgressCallback progressCallback;
-        GenerateFacesCallback callback;
-        ErrorCallback errorCallback;
-        private AtomicReference<VerIDCoreException> errorRef = new AtomicReference<>();
-
-        GenerateFaces(int numberOfFaces, AtomicInteger counter, int startIndex, int reportAtEach, VerIDFaceTemplateVersion faceTemplateVersion, ProgressCallback progressCallback, GenerateFacesCallback callback, ErrorCallback errorCallback) {
-            this.numberOfFaces = numberOfFaces;
-            this.counter = counter;
-            this.startIndex = startIndex;
-            this.reportAtEach = reportAtEach;
-            this.faceTemplateVersion = faceTemplateVersion;
-            this.progressCallback = progressCallback;
-            this.callback = callback;
-            this.errorCallback = errorCallback;
-        }
-
-        @Override
-        protected IRecognizable[] doInBackground(FaceRecognition... faceRecognitions) {
-            FaceRecognition faceRecognition = faceRecognitions[0];
-            IRecognizable[] faces = new IRecognizable[numberOfFaces];
-            for (int i=0; i<numberOfFaces; i++) {
-                try {
-                    faces[i] = faceRecognition.generateRandomFaceTemplate(this.faceTemplateVersion);
-                    int count = counter.incrementAndGet();
-                    if (count % reportAtEach == 0) {
-                        publishProgress(count);
-                    }
-                } catch (VerIDCoreException e) {
-                    errorRef.set(e);
-                    break;
-                }
-            }
-            return faces;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            if (progressCallback != null) {
-                progressCallback.onProgress(values[0]);
-            }
-        }
-
-        @Override
-        protected void onPostExecute(IRecognizable[] faces) {
-            VerIDCoreException error = errorRef.get();
-            if (error != null && errorCallback != null) {
-                errorCallback.onError(error);
-            } else if (error == null && callback != null) {
-                callback.onFacesGenerated(faces, startIndex);
-            }
-        }
-    }
-
-    private interface GenerateFacesCallback {
-        void onFacesGenerated(IRecognizable[] faces, int startIndex);
-    }
-
-    private interface ProgressCallback {
-        void onProgress(int itemCount);
-    }
-
-    private interface ErrorCallback {
-        void onError(VerIDCoreException e);
     }
 }
