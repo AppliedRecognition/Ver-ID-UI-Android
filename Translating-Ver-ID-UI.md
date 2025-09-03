@@ -2,12 +2,12 @@
 
 Ver-ID UI allows you to supply a language translation when starting a Ver-ID session.
 
-The Ver-ID-UI project provides [Python 2.7](https://www.python.org/download/releases/2.7/) scripts to generate an empty translation XML and to verify that a given file is not missing any translations.
+The Ver-ID-UI project provides Python 3 scripts to generate an empty translation XML and to verify that a given file is not missing any translations.
 
 ## Generating a translation XML
 
 ~~~shell
-python translation_xml.py
+python3 translation_xml.py
 ~~~
 The command will collect all strings used in the source code and output a string like this:
 
@@ -76,14 +76,14 @@ Enter the translation of the string inside the `<original>` tag in the `<transla
 To save the generated XML as **es.xml**:
 
 ~~~shell
-python translation_xml.py > es.xml
+python3 translation_xml.py > es.xml
 ~~~
 
 ## Checking that your translation is complete
 Once you translate all the strings in the XML run:
 
 ~~~shell
-python test_translation.py es.xml
+python3 test_translation.py es.xml
 ~~~
 If all strings are translated the command will output:
 
