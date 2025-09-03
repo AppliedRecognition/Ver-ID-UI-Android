@@ -1,4 +1,5 @@
 ![Maven Central](https://img.shields.io/maven-central/v/com.appliedrec.verid/ui2)
+![Android CI](https://github.com/AppliedRecognition/Ver-ID-UI-Android/actions/workflows/android-ci.yml/badge.svg)
 
 # Ver-ID UI for Android
 
