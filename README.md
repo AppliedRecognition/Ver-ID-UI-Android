@@ -248,12 +248,19 @@ We opted to separate the new API to its own packages so both Ver-ID 1.+ and Ver-
 
 ## Requirements
 
-To build this project and to run the sample app you will need a computer with these applications:
+To build this project and run the sample app you'll need:
 
-- [Android Studio 4](https://developer.android.com/studio) with Gradle plugin version 4.0.0 or newer
+- [Android Studio](https://developer.android.com/studio) with Android Gradle Plugin 8.2.x or newer
+- JDK 17 (Android Studio includes a compatible JDK)
 - [Git](https://git-scm.com)
-	
-The SDK runs on Android 5.0 (API level 21) and newer.
+
+Minimum supported Android version for the UI library is Android 8.0 (API level 26).
+
+If you prefer the command line, you can build the UI library with:
+
+```bash
+./gradlew :veridui:assemble
+```
 
 ## Running the sample app
 
