@@ -1,9 +1,0 @@
-<resources>
-
-<!--    &lt;!&ndash; Base application theme. &ndash;&gt;-->
-<!--    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">-->
-<!--        &lt;!&ndash; Customize your theme here. &ndash;&gt;-->
-<!--        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>-->
-<!--    </style>-->
-
-</resources>

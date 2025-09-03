@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?><strings>
+    <string>
+        <original>Done</original>
+        <translation>Hecho</translation>
+    </string>
+    <string>
+        <original>Tips</original>
+        <translation>Consejos</translation>
+    </string>
+    <string>
+        <original>Camera used for face authentication</original>
+        <translation>Cámara utilizada para la autenticación facial</translation>
+    </string>
+    <string>
+        <original>You may have turned too far</original>
+        <translation>Es posible que te hayas girado demasiado</translation>
+    </string>
+    <string>
+        <original>Turn your head in the direction of the arrow</original>
+        <translation>Gira tu cabeza en la dirección de la flecha</translation>
+    </string>
+    <string>
+        <original>Please turn slowly</original>
+        <translation>Por favor, gira lentamente</translation>
+    </string>
+    <string>
+        <original>Success</original>
+        <translation>Éxito</translation>
+    </string>
+    <string>
+        <original>Failed</original>
+        <translation>Falló</translation>
+    </string>
+    <string>
+        <original>Next</original>
+        <translation>Siguiente</translation>
+    </string>
+    <string>
+        <original>Tip 2 of 3</original>
+        <translation>Consejo 2 de 3</translation>
+    </string>
+    <string>
+        <original>Tip 3 of 3</original>
+        <translation>Consejo 3 de 3</translation>
+    </string>
+    <string>
+        <original>Tip 1 of 3</original>
+        <translation>Consejo 1 de 3</translation>
+    </string>
+    <string>
+        <original>Preparing face detection</original>
+        <translation>Preparando la detección facial</translation>
+    </string>
+    <string>
+        <original>Please wait</original>
+        <translation>Por favor, espera</translation>
+    </string>
+    <string>
+        <original>Great, hold it</original>
+        <translation>Excelente, mantén esa posición</translation>
+    </string>
+    <string>
+        <original>Slowly turn to follow the arrow</original>
+        <translation>Gira lentamente para seguir la flecha</translation>
+    </string>
+    <string>
+        <original>Align your face with the oval</original>
+        <translation>Alinea tu rostro con el óvalo</translation>
+    </string>
+    <string>
+        <original>If you can, take off your glasses.</original>
+        <translation>Si es posible, quítate las gafas.</translation>
+    </string>
+    <string>
+        <original>Avoid standing in front of busy backgrounds.</original>
+        <translation>Evita pararte frente a fondos muy ocupados.</translation>
+    </string>
+    <string>
+        <original>Avoid standing in a light that throws sharp shadows like in sharp sunlight or directly under a lamp.</original>
+        <translation>Evita pararte en una luz que proyecte sombras pronunciadas como la luz solar intensa o directamente bajo una lámpara.</translation>
+    </string>
+    <string>
+        <original>Great. You are now registered.</original>
+        <translation>Excelente. Ahora estás registrado.</translation>
+    </string>
+    <string>
+        <original>Great. You authenticated using your face.</original>
+        <translation>Excelente. Te has autenticado usando tu rostro.</translation>
+    </string>
+    <string>
+        <original>Great. Session succeeded.</original>
+        <translation>Excelente. La sesión fue exitosa.</translation>
+    </string>
+    <string>
+        <original>Registration failed</original>
+        <translation>El registro falló</translation>
+    </string>
+    <string>
+        <original>Authentication failed</original>
+        <translation>La autenticación falló</translation>
+    </string>
+    <string>
+        <original>Session failed</original>
+        <translation>La sesión falló</translation>
+    </string>
+    <string>
+        <original>Cancel</original>
+        <translation>Cancelar</translation>
+    </string>
+    <string>
+        <original>Try again</original>
+        <translation>Intentar de nuevo</translation>
+    </string>
+</strings>

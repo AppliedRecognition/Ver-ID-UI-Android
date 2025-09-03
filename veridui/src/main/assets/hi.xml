@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?><strings>
+    <string>
+        <original>Done</original>
+        <translation>हो गया</translation>
+    </string>
+    <string>
+        <original>Tips</original>
+        <translation>सुझाव</translation>
+    </string>
+    <string>
+        <original>Camera used for face authentication</original>
+        <translation>चेहरा प्रमाणीकरण के लिए उपयोग की जाने वाली कैमरा</translation>
+    </string>
+    <string>
+        <original>You may have turned too far</original>
+        <translation>आप बहुत ज्यादा घूम गए हो सकते हैं</translation>
+    </string>
+    <string>
+        <original>Turn your head in the direction of the arrow</original>
+        <translation>अपना सिर तीर की दिशा में घुमाएं</translation>
+    </string>
+    <string>
+        <original>Please turn slowly</original>
+        <translation>कृपया धीरे से घुमें</translation>
+    </string>
+    <string>
+        <original>Success</original>
+        <translation>सफलता</translation>
+    </string>
+    <string>
+        <original>Failed</original>
+        <translation>असफल</translation>
+    </string>
+    <string>
+        <original>Next</original>
+        <translation>अगला</translation>
+    </string>
+    <string>
+        <original>Tip 2 of 3</original>
+        <translation>सुझाव 2 में से 3</translation>
+    </string>
+    <string>
+        <original>Tip 3 of 3</original>
+        <translation>सुझाव 3 में से 3</translation>
+    </string>
+    <string>
+        <original>Tip 1 of 3</original>
+        <translation>सुझाव 1 में से 3</translation>
+    </string>
+    <string>
+        <original>Preparing face detection</original>
+        <translation>चेहरा पहचान तैयार की जा रही है</translation>
+    </string>
+    <string>
+        <original>Please wait</original>
+        <translation>कृपया प्रतीक्षा करें</translation>
+    </string>
+    <string>
+        <original>Great, hold it</original>
+        <translation>बहुत अच्छा, इसे पकड़े रखें</translation>
+    </string>
+    <string>
+        <original>Slowly turn to follow the arrow</original>
+        <translation>तीर का अनुसरण करने के लिए धीरे से घुमें</translation>
+    </string>
+    <string>
+        <original>Align your face with the oval</original>
+        <translation>अपना चेहरा अंडाकार के साथ संरेखित करें</translation>
+    </string>
+    <string>
+        <original>If you can, take off your glasses.</original>
+        <translation>यदि संभव हो तो अपना चश्मा उतार दें।</translation>
+    </string>
+    <string>
+        <original>Avoid standing in front of busy backgrounds.</original>
+        <translation>व्यस्त पृष्ठभूमि के सामने खड़े होने से बचें।</translation>
+    </string>
+    <string>
+        <original>Avoid standing in a light that throws sharp shadows like in sharp sunlight or directly under a lamp.</original>
+        <translation>ऐसी रोशनी में खड़े होने से बचें जो तेज छाया डालती हो, जैसे तेज धूप में या सीधे लैंप के नीचे।</translation>
+    </string>
+    <string>
+        <original>Great. You are now registered.</original>
+        <translation>बहुत अच्छा। अब आप पंजीकृत हैं।</translation>
+    </string>
+    <string>
+        <original>Great. You authenticated using your face.</original>
+        <translation>बहुत अच्छा। आपने अपने चेहरे का उपयोग करके प्रमाणीकरण किया।</translation>
+    </string>
+    <string>
+        <original>Great. Session succeeded.</original>
+        <translation>बहुत अच्छा। सत्र सफल रहा।</translation>
+    </string>
+    <string>
+        <original>Registration failed</original>
+        <translation>पंजीकरण असफल</translation>
+    </string>
+    <string>
+        <original>Authentication failed</original>
+        <translation>प्रमाणीकरण असफल</translation>
+    </string>
+    <string>
+        <original>Session failed</original>
+        <translation>सत्र असफल</translation>
+    </string>
+    <string>
+        <original>Cancel</original>
+        <translation>रद्द करें</translation>
+    </string>
+    <string>
+        <original>Try again</original>
+        <translation>फिर से कोशिश करें</translation>
+    </string>
+</strings>

@@ -1,33 +1,34 @@
 from os import walk
 import re
 
-def unique(list):
-    ulist = []
-    for val in list:
-        if val not in ulist:
-            ulist.append(val)
-    return ulist
+def unique(list_items):
+    """Remove duplicates from a list while preserving order."""
+    seen = set()
+    return [x for x in list_items if not (x in seen or seen.add(x))]
 
-def getJavaFiles(dir, javafiles):
-    for (dirpath, dirnames, filenames) in walk(dir):
+def get_java_files(directory, java_files):
+    """Recursively find all Java files in the given directory."""
+    for (dirpath, dirnames, filenames) in walk(directory):
         for name in filenames:
             if name.endswith(".java"):
-                javafiles.append(dirpath+"/"+name)
+                java_files.append(dirpath + "/" + name)
         for dirname in dirnames:
             if dirname != "build":
-                getJavaFiles(dirpath+dirname, javafiles)
-javafiles = []
-getJavaFiles("./veridui/src/", javafiles)
-
-javafiles = unique(javafiles)
+                get_java_files(dirpath + "/" + dirname, java_files)
 
 def strings():
-    words = []
-    for file in javafiles:
-        f = open(file, "r")
-        src = f.read()
-        matchlist = re.findall(r"getTranslatedString\(\"(.+?)\"", src)
-        for word in matchlist:
-            if word not in words:
-                words.append(word)
-    return words
+    """Extract all translatable strings from Java source files."""
+    java_files = []
+    get_java_files("./veridui/src/", java_files)
+    
+    all_strings = []
+    for java_file in java_files:
+        try:
+            with open(java_file, "r", encoding="utf-8") as f:
+                content = f.read()
+                matches = re.findall(r'getTranslatedString\("([^"]+)"\)', content)
+                all_strings.extend(matches)
+        except Exception as e:
+            print(f"Error reading {java_file}: {e}")
+    
+    return unique(all_strings)
