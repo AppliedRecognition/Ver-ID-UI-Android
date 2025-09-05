@@ -1,5 +1,5 @@
 [versions]
-verid = "2.17.4"
+verid = "2.17.5"
 rxjava3-rxjava = "3.1.8"
 rxjava3-rxandroid = "3.0.2"
 verid-identity = "1.1.1"

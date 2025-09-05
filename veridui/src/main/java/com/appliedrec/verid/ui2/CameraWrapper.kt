@@ -97,9 +97,13 @@ class CameraWrapper<T>(
             Log.d("Camera capture session closed")
             super.onClosed(session)
             val cameraWrapper = cameraWrapperRef.get() ?: return
-            try {
-                cameraWrapper.isCameraOpen.set(false)
-                cameraWrapper.cameraDevice.getAndSet(null)?.close()
+
+            cameraWrapper.isCameraOpen.set(false)
+
+            val cameraDevice = cameraWrapper.cameraDevice.getAndSet(null)
+            safeExecute("close camera device") { cameraDevice?.close() }
+
+            safeExecute("clean up image reader") {
                 cameraWrapper.imageReader.getAndSet(null)?.let { reader ->
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         reader.discardFreeBuffers()
@@ -108,20 +112,28 @@ class CameraWrapper<T>(
                     reader.surface.release()
                     reader.close()
                 }
+            }
+
+            safeExecute("release preview surface") {
                 cameraWrapper.surfaceRef.getAndSet(null)?.release()
-//                cameraWrapper.imageUtils?.close()
-//                cameraWrapper.imageUtils = null
-            } catch (e: Throwable) {
-                e.printStackTrace()
-            } finally {
+            }
+
+            safeExecute("stop background handlers") {
                 cameraWrapper.stopBackgroundHandlers()
                 cameraWrapper.contextRef.get()?.let { context ->
                     context.lifecycleScope.launch(Dispatchers.Main.immediate) {
-                        cameraWrapper.listeners.forEach {
-                            it.onCameraStopped()
-                        }
+                        cameraWrapper.listeners.forEach { it.onCameraStopped() }
                     }
                 }
+            }
+        }
+
+        private fun safeExecute(operation: String, block: () -> Unit) {
+            try {
+                block()
+                Log.v("Successfully executed: $operation")
+            } catch (e: Throwable) {
+                Log.e("Failed to execute: $operation", e)
             }
         }
 
