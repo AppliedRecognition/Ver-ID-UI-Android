@@ -28,6 +28,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -61,17 +63,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.appliedrec.verid.core2.ImageUtils
 import com.appliedrec.verid.core2.Size
 import com.appliedrec.verid.core2.session.FaceDetectionResult
 import com.appliedrec.verid.core2.session.FaceDetectionStatus
 import com.appliedrec.verid.core2.session.VerIDSessionResult
+import com.appliedrec.verid.core2.session.VerIDSessionSettings
+import com.appliedrec.verid.core2.session.RegistrationSessionSettings
 import com.appliedrec.verid.core2.util.Log
 import com.appliedrec.verid.ui2.ui.theme.SessionTheme
 import com.appliedrec.verid.ui2.ui.theme.VerIDTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,6 +98,7 @@ class SessionView @JvmOverloads constructor(
     private var latestMisalignTime: Long? = null
     private var textureView: TextureView
     private val ovalMaskView: OvalMaskView
+    private var capturedFaceThumbnails: List<Bitmap> by mutableStateOf(emptyList())
 
     /**
      * Theme for the session view
@@ -233,6 +238,26 @@ class SessionView @JvmOverloads constructor(
                                 modifier = Modifier.align(Alignment.Center)
                             )
                         }
+                        if (capturedFaceThumbnails.isNotEmpty()) {
+                            val thumbSize = with(LocalDensity.current) { this@SessionView.getCapturedFaceImageHeight().toDp() }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 16.dp)
+                            ) {
+                                capturedFaceThumbnails.take(sessionSettings.faceCaptureCount).forEach { bmp ->
+                                    Image(
+                                        bitmap = bmp.asImageBitmap(),
+                                        contentDescription = "Captured face",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .requiredSize(thumbSize)
+                                            .clip(RoundedCornerShape(thumbSize / 6))
+                                    )
+                                }
+                            }
+                        }
                         if (faceCaptureCount < sessionSettings.faceCaptureCount && context is Activity && cancelButton != null) {
                             Box(modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -335,7 +360,17 @@ class SessionView @JvmOverloads constructor(
     }
 
     override fun drawFaces(faceImages: MutableList<out Drawable>?) {
-
+        if (faceImages == null) {
+            capturedFaceThumbnails = emptyList()
+            return
+        }
+        capturedFaceThumbnails = faceImages.mapNotNull { drawable ->
+            try {
+                drawable.toBitmap()
+            } catch (e: Throwable) {
+                null
+            }
+        }
     }
 
     override fun getCapturedFaceImageHeight(): Int {
@@ -374,6 +409,11 @@ class SessionView @JvmOverloads constructor(
         prompt = null
         ovalMaskView.visibility = View.VISIBLE
         faceCaptureCount = 0
+        capturedFaceThumbnails = emptyList()
+    }
+
+    override fun isCapableOfDrawingFaces(sessionSettings: VerIDSessionSettings): Boolean {
+        return sessionSettings is RegistrationSessionSettings
     }
 
     private fun getDefaultFaceRectFromFaceDetectionResult(faceDetectionResult: FaceDetectionResult): RectF {
