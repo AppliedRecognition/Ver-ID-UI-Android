@@ -138,13 +138,13 @@ public class RegisteredUserActivity extends AppCompatActivity implements IVerIDL
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                showSettings();
-                return true;
-            case R.id.action_export_registration:
-                exportRegistration();
-                return true;
+        if (item.getItemId() == R.id.action_settings) {
+            showSettings();
+            return true;
+        }
+        if (item.getItemId() == R.id.action_export_registration) {
+            exportRegistration();
+            return true;
         }
         return false;
     }

@@ -29,7 +29,10 @@ public class TipsActivity extends PageViewActivity implements IStringTranslator 
             TextSpeaker.getInstance().speak(tipText(0), translatedStrings.getLocale(), true);
         }
         if (getSupportActionBar() != null) {
+            getSupportActionBar().show();
             getSupportActionBar().setTitle(translatedStrings.getTranslatedString("Tip 1 of 3"));
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
     }
 
@@ -57,6 +60,10 @@ public class TipsActivity extends PageViewActivity implements IStringTranslator 
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
         if (item.getItemId() == R.id.action_next) {
             if (getViewPager().getCurrentItem() >= getPageCount() - 1) {
                 finish();
