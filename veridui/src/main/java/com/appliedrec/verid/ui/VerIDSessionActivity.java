@@ -203,7 +203,9 @@ public class VerIDSessionActivity<T extends VerIDSessionSettings & Parcelable, U
             executor.getQueue().drainTo(tasks);
             for (Runnable task : tasks) {
                 if (task instanceof SessionTask) {
-                    ((SessionTask)task).cancel(true);
+                    try {
+                        ((SessionTask) task).cancel(true);
+                    } catch (Exception ignore) {}
                 }
             }
             executor.shutdownNow();

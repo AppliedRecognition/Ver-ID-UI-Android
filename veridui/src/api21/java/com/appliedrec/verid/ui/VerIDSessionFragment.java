@@ -60,6 +60,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragment2, TextureView.SurfaceTextureListener, IVideoRecorder {
 
@@ -118,6 +119,12 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     private boolean isRecordingVideo = false;
     private File videoFile;
     private Size videoSize;
+    private final Object bitmapLock = new Object();
+    @Nullable private Bitmap reusableInputBitmap;
+    @Nullable private Bitmap reusableOutputBitmap;
+    private final Matrix reuseMatrix = new Matrix();
+    private final android.graphics.Paint blitPaint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+    private final AtomicBoolean isProcessingImage = new AtomicBoolean(false);
 
     // region Fragment lifecycle
 
@@ -495,44 +502,71 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        if (imageProcessingExecutor.getActiveCount() == 0 && imageProcessingExecutor.getQueue().isEmpty()) {
-            int rotation = textureView.getDisplay().getRotation();
-            int surfaceRotationDegrees;
-            switch (rotation) {
-                case Surface.ROTATION_90:
-                    surfaceRotationDegrees = 90;
-                    break;
-                case Surface.ROTATION_180:
-                    surfaceRotationDegrees = 180;
-                    break;
-                case Surface.ROTATION_270:
-                    surfaceRotationDegrees = 270;
-                    break;
-                default:
-                    surfaceRotationDegrees = 0;
-            }
-            Bitmap bitmap;
-            if (sensorOrientation % 180 == 0) {
-                bitmap = textureView.getBitmap(previewSize.getWidth(), previewSize.getHeight());
-            } else {
-                bitmap = textureView.getBitmap(previewSize.getHeight(), previewSize.getWidth());
-            }
-            imageProcessingExecutor.execute(() -> {
-                Matrix matrix = new Matrix();
-                if (getDelegate().getSessionSettings().getFacingOfCameraLens() != VerIDSessionSettings.LensFacing.BACK) {
-                    matrix.setScale(-1, 1);
-                }
-                matrix.postRotate(surfaceRotationDegrees);
-                Bitmap flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-                bitmap.recycle();
-                VerIDImage verIDImage = new VerIDImage(flippedBitmap, ExifInterface.ORIENTATION_NORMAL);
-                try {
-                    imageQueue.put(verIDImage);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
+        if (!isProcessingImage.compareAndSet(false, true)) {
+            return;
         }
+
+        if (textureView == null || previewSize == null || sensorOrientation == null) return;
+
+        final int rotation = textureView.getDisplay() != null ? textureView.getDisplay().getRotation() : Surface.ROTATION_0;
+        final int surfaceRotationDegrees = rotationToDegrees(rotation);
+
+        final boolean shouldMirror = getDelegate() != null
+                && getDelegate().getSessionSettings() != null
+                && getDelegate().getSessionSettings().getFacingOfCameraLens() != VerIDSessionSettings.LensFacing.BACK;
+
+        final int inW = (sensorOrientation % 180 == 0) ? previewSize.getWidth() : previewSize.getHeight();
+        final int inH = (sensorOrientation % 180 == 0) ? previewSize.getHeight() : previewSize.getWidth();
+
+        // Output dims after rotation
+        final boolean swap = (surfaceRotationDegrees == 90 || surfaceRotationDegrees == 270);
+        final int outW = swap ? inH : inW;
+        final int outH = swap ? inW : inH;
+
+        final Bitmap input;
+        final Bitmap output;
+        synchronized (bitmapLock) {
+            if (reusableInputBitmap == null || reusableInputBitmap.getWidth() != inW || reusableInputBitmap.getHeight() != inH) {
+                if (reusableInputBitmap != null) reusableInputBitmap.recycle();
+                reusableInputBitmap = Bitmap.createBitmap(inW, inH, Bitmap.Config.ARGB_8888);
+            }
+            if (reusableOutputBitmap == null || reusableOutputBitmap.getWidth() != outW || reusableOutputBitmap.getHeight() != outH) {
+                if (reusableOutputBitmap != null) reusableOutputBitmap.recycle();
+                reusableOutputBitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+            }
+            input = reusableInputBitmap;
+            output = reusableOutputBitmap;
+        }
+
+        textureView.getBitmap(input);
+
+        imageProcessingExecutor.execute(() -> {
+            reuseMatrix.reset();
+            reuseMatrix.postTranslate(-input.getWidth() / 2f, -input.getHeight() / 2f);
+
+            if (shouldMirror) {
+                reuseMatrix.postScale(-1f, 1f);
+            }
+            if (surfaceRotationDegrees != 0) {
+                reuseMatrix.postRotate(surfaceRotationDegrees);
+            }
+
+            reuseMatrix.postTranslate(output.getWidth() / 2f, output.getHeight() / 2f);
+
+            android.graphics.Canvas canvas = new android.graphics.Canvas(output);
+            canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+            canvas.drawBitmap(input, reuseMatrix, blitPaint);
+
+            VerIDImage verIDImage = new VerIDImage(output, () -> {
+                isProcessingImage.set(false);
+            });
+
+            try {
+                imageQueue.put(verIDImage);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     // endregion
@@ -962,5 +996,14 @@ public class VerIDSessionFragment extends Fragment implements IVerIDSessionFragm
     public File getVideoFile() {
         stopRecordingVideo();
         return this.videoFile;
+    }
+
+    private static int rotationToDegrees(int rotation) {
+        switch (rotation) {
+            case Surface.ROTATION_90: return 90;
+            case Surface.ROTATION_180: return 180;
+            case Surface.ROTATION_270: return 270;
+            default: return 0;
+        }
     }
 }
